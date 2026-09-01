@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ManaShelf v2.4.13</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<div class="grid-bg"></div><div class="glow glow-a"></div><div class="glow glow-b"></div>
+<header>
+  <div class="brand"><span>✦</span> ManaShelf <small>v2.4.13</small></div>
+  <div class="header-actions"><button id="historyBtn" class="ghost">Historial</button><button id="shortlistBtn" class="ghost">★ Shortlist <b id="shortlistCount">0</b></button></div>
+</header>
+<main>
+<section class="hero">
+  <div class="kicker">COLLECTION-AWARE COMMANDER TOOL</div>
+  <h1>Tu colección.<br><span>Tu próximo deck.</span></h1>
+</section>
+
+<section id="loginPanel" class="login-panel">
+  <div class="access-tabs">
+    <button id="accessPublic" class="access-tab active">Colección pública</button>
+    <button id="accessPrivate" class="access-tab">Colección privada / mi cuenta</button>
+  </div>
+  <div class="panel">
+    <div class="panel-label" id="accessLabel">LEER COLECCIÓN PÚBLICA</div>
+    <div class="control"><span>@</span><input id="username" placeholder="usuario de Archidekt"></div>
+    <div id="passwordRow" class="control hidden"><span>••</span><input id="password" type="password" placeholder="contraseña"></div>
+    <button id="checkUser" class="primary wide">Abrir colección →</button>
+    <div id="userStatus" class="status">No hace falta iniciar sesión si la colección es pública.</div>
+  </div>
+</section>
+
+<section id="accountBar" class="account-bar hidden">
+  <div class="account-id"><i></i><strong id="accountName"></strong><span id="accountStats"></span><em id="accessBadge"></em></div>
+  <div id="syncMini" class="sync-mini hidden">
+    <div class="sync-head"><span id="syncMiniTitle">Sincronizando mazos</span><strong id="syncCount">0 / 0</strong></div>
+    <progress id="syncMiniProgress" max="1" value="0"></progress>
+    <div class="sync-sub"><span id="syncMiniText">Preparando…</span><span id="syncTime"></span></div>
+    <div id="syncActions" class="sync-actions hidden"><button id="showSyncErrors" class="tiny">Ver errores</button><button id="retrySync" class="tiny accent">Reintentar</button></div>
+  </div>
+  <div class="account-actions"><button id="cacheBtn" class="ghost">Caché · Actualizar / Borrar</button><button id="reconnect" class="ghost">Cambiar colección</button><button id="logout" class="ghost danger-ghost">Cerrar sesión</button></div>
+</section>
+
+<section id="dashboard" class="dashboard hidden">
+  <div><div class="kicker">RESUMEN</div><h2>Biblioteca conectada</h2><p id="dashText"></p></div>
+  <div class="dash-actions"><button data-go="explore">Explorar Commander</button><button data-go="improve">Mejorar mazo</button><button data-go="rank">Qué puedo construir</button></div>
+</section>
+
+<section class="mode-tabs">
+  <button id="modeExplore" class="mode active"><b>01</b><span>Explorar Commander<small>Cualquier leyenda</small></span></button>
+  <button id="modeImprove" class="mode"><b>02</b><span>Mejorar mi mazo<small>Deck existente</small></span></button>
+  <button id="modeRank" class="mode"><b>03</b><span>¿Qué Commander puedo armar?<small>Uno específico o toda tu colección</small></span></button>
+  <button id="modeLab" class="mode lab-mode"><b>⚗</b><span>LAB<small>Deck Health experimental</small></span></button>
+</section>
+
+<section id="exploreFlow" class="flow-panel">
+  <div class="flow-head"><span>EXPLORAR COMMANDER</span><p>Buscá una criatura legendaria y cruzá EDHREC con tu colección.</p></div>
+  <div class="commander-search">
+    <div class="control"><span>♛</span><input id="commanderSearch" placeholder="Buscar criatura legendaria…" autocomplete="off"></div>
+    <div id="dropdown" class="dropdown hidden"></div>
+  </div>
+  <div id="chosen" class="chosen hidden">
+    <div id="chosenCard" class="chosen-card commander-click"></div>
+    <button id="analyzeExplore" class="primary big">Analizar colección →</button>
+  </div>
+</section>
+
+<section id="improveFlow" class="flow-panel hidden">
+  <div class="flow-head"><span>MEJORAR MI MAZO</span></div>
+  <div class="deck-autocomplete">
+    <div class="control"><span>⌕</span><input id="deckSearch" placeholder="Escribí el nombre del mazo…" autocomplete="off"></div>
+    <div id="deckPicker" class="deck-picker deck-dropdown hidden"></div>
+  </div>
+  <div id="deckLoading" class="inline-loading hidden"><i></i><span>Leyendo Commander, Size y cartas del deck…</span></div>
+  <div id="deckSummary" class="deck-summary hidden">
+    <div id="deckCommanderArt" class="deck-art commander-click"></div>
+    <div class="deck-info"><div class="panel-label">DECK SELECCIONADO</div><h2 id="deckName"></h2>
+      <div class="deck-commander"><span>Commander</span><strong id="deckCommander"></strong></div>
+      <div class="deck-counts"><span><b>SIZE</b> · <strong id="mainCount">0</strong> cartas</span><small id="sizeAudit"></small></div>
+      <a id="openDeckLink" class="ghost-link hidden" target="_blank" rel="noopener">Abrir en Archidekt ↗</a>
+    </div>
+    <div class="improve-actions"><button id="analyzeImprove" class="primary big">Analizar mazo →</button></div>
+  </div>
+  <div id="deckError" class="status bad hidden"></div>
+  <div id="improveHealthLoading" class="lab-loading hidden"><span></span><p>Analizando recomendaciones, estructura, curva e identidad…</p></div>
+  <nav id="improveTabs" class="ribbon-tabs hidden" aria-label="Secciones del análisis">
+    <button type="button" data-improve-tab="deckcheck" class="active">Deck Check</button>
+    <button type="button" data-improve-tab="changes">SWAPS</button>
+    <button type="button" data-improve-tab="recommendations">EDHREComendaciones</button>
+  </nav>
+  <div id="improveHealthResults" class="lab-results improve-health-results" data-view="deckcheck"></div>
+  <aside id="improveDeckInspector" class="deck-inspector hidden">
+    <div class="deck-inspector-head"><div><span>DECK LIST</span><strong id="improveDeckInspectorTitle">Mazo</strong><small id="improveDeckInspectorCount">Size · —</small></div>
+      <label class="deck-sort-label"><span>Ordenar por</span><select id="improveDeckSort" aria-label="Ordenar deck"><option value="type">Tipo</option><option value="category">Categoría</option><option value="cmc">CMC</option><option value="name">Nombre</option></select></label>
+    </div>
+    <div id="improveDeckFilter" class="deck-inspector-filter hidden"></div>
+    <div id="improveDeckList" class="deck-card-list"></div>
+  </aside>
+</section>
+
+<section id="rankFlow" class="flow-panel hidden">
+  <div class="flow-head"><span>DESCUBRIR COMMANDERS</span><p>Explorá únicamente criaturas legendarias Commander-legales de tu colección. EDHREC se consulta solo cuando elegís analizar o comparar.</p></div>
+  <div class="discovery-tools">
+    <div class="control discover-main-search"><span>⌕</span><input id="discoverSearch" placeholder="Buscar Commander por nombre, color o señal…" autocomplete="off"></div>
+    <div class="tag-panel">
+      <div class="tag-filter-head">
+        <div><strong>FILTRAR POR TAG EDHREC</strong><small>Elegí uno o varios. No hace falta recorrer toda la lista.</small></div>
+        <button id="discoverTagsToggle" class="ghost tiny" type="button">Ver todos los tags</button>
+      </div>
+      <div class="tag-search-row">
+        <div class="control tag-search"><span>⌕</span><input id="discoverTagSearch" placeholder="Buscar tag…" autocomplete="off"></div>
+        <div id="discoverSelectedTags" class="discover-selected-tags"></div>
+      </div>
+      <div id="discoverFilters" class="discover-filters"></div>
+    </div>
+  </div>
+  <div class="discover-list-head">
+    <div class="discover-list-title"><span>COMMANDERS DE TU COLECCIÓN</span><strong id="discoverGalleryCount">—</strong><div id="discoverStatus" class="status">Cargando Commanders de tu colección…</div><div id="discoverLoadProgress" class="discover-load-progress hidden"><i id="discoverLoadProgressBar"></i></div></div>
+    <button id="discoverCollapse" class="primary discover-gallery-toggle">Ocultar Commanders</button>
+  </div>
+  <div id="discoverGrid" class="discover-grid"></div>
+
+  <div class="compare-five">
+    <div><div class="panel-label">COMPARAR SELECCIÓN · HASTA 10</div><p>Elegí entre 2 y 10 criaturas legendarias de tu colección. ManaShelf consulta EDHREC solamente para esas cartas y las ordena por cantidad de recomendaciones que ya tenés.</p></div>
+    <div class="commander-search">
+      <div class="control"><span>＋</span><input id="compareCommanderSearch" placeholder="Agregar a la selección…" autocomplete="off"></div>
+      <div id="compareCommanderDropdown" class="dropdown hidden"></div>
+    </div>
+    <div id="compareChips" class="compare-chips"></div>
+    <div class="floating-compare-wrap hidden" id="floatingCompareWrap">
+      <button id="compareBtn" class="primary floating-compare" disabled>Comparar selección</button>
+      <small id="compareProgressCaption" class="compare-progress-caption hidden"></small>
+    </div>
+    <div id="rankResults" class="rank-results"></div>
+  </div>
+  <div id="rankOneResult" class="buildability-result"></div>
+  <div class="hidden" aria-hidden="true"><input id="rankCommanderSearch"><div id="rankCommanderDropdown"></div><div id="rankCommanderChosen"></div><div id="rankCommanderCard"></div><button id="rankOneBtn"></button><button id="rankBtn"></button></div>
+</section>
+
+<section id="loading" class="loading hidden"><i></i><div class="analysis-progress"><strong id="loadingTitle">Analizando…</strong><span id="loadingText"></span><div class="analysis-track"><b></b></div><small id="loadingElapsed">0s · progreso de red no cuantificable</small></div></section>
+
+
+<section id="labFlow" class="flow-panel lab-panel hidden">
+  <div class="lab-banner"><b>⚗ MANASHELF LAB</b><span>FUNCIÓN EXPERIMENTAL · SOLO LECTURA · NO MODIFICA ARCHIDEKT</span></div>
+  <div class="flow-head"><span>DECK HEALTH + THEME HEALTH</span><p>Probá el análisis contextual en un mazo real sin cambiar el funcionamiento estable de ManaShelf.</p></div>
+  <div class="deck-autocomplete">
+    <div class="control lab-control"><span>⌕</span><input id="labDeckSearch" placeholder="Buscar mazo para analizar…" autocomplete="off"></div>
+    <div id="labDeckPicker" class="deck-picker deck-dropdown hidden"></div>
+  </div>
+  <div id="labDeckChosen" class="lab-deck-chosen hidden"></div>
+  <button id="labAnalyze" class="lab-primary hidden">Analizar Deck Health →</button>
+  <div id="labLoading" class="lab-loading hidden"><span></span><p>Clasificando cartas y detectando el plan del mazo…</p></div>
+  <div class="lab-workspace">
+    <div id="labResults" class="lab-results"></div>
+    <aside id="labDeckInspector" class="deck-inspector lab-inspector hidden">
+      <div class="deck-inspector-head"><div><span>DECK LIST · AUDITORÍA</span><strong id="labDeckInspectorTitle">Mazo</strong><small id="labDeckInspectorCount">Size · —</small></div>
+        <select id="labDeckSort" aria-label="Ordenar deck del LAB"><option value="type">Tipo</option><option value="category">Categoría</option><option value="cmc">CMC</option><option value="name">Nombre</option></select>
+      </div>
+      <div id="labDeckFilter" class="deck-inspector-filter hidden"></div>
+      <div id="labDeckList" class="deck-card-list"></div>
+    </aside>
+  </div>
+</section>
+
+<section id="results" class="results hidden">
+  <div class="results-top"><div><div class="kicker" id="resultModeLabel">RESULTADOS</div><h2 id="title"></h2><p id="meta"></p></div>
+    <div class="result-actions"><button id="completeBtn" class="ghost">Completar a 100</button><button id="exportBtn" class="ghost">Exportar resultados</button></div>
+  </div>
+  <div class="summary-explainer">
+    <div class="stat total-stat"><span>RECOMENDACIONES EDHREC ÚNICAS</span><strong id="sumTotal">0</strong></div>
+    <div class="summary-branch">
+      <div class="stat"><span>EN COLECCIÓN</span><strong id="sumOwned">0</strong></div>
+      <div class="stat"><span>CON COPIA DISPONIBLE</span><strong id="sumAvailable">0</strong></div>
+      <div class="stat"><span>SIN COPIA DISPONIBLE</span><strong id="sumOccupied">0</strong></div>
+      <div class="stat"><span>NO POSEÍDAS</span><strong id="sumMissing">0</strong></div>
+    </div>
+    <p class="summary-note"><strong id="sumUsed">0</strong> de las recomendadas que tenés aparecen en al menos un mazo. Ese dato puede superponerse con “disponible” si poseés más de una copia.</p>
+  </div>
+
+  <div class="toolbar">
+    <div class="filter-stack state-filter" role="group" aria-label="Estado de colección">
+      <button id="filterAll" class="state-choice active" data-state="all" aria-pressed="true">Todas</button>
+      <button id="filterOwned" class="state-choice" data-state="owned" aria-pressed="false">En Colección</button>
+      <button id="filterAvailable" class="state-choice" data-state="available" aria-pressed="false">Disponibles</button>
+      <button id="hideInDeckToggle" class="state-choice in-deck-filter hidden" aria-pressed="false">Ya en el mazo</button>
+    </div>
+    <div class="toolbar-right">
+      <label class="select-labeled"><span>ROL MANASHELF</span><select id="roleFilter" title="Roles inferidos por ManaShelf desde tipo y texto Oracle de Scryfall; no son categorías EDHREC."><option value="">Todos los roles ManaShelf</option></select></label>
+      <label class="select-labeled hidden" id="themeFilterWrap"><span>TEMÁTICA</span><select id="themeFilter" title="Temáticas que EDHREC asocia a este Commander y que tenés evidencia de sostener."><option value="">Todas las temáticas</option></select></label>
+      <label class="select-labeled sort-labeled"><span>ORDENAR POR</span><select id="sort"><option value="synergy">Sinergia</option><option value="inclusion">Inclusión</option><option value="availability">Disponibles</option><option value="name">Nombre</option></select></label>
+      <div class="view-toggle"><button id="viewCards" class="active" title="Cartas">▦</button><button id="viewList" title="Lista">☷</button></div>
+    </div>
+  </div>
+
+  <div class="shell">
+    <aside><div class="asideTitle">SECCIONES EDHREC</div><p class="asideHelp">Estas categorías vienen de EDHREC. Los roles del filtro de arriba los infiere ManaShelf.</p><div id="categories"></div></aside>
+    <div class="catalog">
+      <div class="catalogHead"><h3 id="categoryTitle"></h3><p id="categoryMeta"></p></div>
+      <div id="listHeader" class="list-header hidden"><div>CARTA</div><div>EDHREC / ROL</div><div>TU COLECCIÓN</div><div>USO / ACCIONES</div></div>
+      <div id="grid" class="grid"></div>
+      <div id="empty" class="empty hidden">No hay cartas para mostrar con estos filtros.</div>
+    </div>
+  </div>
+</section>
+
+<div id="syncErrorPanel" class="sync-error-panel hidden"><div class="sync-error-head"><strong>Mazos que no pudieron sincronizarse</strong><button id="closeSyncErrors" class="tiny">Cerrar</button></div><div id="syncErrorList"></div></div>
+<div id="error" class="error hidden"></div>
+</main>
+
+<div id="modal" class="modal hidden"><div class="modal-card"><button id="modalClose" class="modal-x">×</button><div id="modalBody"></div></div></div>
+<div id="drawer" class="drawer hidden"><div class="drawer-head"><strong id="drawerTitle">Shortlist</strong><button id="drawerClose">×</button></div><div id="drawerBody"></div></div>
+
+<footer><span>ManaShelf · local-first</span><span>v2.4.13</span></footer>
+<script type="module" src="/app.js"></script>
+</body></html>
