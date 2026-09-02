@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ManaShelf v2.4.13</title>
+<title>ManaShelf v2.4.15</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
@@ -11,7 +11,7 @@
 <body>
 <div class="grid-bg"></div><div class="glow glow-a"></div><div class="glow glow-b"></div>
 <header>
-  <div class="brand"><span>✦</span> ManaShelf <small>v2.4.13</small></div>
+  <div class="brand"><span>✦</span> ManaShelf <small>v2.4.15</small></div>
   <div class="header-actions"><button id="historyBtn" class="ghost">Historial</button><button id="shortlistBtn" class="ghost">★ Shortlist <b id="shortlistCount">0</b></button></div>
 </header>
 <main>
@@ -42,19 +42,18 @@
     <div class="sync-sub"><span id="syncMiniText">Preparando…</span><span id="syncTime"></span></div>
     <div id="syncActions" class="sync-actions hidden"><button id="showSyncErrors" class="tiny">Ver errores</button><button id="retrySync" class="tiny accent">Reintentar</button></div>
   </div>
-  <div class="account-actions"><button id="cacheBtn" class="ghost">Caché · Actualizar / Borrar</button><button id="reconnect" class="ghost">Cambiar colección</button><button id="logout" class="ghost danger-ghost">Cerrar sesión</button></div>
+  <div class="account-actions"><button id="cacheBtn" class="ghost">Caché · Actualizar / Borrar</button><button id="reconnect" class="ghost">⇄ Cambiar colección</button><span class="account-actions-sep"></span><button id="logout" class="ghost danger-ghost">⎋ Cerrar sesión</button></div>
 </section>
 
 <section id="dashboard" class="dashboard hidden">
   <div><div class="kicker">RESUMEN</div><h2>Biblioteca conectada</h2><p id="dashText"></p></div>
-  <div class="dash-actions"><button data-go="explore">Explorar Commander</button><button data-go="improve">Mejorar mazo</button><button data-go="rank">Qué puedo construir</button></div>
 </section>
 
 <section class="mode-tabs">
   <button id="modeExplore" class="mode active"><b>01</b><span>Explorar Commander<small>Cualquier leyenda</small></span></button>
   <button id="modeImprove" class="mode"><b>02</b><span>Mejorar mi mazo<small>Deck existente</small></span></button>
   <button id="modeRank" class="mode"><b>03</b><span>¿Qué Commander puedo armar?<small>Uno específico o toda tu colección</small></span></button>
-  <button id="modeLab" class="mode lab-mode"><b>⚗</b><span>LAB<small>Deck Health experimental</small></span></button>
+  <button id="modeLab" class="mode lab-mode"><b>⚗</b><span>LAB<small>Experimental</small></span></button>
 </section>
 
 <section id="exploreFlow" class="flow-panel">
@@ -94,6 +93,7 @@
   </nav>
   <div id="improveHealthResults" class="lab-results improve-health-results" data-view="deckcheck"></div>
   <aside id="improveDeckInspector" class="deck-inspector hidden">
+    <button type="button" id="improveDeckInspectorToggle" class="deck-inspector-toggle" title="Ocultar/mostrar la lista del mazo" aria-label="Ocultar/mostrar la lista del mazo">»</button>
     <div class="deck-inspector-head"><div><span>DECK LIST</span><strong id="improveDeckInspectorTitle">Mazo</strong><small id="improveDeckInspectorCount">Size · —</small></div>
       <label class="deck-sort-label"><span>Ordenar por</span><select id="improveDeckSort" aria-label="Ordenar deck"><option value="type">Tipo</option><option value="category">Categoría</option><option value="cmc">CMC</option><option value="name">Nombre</option></select></label>
     </div>
@@ -157,6 +157,7 @@
   <div class="lab-workspace">
     <div id="labResults" class="lab-results"></div>
     <aside id="labDeckInspector" class="deck-inspector lab-inspector hidden">
+      <button type="button" class="deck-inspector-toggle" title="Ocultar/mostrar la lista del mazo" aria-label="Ocultar/mostrar la lista del mazo">»</button>
       <div class="deck-inspector-head"><div><span>DECK LIST · AUDITORÍA</span><strong id="labDeckInspectorTitle">Mazo</strong><small id="labDeckInspectorCount">Size · —</small></div>
         <select id="labDeckSort" aria-label="Ordenar deck del LAB"><option value="type">Tipo</option><option value="category">Categoría</option><option value="cmc">CMC</option><option value="name">Nombre</option></select>
       </div>
@@ -192,7 +193,7 @@
       <label class="select-labeled"><span>ROL MANASHELF</span><select id="roleFilter" title="Roles inferidos por ManaShelf desde tipo y texto Oracle de Scryfall; no son categorías EDHREC."><option value="">Todos los roles ManaShelf</option></select></label>
       <label class="select-labeled hidden" id="themeFilterWrap"><span>TEMÁTICA</span><select id="themeFilter" title="Temáticas que EDHREC asocia a este Commander y que tenés evidencia de sostener."><option value="">Todas las temáticas</option></select></label>
       <label class="select-labeled sort-labeled"><span>ORDENAR POR</span><select id="sort"><option value="synergy">Sinergia</option><option value="inclusion">Inclusión</option><option value="availability">Disponibles</option><option value="name">Nombre</option></select></label>
-      <div class="view-toggle"><button id="viewCards" class="active" title="Cartas">▦</button><button id="viewList" title="Lista">☷</button></div>
+      <div class="view-toggle"><button id="viewCards" class="active" title="Vista en miniaturas"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1"/><rect x="9" y="1.5" width="5.5" height="5.5" rx="1"/><rect x="1.5" y="9" width="5.5" height="5.5" rx="1"/><rect x="9" y="9" width="5.5" height="5.5" rx="1"/></svg></button><button id="viewList" title="Vista en lista"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><line x1="1.5" y1="3" x2="14.5" y2="3"/><line x1="1.5" y1="8" x2="14.5" y2="8"/><line x1="1.5" y1="13" x2="14.5" y2="13"/></svg></button></div>
     </div>
   </div>
 
@@ -200,7 +201,7 @@
     <aside><div class="asideTitle">SECCIONES EDHREC</div><p class="asideHelp">Estas categorías vienen de EDHREC. Los roles del filtro de arriba los infiere ManaShelf.</p><div id="categories"></div></aside>
     <div class="catalog">
       <div class="catalogHead"><h3 id="categoryTitle"></h3><p id="categoryMeta"></p></div>
-      <div id="listHeader" class="list-header hidden"><div>CARTA</div><div>EDHREC / ROL</div><div>TU COLECCIÓN</div><div>USO / ACCIONES</div></div>
+      <div id="listHeader" class="list-header hidden"><div>CARTA</div><div>TIPO</div><div>CATEGORÍA</div><div>CMC</div><div>COLECCIÓN</div></div>
       <div id="grid" class="grid"></div>
       <div id="empty" class="empty hidden">No hay cartas para mostrar con estos filtros.</div>
     </div>
@@ -214,6 +215,6 @@
 <div id="modal" class="modal hidden"><div class="modal-card"><button id="modalClose" class="modal-x">×</button><div id="modalBody"></div></div></div>
 <div id="drawer" class="drawer hidden"><div class="drawer-head"><strong id="drawerTitle">Shortlist</strong><button id="drawerClose">×</button></div><div id="drawerBody"></div></div>
 
-<footer><span>ManaShelf · local-first</span><span>v2.4.13</span></footer>
+<footer><span>ManaShelf · local-first</span><span>v2.4.15</span></footer>
 <script type="module" src="/app.js"></script>
 </body></html>

@@ -28,7 +28,7 @@ async function timed(label, fn){
     throw e;
   }
 }
-async function get(url,opt={},ms=20000){const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);try{return await fetch(url,{...opt,signal:c.signal,headers:{"User-Agent":"ManaShelf/2.4.13",Accept:"application/json",...(opt.headers||{})}})}finally{clearTimeout(t)}}
+async function get(url,opt={},ms=20000){const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);try{return await fetch(url,{...opt,signal:c.signal,headers:{"User-Agent":"ManaShelf/2.4.15",Accept:"application/json",...(opt.headers||{})}})}finally{clearTimeout(t)}}
 
 // v2.4.11 — pacing global para pedidos directos a archidekt.com. Antes de v2.4.9 estos
 // pedidos pasaban por el bridge; al ir directo, 5 pedidos concurrentes le pegan a Archidekt
@@ -286,7 +286,7 @@ async function publicCollection(username){
   // v2.4.1 — flujo público validado contra colección real:
   // username -> perfil público -> collection/v2/<id> -> export/v2 CSV completo.
   const profile=await get(`https://archidekt.com/u/${encodeURIComponent(clean)}`,{
-    headers:{"Accept":"text/html,*/*","User-Agent":"ManaShelf/2.4.13"}
+    headers:{"Accept":"text/html,*/*","User-Agent":"ManaShelf/2.4.15"}
   },30000);
   if(!profile.ok)throw new Error(`No pude abrir el perfil público de Archidekt (HTTP ${profile.status}).`);
   const idMatch=(await profile.text()).match(/\/collection\/v2\/(\d+)/);
@@ -311,7 +311,7 @@ async function publicCollection(username){
   const merged=new Map();let page=1,totalRows=0;
   while(page<=1000){
     const endpoint=`https://archidekt.com/api/collection/export/v2/${collectionId}/`;
-    const r=await get(endpoint,{method:"POST",headers:{"Content-Type":"application/json","Accept":"application/json","User-Agent":"ManaShelf/2.4.13"},body:JSON.stringify({fields,page,game:1,pageSize:2500})},45000);
+    const r=await get(endpoint,{method:"POST",headers:{"Content-Type":"application/json","Accept":"application/json","User-Agent":"ManaShelf/2.4.15"},body:JSON.stringify({fields,page,game:1,pageSize:2500})},45000);
     const text=await r.text();
     if(!r.ok)throw new Error(`Archidekt export HTTP ${r.status}: ${text.slice(0,240)}`);
     let payload={};try{payload=JSON.parse(text)}catch{throw new Error("Archidekt export devolvió una respuesta inválida.")}
@@ -1788,7 +1788,7 @@ async function loadCommanderCatalog({force=false,onProgress=null}={}){
       page++;
       onProgress?.({current:page-1,total:0,message:`Catálogo de Commanders · página ${page}`});
       const r=await scryfallRequest(url,{
-        headers:{"Accept":"application/json;q=0.9,*/*;q=0.8","User-Agent":"ManaShelf/2.4.13"}
+        headers:{"Accept":"application/json;q=0.9,*/*;q=0.8","User-Agent":"ManaShelf/2.4.15"}
       },30000);
       if(r.status===404)break;
       if(!r.ok){
