@@ -4,7 +4,7 @@
 >
 > Este documento describe decisiones de arquitectura y diseño que siguen vigentes, pero el
 > número de versión de su título original (v2.4.1) quedó desactualizado — la baseline real
-> hoy es **v2.5.26-beta**. Para el estado actual pieza por pieza, leer `BACKLOG.md` completo
+> hoy es **v2.5.27-beta**. Para el estado actual pieza por pieza, leer `BACKLOG.md` completo
 > (tiene el historial real hasta la versión vigente); este archivo sigue siendo válido para
 > entender el "por qué" de decisiones de fondo, pero no asumir que describe el estado actual
 > exacto de cada componente sin cruzarlo contra el BACKLOG.

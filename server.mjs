@@ -8,8 +8,12 @@ import { partitionArchidektDeck } from "./lib/archidekt-size.mjs";
 import { buildDeckMetrics, METRICS_ENGINE_VERSION, CLASSIFICATION_VERSION, SIMULATION_VERSION } from "./lib/deck-metrics.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PORT = process.env.PORT || 3000;
-const APP_VERSION = "2.5.26-beta";
+const PORT = Number(process.env.PORT) || 3000;
+// Local beta installs stay loopback-only. Hosted production runtimes (Render sets
+// NODE_ENV=production) must bind all interfaces so the platform proxy can reach us.
+// HOST remains overrideable for other deployment environments.
+const HOST = process.env.HOST || (process.env.NODE_ENV === "production" ? "0.0.0.0" : "127.0.0.1");
+const APP_VERSION = "2.5.27-beta";
 const PUBLIC_DIR = path.join(__dirname, "public");
 const ARCHIDEKT_BRIDGE = process.env.ARCHIDEKT_BRIDGE_URL || "https://akmcp.mtgate.cloud";
 
@@ -2425,4 +2429,4 @@ http.createServer(async(req,res)=>{
     const data=await fs.readFile(f);
     res.writeHead(200,{"Content-Type":mime[path.extname(f)]||"application/octet-stream","Cache-Control":"no-cache",...SECURITY_HEADERS});res.end(data);
   }catch{res.writeHead(404,SECURITY_HEADERS);res.end("No encontrado")}
-}).listen(PORT,"127.0.0.1",()=>console.log(`ManaShelf v${APP_VERSION} → http://127.0.0.1:${PORT}`));
+ }).listen(PORT,HOST,()=>console.log(`ManaShelf v${APP_VERSION} → http://${HOST}:${PORT}`));

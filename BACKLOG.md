@@ -1,7 +1,14 @@
+## v2.5.27-beta — compatibilidad Render sin exponer la instalación local
+- [x] El servidor ya no fuerza `127.0.0.1` en todos los entornos.
+- [x] Local/dev: `127.0.0.1` por defecto.
+- [x] Producción (`NODE_ENV=production`, como Render): `0.0.0.0`.
+- [x] Respeta `PORT` del hosting y permite override explícito con `HOST`.
+- [x] Se mantiene la protección loopback para los launchers locales.
+
 # ManaShelf backlog — v2.0
 
 
-## v2.5.26-beta — navegación LAB/Improve sin solaparse
+## v2.5.27-beta — navegación LAB/Improve sin solaparse
 - [x] La build vuelve a identificarse explícitamente como BETA; no es release candidate ni release pública.
 - [x] Los menús sticky de Improve y LAB ya no se superponen con sus Deck Lists: cuando el ribbon está activo, el drawer se apila debajo con altura de viewport recalculada.
 - [x] LAB: el tab flotante `Reglas` pasa a `Estructura`; la sección `Recomendaciones estructurales` pasa a `Estructura del mazo`, y el copy visible usa `criterios` para describir mejor qué se evalúa.

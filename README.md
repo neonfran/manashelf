@@ -1,6 +1,6 @@
 # ManaShelf
 
-> Beta vigente para testing: **v2.5.26-beta**.
+> Beta vigente para testing: **v2.5.27-beta**.
 
 ManaShelf es una herramienta local-first para explorar una colección de Archidekt, analizar mazos Commander y generar recomendaciones basadas en la colección, Scryfall y EDHREC.
 
@@ -11,7 +11,8 @@ ManaShelf es una herramienta local-first para explorar una colección de Archide
 - Los datos privados requieren login; los públicos no.
 
 ## Privacidad y red
-- El servidor local escucha únicamente en `127.0.0.1`; no se publica en la red local.
+- En ejecución local, el servidor escucha únicamente en `127.0.0.1`; no se publica en la red local.
+- En hosting con `NODE_ENV=production` (por ejemplo Render), escucha en `0.0.0.0` para que el proxy de la plataforma pueda alcanzarlo. El puerto siempre se toma de `PORT` cuando está definido.
 - La colección pública se consulta sin contraseña.
 - Para colección privada, la contraseña se envía al bridge de autenticación configurado para obtener una sesión de Archidekt. ManaShelf no persiste la contraseña en su caché local.
 - La sesión/token de Archidekt se mantiene en memoria durante la ejecución.
@@ -72,6 +73,9 @@ Manual:
 node server.mjs
 ```
 y abrir http://127.0.0.1:3000
+
+### Deploy en Render / hosting
+ManaShelf usa `process.env.PORT` y, cuando `NODE_ENV=production`, se enlaza a `0.0.0.0`. Para otros entornos se puede definir `HOST` explícitamente. En local conserva `127.0.0.1` por defecto.
 
 ## Nota sobre datos públicos
 Sin autenticación ManaShelf puede leer la colección y decks públicos, pero no conoce uso privado ni puede escribir en la cuenta.

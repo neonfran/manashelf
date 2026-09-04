@@ -36,13 +36,14 @@ assert.match(css,/@keyframes themeNeonSweep/,"theme transition must include the 
 assert.match(css,/@media\(prefers-reduced-motion:reduce\)/,"theme transition must respect reduced motion");
 assert.match(css,/body\.improve-with-inspector main,[\s\S]*padding-right:0!important/,"Improve must not widen the page when the inspector opens");
 assert.match(app,/if\(!row\.commander&&keep\.commander\)current\.commander=keep\.commander/,"catalog refresh must not erase a resolved Commander");
-assert.match(html,/ManaShelf v2\.5\.26-beta/,"HTML title must expose current beta");
-assert.match(server,/const APP_VERSION = "2\.5\.26-beta"/,"server user agent/version must be current");
-assert.match(server,/\.listen\(PORT,"127\.0\.0\.1"/,"local server must bind only to loopback");
+assert.match(html,/ManaShelf v2\.5\.27-beta/,"HTML title must expose current beta");
+assert.match(server,/const APP_VERSION = "2\.5\.27-beta"/,"server user agent/version must be current");
+assert.match(server,/const HOST = process\.env\.HOST \|\| \(process\.env\.NODE_ENV === "production" \? "0\.0\.0\.0" : "127\.0\.0\.1"\)/,"server must use environment-aware host binding");
+assert.match(server,/\.listen\(PORT,HOST/,"HTTP server must listen on the resolved HOST");
 for(const launcher of ["INICIAR-WINDOWS.bat","Abrir ManaShelf.bat"]){
   const src=fs.readFileSync(new URL(`../${launcher}`,import.meta.url),"utf8");
   assert.match(src,/Get-NetTCPConnection/,`${launcher} must find a free port`);
-  assert.match(src,/build=2\.5\.26-beta/,`${launcher} must open the current build`);
+  assert.match(src,/build=2\.5\.27-beta/,`${launcher} must open the current build`);
   assert.ok(!src.includes('start "" http://127.0.0.1:3000'),`${launcher} must not hard-code port 3000`);
 }
 console.log("release regression test: OK");
