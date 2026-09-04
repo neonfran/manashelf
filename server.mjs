@@ -5,14 +5,30 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { partitionArchidektDeck } from "./lib/archidekt-size.mjs";
+import { buildDeckMetrics, METRICS_ENGINE_VERSION, CLASSIFICATION_VERSION, SIMULATION_VERSION } from "./lib/deck-metrics.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
+const APP_VERSION = "2.5.26-beta";
 const PUBLIC_DIR = path.join(__dirname, "public");
 const ARCHIDEKT_BRIDGE = process.env.ARCHIDEKT_BRIDGE_URL || "https://akmcp.mtgate.cloud";
 
-const send=(res,status,data)=>{res.writeHead(status,{"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"});res.end(JSON.stringify(data));};
-const body=req=>new Promise((ok,no)=>{let s="";req.on("data",c=>s+=c);req.on("end",()=>{try{ok(s?JSON.parse(s):{})}catch(e){no(e)}});req.on("error",no)});
+const send=(res,status,data)=>{res.writeHead(status,{"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store",...SECURITY_HEADERS});res.end(JSON.stringify(data));};
+// v2.4.17 — límite de tamaño de body, a partir de la auditoría: sin esto, un cliente podía
+// mandar un body enorme y el server lo acumulaba entero en memoria sin cortar. 1 MB alcanza
+// de sobra para cualquier request real de la app (nombres de cartas, IDs, etc.).
+const MAX_BODY_BYTES=1_000_000;
+const body=req=>new Promise((ok,no)=>{
+  let s="",bytes=0,tooLarge=false;
+  req.on("data",c=>{
+    if(tooLarge)return;
+    bytes+=c.length;
+    if(bytes>MAX_BODY_BYTES){tooLarge=true;no(Object.assign(new Error("El pedido es demasiado grande."),{code:"PAYLOAD_TOO_LARGE"}));return}
+    s+=c;
+  });
+  req.on("end",()=>{if(tooLarge)return;try{ok(s?JSON.parse(s):{})}catch(e){no(Object.assign(new Error("El cuerpo del pedido no es JSON válido."),{code:"BAD_JSON"}))}});
+  req.on("error",no);
+});
 
 // Diagnostic-only timing helper (v2.4.1 follow-up: measure connect/collection performance
 // without asking the user to stopwatch anything by hand). Logs to the server terminal only;
@@ -28,19 +44,31 @@ async function timed(label, fn){
     throw e;
   }
 }
-async function get(url,opt={},ms=20000){const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);try{return await fetch(url,{...opt,signal:c.signal,headers:{"User-Agent":"ManaShelf/2.4.15",Accept:"application/json",...(opt.headers||{})}})}finally{clearTimeout(t)}}
+async function get(url,opt={},ms=20000){const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);try{return await fetch(url,{...opt,signal:c.signal,headers:{"User-Agent":`ManaShelf/${APP_VERSION}`,Accept:"application/json",...(opt.headers||{})}})}finally{clearTimeout(t)}}
 
 // v2.4.11 — pacing global para pedidos directos a archidekt.com. Antes de v2.4.9 estos
 // pedidos pasaban por el bridge; al ir directo, 5 pedidos concurrentes le pegan a Archidekt
 // sin ningún espaciado, lo que puede disparar su rate-limit (429 con Retry-After de
 // decenas de segundos) más fácil que antes. Este espaciado mínimo entre inicios de pedido
 // reduce la chance de gatillarlo, sin volver a ser secuencial uno por uno.
+// v2.4.17 — cola real en vez del pacing "ingenuo" anterior. Confirmado con la auditoría y
+// verificado a mano: el mecanismo viejo leía lastArchidektRequestAt, esperaba, y RECIÉN
+// DESPUÉS lo actualizaba — así que 5 workers concurrentes podían leer el mismo timestamp
+// viejo antes de que ninguno lo actualizara, calcular la misma espera, y despertarse todos
+// juntos (ráfaga, no espaciado real). Esta cola encadena cada pedido al anterior de forma
+// síncrona (sin punto de interleaving entre "leer" y "actualizar"), así que si 5 llegan
+// juntos, quedan genuinamente uno detrás del otro con el espaciado mínimo entre cada uno.
+let archidektQueue=Promise.resolve();
 let lastArchidektRequestAt=0;
-const ARCHIDEKT_MIN_GAP_MS=120;
-async function archidektPace(){
-  const wait=Math.max(0,ARCHIDEKT_MIN_GAP_MS-(Date.now()-lastArchidektRequestAt));
-  if(wait)await new Promise(r=>setTimeout(r,wait));
-  lastArchidektRequestAt=Date.now();
+const ARCHIDEKT_MIN_GAP_MS=850;
+function archidektPace(){
+  const next=archidektQueue.then(async()=>{
+    const wait=Math.max(0,ARCHIDEKT_MIN_GAP_MS-(Date.now()-lastArchidektRequestAt));
+    if(wait)await new Promise(r=>setTimeout(r,wait));
+    lastArchidektRequestAt=Date.now();
+  });
+  archidektQueue=next.catch(()=>{}); // la cola sigue viva aunque un paso individual falle
+  return next;
 }
 const slug=s=>s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[’']/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
 
@@ -107,21 +135,32 @@ function typeLineFromRow(row){
   };
 }
 
-async function archidektRequest(url, options={}, attempts=3){
-  let last;
+async function archidektRequest(url, options={}, attempts=4){
+  let last=null,lastError=null;
   for(let attempt=0; attempt<attempts; attempt++){
     await archidektPace();
-    const r=await get(url,options,30000);
+    let r;
+    try{
+      r=await get(url,options,30000);
+      last=r;lastError=null;
+    }catch(e){
+      lastError=e;
+      if(attempt+1>=attempts)throw e;
+      const delay=Math.min(12000,900*(2**attempt));
+      console.log(`[timing] archidekt:network retry ${attempt+1}/${attempts-1} en ${url.replace(/^https:\/\/archidekt\.com/,"")} · esperando ${delay}ms (${String(e.message||e)})`);
+      await new Promise(resolve=>setTimeout(resolve,delay));
+      continue;
+    }
     if(r.status!==429 && r.status<500) return r;
-    last=r;
     if(attempt+1<attempts){
       const retryHeader=Number(r.headers.get("retry-after"));
-      const delay=Number.isFinite(retryHeader) && retryHeader>=0 ? Math.min(retryHeader*1000,8000) : (700*(2**attempt));
+      const delay=Number.isFinite(retryHeader) && retryHeader>=0 ? Math.min(retryHeader*1000,45000) : (900*(2**attempt));
       if(r.status===429)console.log(`[timing] archidekt:429 en ${url.replace(/^https:\/\/archidekt\.com/,"")} · esperando ${delay}ms (Retry-After crudo: ${Number.isFinite(retryHeader)?retryHeader+"s":"no enviado"})`);
       await new Promise(resolve=>setTimeout(resolve,delay));
     }
   }
-  return last;
+  if(last)return last;
+  throw lastError||new Error("Archidekt no respondió.");
 }
 
 async function collection(collectionId, account){
@@ -286,7 +325,7 @@ async function publicCollection(username){
   // v2.4.1 — flujo público validado contra colección real:
   // username -> perfil público -> collection/v2/<id> -> export/v2 CSV completo.
   const profile=await get(`https://archidekt.com/u/${encodeURIComponent(clean)}`,{
-    headers:{"Accept":"text/html,*/*","User-Agent":"ManaShelf/2.4.15"}
+    headers:{"Accept":"text/html,*/*","User-Agent":`ManaShelf/${APP_VERSION}`}
   },30000);
   if(!profile.ok)throw new Error(`No pude abrir el perfil público de Archidekt (HTTP ${profile.status}).`);
   const idMatch=(await profile.text()).match(/\/collection\/v2\/(\d+)/);
@@ -311,7 +350,7 @@ async function publicCollection(username){
   const merged=new Map();let page=1,totalRows=0;
   while(page<=1000){
     const endpoint=`https://archidekt.com/api/collection/export/v2/${collectionId}/`;
-    const r=await get(endpoint,{method:"POST",headers:{"Content-Type":"application/json","Accept":"application/json","User-Agent":"ManaShelf/2.4.15"},body:JSON.stringify({fields,page,game:1,pageSize:2500})},45000);
+    const r=await get(endpoint,{method:"POST",headers:{"Content-Type":"application/json","Accept":"application/json","User-Agent":`ManaShelf/${APP_VERSION}`},body:JSON.stringify({fields,page,game:1,pageSize:2500})},45000);
     const text=await r.text();
     if(!r.ok)throw new Error(`Archidekt export HTTP ${r.status}: ${text.slice(0,240)}`);
     let payload={};try{payload=JSON.parse(text)}catch{throw new Error("Archidekt export devolvió una respuesta inválida.")}
@@ -334,7 +373,7 @@ async function publicCollection(username){
 async function publicDecks(username){
   const decks=[];
   for(let page=1;page<=10;page++){
-    const r=await get(`https://archidekt.com/api/decks/v3/?ownerUsername=${encodeURIComponent(username)}&orderBy=-updatedAt&pageSize=100&page=${page}`,{},25000);
+    const r=await archidektRequest(`https://archidekt.com/api/decks/v3/?ownerUsername=${encodeURIComponent(username)}&orderBy=-updatedAt&pageSize=100&page=${page}`,{},3);
     if(!r.ok)break;
     const d=await r.json().catch(()=>({}));
     const rows=Array.isArray(d.results)?d.results:[];
@@ -360,9 +399,9 @@ async function publicDecks(username){
 async function privateDecks(username,token){
   const decks=[];
   for(let page=1;page<=10;page++){
-    const r=await get(`https://archidekt.com/api/decks/v3/?ownerUsername=${encodeURIComponent(username)}&orderBy=-updatedAt&pageSize=100&page=${page}`,{
+    const r=await archidektRequest(`https://archidekt.com/api/decks/v3/?ownerUsername=${encodeURIComponent(username)}&orderBy=-updatedAt&pageSize=100&page=${page}`,{
       headers:{"Authorization":`JWT ${token}`,"Accept":"application/json"}
-    },25000);
+    },3);
     if(!r.ok)break;
     const d=await r.json().catch(()=>({}));
     const rows=Array.isArray(d.results)?d.results:[];
@@ -510,6 +549,11 @@ async function edhrecSimilar(cardName){
 
 const cache={collections:new Map(),edhrec:new Map(),commanderCandidates:null,commanderCandidatesAt:0};
 const sessions=new Map();
+// v2.4.17 — TTL para sesiones y jobs viejos, a partir de la auditoría: hoy nada se borra
+// salvo el logout explícito. En un proceso local esto no importa mucho, pero en un hosting
+// compartido/prolongado (Render) es una fuga de memoria lenta. Se marca actividad en cada
+// sesión y se limpia periódicamente lo que quedó inactivo.
+function registerSession(id,session){session.lastSeen=Date.now();sessions.set(id,session);return session}
 
 
 
@@ -636,9 +680,14 @@ async function readJsonFile(file,fallback){
 }
 async function writeJsonFile(file,data){
   await fs.mkdir(path.dirname(file),{recursive:true});
-  const tmp=`${file}.tmp`;
-  await fs.writeFile(tmp,JSON.stringify(data),"utf-8");
-  await fs.rename(tmp,file);
+  // Unique temp files avoid collisions when sync/catalog/cache writes overlap.
+  const tmp=`${file}.${process.pid}.${Date.now()}.${Math.random().toString(16).slice(2)}.tmp`;
+  try{
+    await fs.writeFile(tmp,JSON.stringify(data),"utf-8");
+    await fs.rename(tmp,file);
+  }finally{
+    try{await fs.unlink(tmp)}catch{}
+  }
 }
 function userCacheKey(session){
   return String(session.account?.user_id||session.collectionId||session.account?.username||"default").replace(/[^a-zA-Z0-9._-]/g,"_");
@@ -652,7 +701,10 @@ async function loadDeckDiskCache(session){
 }
 async function saveDeckDiskCache(session){
   if(!session.diskDeckCache)return;
-  await writeJsonFile(session.deckCacheFile,session.diskDeckCache);
+  const run=()=>writeJsonFile(session.deckCacheFile,session.diskDeckCache);
+  const pending=(session.deckCacheSavePromise||Promise.resolve()).then(run,run);
+  session.deckCacheSavePromise=pending.catch(()=>{});
+  await pending;
 }
 async function loadScryfallDiskCache(){
   if(scryfallDiskCache)return scryfallDiskCache;
@@ -676,7 +728,14 @@ async function batchScryfallImagesUnlocked(names,{force=false,onProgress=null}={
   const unique=[...new Set(names.map(n=>String(n).trim()).filter(Boolean))];
   const missing=unique.filter(n=>{
     const c=disk.cards[n.toLocaleLowerCase("en-US")];
-    return force || !c || Number(c.metaVersion||0)<2;
+    if(force || !c || Number(c.metaVersion||0)<3)return true;
+    const hasImage=Boolean(c.small||c.normal||c.large);
+    if(hasImage)return false;
+    // Older builds could permanently cache a null image after a transient miss.
+    // Only a confirmed Scryfall not_found result is allowed to stay negative, and
+    // even that expires so renamed/fixed records can recover later.
+    const negativeFresh=Boolean(c.notFound)&&Date.now()-Number(c.updatedAt||0)<24*60*60*1000;
+    return !negativeFresh;
   });
   const total=Math.ceil(missing.length/75);
   for(let i=0,part=0;i<missing.length;i+=75,part++){
@@ -696,13 +755,13 @@ async function batchScryfallImagesUnlocked(names,{force=false,onProgress=null}={
       const oracleText=c.oracle_text||c.card_faces?.map(f=>f.oracle_text||"").filter(Boolean).join("\n")||"";
       disk.cards[String(c.name).toLocaleLowerCase("en-US")]={
         small:smallImage(c),normal:normalImage(c),large:c?.image_uris?.large||c?.card_faces?.[0]?.image_uris?.large||normalImage(c),
-        typeLine:c.type_line||"",oracleText,cmc:Number(c.cmc||0),colorIdentity:c.color_identity||[],
-        keywords:c.keywords||[],edhrecRank:c.edhrec_rank??null,legalities:c.legalities||{},metaVersion:2,updatedAt:Date.now()
+        typeLine:c.type_line||"",oracleText,cmc:Number(c.cmc||0),manaCost:c.mana_cost||c.card_faces?.[0]?.mana_cost||"",producedMana:c.produced_mana||[],colorIdentity:c.color_identity||[],
+        keywords:c.keywords||[],edhrecRank:c.edhrec_rank??null,legalities:c.legalities||{},notFound:false,metaVersion:3,updatedAt:Date.now()
       };
     }
     for(const nf of (payload.not_found||[])){
       const n=nf?.name;
-      if(n)disk.cards[String(n).toLocaleLowerCase("en-US")]={small:null,normal:null,large:null,typeLine:"",oracleText:"",cmc:0,colorIdentity:[],keywords:[],legalities:{},metaVersion:2,updatedAt:Date.now()};
+      if(n)disk.cards[String(n).toLocaleLowerCase("en-US")]={small:null,normal:null,large:null,typeLine:"",oracleText:"",cmc:0,manaCost:"",producedMana:[],colorIdentity:[],keywords:[],legalities:{},notFound:true,metaVersion:3,updatedAt:Date.now()};
     }
     await saveScryfallDiskCache();
   }
@@ -712,7 +771,7 @@ async function batchScryfallImagesUnlocked(names,{force=false,onProgress=null}={
     const c=disk.cards[name.toLocaleLowerCase("en-US")];
     if(c)out.set(name,{
       small:c.small||null,normal:c.normal||null,large:c.large||c.normal||null,
-      typeLine:c.typeLine||"",oracleText:c.oracleText||"",cmc:Number(c.cmc||0),colorIdentity:c.colorIdentity||[],
+      typeLine:c.typeLine||"",oracleText:c.oracleText||"",cmc:Number(c.cmc||0),manaCost:c.manaCost||"",producedMana:c.producedMana||[],colorIdentity:c.colorIdentity||[],
       keywords:c.keywords||[],edhrecRank:c.edhrecRank??null,legalities:c.legalities||{}
     });
   }
@@ -736,6 +795,10 @@ function freshUsageState(session){
     failedDecks:0,
     currentDeck:null,
     status:"idle",
+    phase:"idle",
+    retryRound:0,
+    maxRetryRounds:3,
+    lastProgressAt:null,
     startedAt:null,
     finishedAt:null,
     errors:[]
@@ -778,7 +841,7 @@ function sameDeckVersion(cacheEntry,deck){
 function startDeckUsageSync(session,{retryOnly=false}={}){
   if(!session.account){
     if(!session.deckUsage)session.deckUsage=freshUsageState(session);
-    session.deckUsage.status="done";session.deckUsage.completedDecks=0;session.deckUsage.totalDecks=0;
+    session.deckUsage.status="done";session.deckUsage.phase="done";session.deckUsage.completedDecks=0;session.deckUsage.totalDecks=0;
     return;
   }
   if(session.deckSyncPromise)return;
@@ -787,67 +850,136 @@ function startDeckUsageSync(session,{retryOnly=false}={}){
   session.deckSyncPromise=(async()=>{
     const state=session.deckUsage;
     const disk=await loadDeckDiskCache(session);
+    const MAX_AUTO_RETRY_ROUNDS=3;
+    const RETRY_DELAYS=[4000,8000,15000];
 
     if(!retryOnly){
       state.usage=new Map();state.completedDecks=0;state.cachedDecks=0;state.fetchedDecks=0;state.failedDecks=0;state.errors=[];
+      state.startedAt=Date.now();
+    }
+    state.totalDecks=state.decks.length;
+    state.finishedAt=null;
+    state.status="running";
+    state.phase=retryOnly?"manual_retry":"loading";
+    state.retryRound=0;
+    state.maxRetryRounds=MAX_AUTO_RETRY_ROUNDS;
+    state.lastProgressAt=Date.now();
+
+    const failedIds=retryOnly?new Set((state.errors||[]).map(e=>Number(e.deckId))) : null;
+    if(retryOnly){
+      // Preserve successful usage and only retry the decks that actually failed.
+      state.completedDecks=Math.max(0,state.totalDecks-failedIds.size);
+      state.failedDecks=failedIds.size;
     }
 
-    const failedIds=retryOnly?new Set((state.errors||[]).map(e=>e.deckId)) : null;
-    if(retryOnly){state.failedDecks=0;state.errors=[]}
+    const setError=(deck,error)=>{
+      const msg=String(error?.message||error||"Error desconocido");
+      const existing=state.errors.find(x=>Number(x.deckId)===Number(deck.id));
+      if(existing)existing.error=msg;else state.errors.push({deckId:deck.id,deckName:deck.name,error:msg});
+      state.failedDecks=state.errors.length;
+      state.lastProgressAt=Date.now();
+    };
+    const clearError=(deck)=>{
+      state.errors=state.errors.filter(x=>Number(x.deckId)!==Number(deck.id));
+      state.failedDecks=state.errors.length;
+      state.lastProgressAt=Date.now();
+    };
+    const saveSuccess=(deck,partition,{countAsFetched=true}={})=>{
+      const cards=partition.mainboard;
+      addDeckCardsToUsage(state,deck,cards);
+      deck.mainCount=partition.size;deck.exactMainCount=partition.size;
+      deck.commander=partition.commanders[0]||deckCachedCommander(cards);
+      disk.decks[String(deck.id)]={updatedAt:deck.updatedAt||null,size:partition.size,commander:deck.commander||null,cards,savedAt:Date.now()};
+      if(countAsFetched)state.fetchedDecks++;
+      clearError(deck);
+    };
+    const fetchOne=async(deck)=>{
+      state.currentDeck=deck.name;
+      // Preview/Commander correctness requires the FULL endpoint. The previous helper could
+      // silently fall back to /small and mark a deck successful even when /small omitted
+      // the premier category. That is the root cause of "Commander por identificar".
+      const partition=await fetchDeckPartitionFullOnly(session,deck.id);
+      if(!partition)throw new Error("Archidekt no devolvió el mazo completo.");
+      if(!partition.commanders?.length)throw new Error("El mazo completo no identificó una categoría premier para Commander.");
+      saveSuccess(deck,partition);
+    };
 
-    state.status="running";state.startedAt=Date.now();state.finishedAt=null;
     const targets=[];
-
     for(const deck of state.decks){
-      if(retryOnly&&!failedIds.has(deck.id))continue;
+      if(retryOnly){if(failedIds.has(Number(deck.id)))targets.push(deck);continue}
       const cached=disk.decks[String(deck.id)];
-      if(!retryOnly&&sameDeckVersion(cached,deck)&&Array.isArray(cached.cards)){
+      const cachedCommander=String(cached?.commander||deck.commander||deckCachedCommander(cached?.cards)||"").trim()||null;
+      // A legacy cache without Commander metadata is not complete enough for the deck
+      // picker. Re-fetch that deck once with the validated full endpoint so Improve and
+      // LAB receive the same ready-to-render Commander identity instead of hydrating rows.
+      if(sameDeckVersion(cached,deck)&&Array.isArray(cached.cards)&&cachedCommander){
         addDeckCardsToUsage(state,deck,cached.cards);
-        deck.mainCount=deck.size;
-        deck.commander=deckCachedCommander(cached.cards);
-        state.cachedDecks++;state.completedDecks++;
+        deck.mainCount=Number.isFinite(Number(cached.size))?Number(cached.size):deck.size;
+        deck.exactMainCount=deck.mainCount;
+        deck.commander=cachedCommander;
+        cached.commander=cachedCommander;
+        state.cachedDecks++;state.completedDecks++;state.lastProgressAt=Date.now();
       }else targets.push(deck);
     }
 
-    // v2.4.3 — concurrencia acotada en vez de secuencial uno por uno.
-    // Medido con cuenta real: 55 mazos secuenciales tardaron 191s (ver BACKLOG v2.4.3).
-    // v2.4.9 — pasa de pedirle el mazo al bridge (una posta de red extra, re-autenticando
-    // en cada pedido) a pedirlo directo a Archidekt con el token ya obtenido en el login,
-    // el mismo camino ya validado que usa el cálculo de Size. Antes esto era una SEGUNDA
-    // pasada completa por los 55 mazos (la primera era prefetchDeckSizes); ahora es una sola:
-    // la misma respuesta trae el tamaño real Y las cartas para "uso en otros mazos".
-    const CONCURRENCY=5;
+    // Requests are globally paced at the Archidekt layer. A few workers allow response
+    // overlap without creating request bursts.
+    const CONCURRENCY=4;
     let cursor=0;
     async function worker(){
       while(cursor<targets.length){
         const deck=targets[cursor++];
-        state.currentDeck=deck.name;
         try{
-          const partition=await fetchDeckPartition(session,deck.id);
-          if(!partition)throw new Error("Archidekt no devolvió el mazo.");
-          const cards=partition.mainboard;
-          addDeckCardsToUsage(state,deck,cards);
-          deck.mainCount=partition.size;deck.exactMainCount=partition.size;
-          deck.commander=partition.commanders[0]||deckCachedCommander(cards);
-          disk.decks[String(deck.id)]={updatedAt:deck.updatedAt||null,size:partition.size,cards,savedAt:Date.now()};
-          state.fetchedDecks++;
-        }catch(e){
-          state.failedDecks++;
-          state.errors.push({deckId:deck.id,deckName:deck.name,error:String(e.message||e)});
-        }finally{
-          if(!retryOnly)state.completedDecks++;
-        }
+          await fetchOne(deck);
+          state.completedDecks=Math.min(state.totalDecks,state.completedDecks+1);
+        }catch(e){setError(deck,e)}
       }
     }
     await Promise.all(Array.from({length:Math.min(CONCURRENCY,targets.length)},worker));
-    if(targets.length)await saveDeckDiskCache(session);
 
-    if(retryOnly)state.completedDecks=state.totalDecks-state.failedDecks;
+    // Automatic recovery is not limited to N-1/N anymore: every failed deck gets up to
+    // three additional passes, with a cooldown and lower concurrency. This is intentionally
+    // conservative around Archidekt rate limiting.
+    for(let round=1;round<=MAX_AUTO_RETRY_ROUNDS && state.errors.length;round++){
+      state.retryRound=round;state.phase="auto_retry";
+      state.currentDeck=`Esperando reintento automático ${round}/${MAX_AUTO_RETRY_ROUNDS}`;
+      await new Promise(r=>setTimeout(r,RETRY_DELAYS[round-1]));
+      const retryIds=new Set(state.errors.map(e=>Number(e.deckId)));
+      const retryTargets=state.decks.filter(d=>retryIds.has(Number(d.id)));
+      let retryCursor=0;
+      async function retryWorker(){
+        while(retryCursor<retryTargets.length){
+          const deck=retryTargets[retryCursor++];
+          state.currentDeck=`Reintento ${round}/${MAX_AUTO_RETRY_ROUNDS} · ${deck.name}`;
+          try{
+            await fetchOne(deck);
+            state.completedDecks=Math.min(state.totalDecks,state.completedDecks+1);
+          }catch(e){setError(deck,e)}
+        }
+      }
+      await Promise.all(Array.from({length:Math.min(2,retryTargets.length)},retryWorker));
+    }
+
+    // Commander thumbnails are intentionally NOT bulk-hydrated here. Full-deck preview
+    // requests are expensive and previously delayed/competed with initial deck loading.
+    // The search UI now resolves only visible rows on demand with the validated full-deck
+    // -> isPremier method, while this sync stays focused on deck usage/cards.
+    if(targets.length||retryOnly)await saveDeckDiskCache(session);
+    state.failedDecks=state.errors.length;
+    state.completedDecks=Math.max(0,state.totalDecks-state.failedDecks);
     state.currentDeck=null;
+    state.phase=state.failedDecks?"needs_manual_retry":"done";
     state.status=state.failedDecks?"done_with_errors":"done";
-    state.finishedAt=Date.now();
+    state.finishedAt=Date.now();state.lastProgressAt=Date.now();
     console.log(`[timing] deck-usage-sync:TOTAL: ${Date.now()-state.startedAt}ms · ${state.completedDecks}/${state.totalDecks} mazos (${state.cachedDecks} caché, ${state.fetchedDecks} bajados, ${state.failedDecks} fallidos)`);
-  })().finally(()=>{session.deckSyncPromise=null});
+  })().catch(e=>{
+    const state=session.deckUsage||freshUsageState(session);
+    state.status="done_with_errors";state.phase="needs_manual_retry";state.finishedAt=Date.now();state.lastProgressAt=Date.now();
+    if(!state.errors?.length)state.errors=[{deckId:null,deckName:"Sincronización",error:String(e.message||e)}];
+    state.failedDecks=Math.max(1,state.errors.length);
+    state.completedDecks=Math.max(0,state.totalDecks-state.failedDecks);
+    console.error(`[deck-usage-sync] ${String(e.stack||e)}`);
+  }).finally(()=>{session.deckSyncPromise=null});
 }
 
 async function fetchRawDeckDetail(session, deckId){
@@ -868,9 +1000,11 @@ async function fetchRawDeckDetail(session, deckId){
     const reportedSize=payloadSize??catalogSize;
     const meta=await batchScryfallImages(mainboard.map(c=>c.name));
     const enriched=mainboard.map(c=>{const m=meta.get(c.name)||{};return {...c,typeLine:m.typeLine||"",cmc:Number(m.cmc||0),imageNormal:m.normal||m.large||null,roles:classifyRoles(m)}});
+    const commanderImages=commanders.map(name=>{const m=meta.get(name)||{};return {name,image:m.small||m.normal||m.large||null,normal:m.normal||m.large||m.small||null,large:m.large||m.normal||m.small||null}});
+    const primaryCommanderImage=commanderImages[0]||{};
     return {
       id:Number(deckId),name:String(payload.name||summary?.name||`Deck ${deckId}`),
-      commander:commanders[0]||null,commanders,
+      commander:commanders[0]||null,commanders,commanderImages,commanderImage:primaryCommanderImage.normal||primaryCommanderImage.image||null,commanderImageLarge:primaryCommanderImage.large||primaryCommanderImage.normal||null,
       mainboard:enriched,excluded,
       size:calculatedSize,mainboardCount:calculatedSize,calculatedIncludedCount:calculatedSize,
       reportedSize,excludedCount,
@@ -880,6 +1014,42 @@ async function fetchRawDeckDetail(session, deckId){
     };
   }
   throw new Error(`No pude leer el detalle del mazo en Archidekt (HTTP ${lastStatus}). ${lastText.slice(0,180)}`);
+}
+
+
+async function fetchFullArchidektPayload(session,deckId,{attempts=3}={}){
+  const id=Number(deckId);if(!id)throw new Error("deckId inválido.");
+  const url=`https://archidekt.com/api/decks/${id}/`;
+  const r=await archidektRequest(url,{method:"GET",headers:{...(session.account?.token?{"Authorization":`JWT ${session.account.token}`}:{ }),"Accept":"application/json"}},attempts);
+  const raw=await r.text();
+  if(!r.ok)throw new Error(`Archidekt full deck HTTP ${r.status}: ${raw.slice(0,180)}`);
+  try{return JSON.parse(raw)}catch{throw new Error("Archidekt full deck devolvió una respuesta no JSON.")}
+}
+async function fetchDeckPartitionFullOnly(session,deckId){
+  return partitionArchidektDeck(await fetchFullArchidektPayload(session,deckId,{attempts:3}));
+}
+function archidektCategoryName(x){return typeof x==="string"?x:String(x?.name||x?.category||"")}
+// Commander identity fallback validated against the in-app five-method comparison:
+// read the FULL Archidekt payload and identify cards whose primary category is premier.
+// This intentionally stays separate from lib/archidekt-size.mjs / Method 6.
+function detectPremierCommanders(payload){
+  const categories=Array.isArray(payload?.categories)?payload.categories:[];
+  const byName=new Map(categories.map(c=>[String(c?.name||"").toLocaleLowerCase("en-US"),c]));
+  const commanders=[];
+  for(const entry of payload?.cards||[]){
+    const card=entry?.card||{},oracle=card?.oracleCard||card?.oracle_card||{};
+    const name=String(oracle?.name||card?.name||entry?.name||"").trim();if(!name)continue;
+    const cats=(entry?.categories||[]).map(archidektCategoryName).filter(Boolean),primary=cats[0]||"";
+    const meta=byName.get(primary.toLocaleLowerCase("en-US"));
+    if(Boolean(meta?.isPremier)||/^commander$/i.test(primary))commanders.push(name);
+  }
+  return [...new Set(commanders)];
+}
+async function discoverCommanderExact(name){
+  if(!name)return null;
+  const results=await commanderSearch(name);
+  const wanted=String(name).toLocaleLowerCase("en-US");
+  return (results||[]).find(x=>String(x.name||"").toLocaleLowerCase("en-US")===wanted)||(results||[])[0]||null;
 }
 
 // v2.4.5 — precálculo de Size en segundo plano, apenas se conecta la cuenta, en vez de
@@ -900,28 +1070,105 @@ async function fetchDeckPartition(session, deckId){
   }
   return null;
 }
-function prefetchDeckSizes(session){
-  const targets=(session.decks||[]).filter(d=>d.exactMainCount==null);
-  if(!targets.length)return;
-  const t0=Date.now();
-  const CONCURRENCY=5;
-  let cursor=0,done=0;
-  async function worker(){
-    while(cursor<targets.length){
-      const deck=targets[cursor++];
-      try{
-        const partition=await fetchDeckPartition(session,deck.id);
-        if(partition){deck.exactMainCount=partition.size;deck.mainCount=partition.size}
-      }catch{ /* se resuelve más tarde por el fetch normal si hace falta */ }
-      done++;
+
+// Preview image fast path: reuse the local Scryfall cache first, then recover a missing
+// exact image without changing the validated Size/Method 6 module.
+async function fetchExactScryfallPreview(name){
+  const fromCache=await batchScryfallImages([name]);
+  let m=fromCache.get(name)||{};
+  if(m.small||m.normal||m.large)return {image:m.small||m.normal||m.large||null,normal:m.normal||m.large||m.small||null,large:m.large||m.normal||m.small||null};
+  const r=await scryfallRequest(`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(name)}`,{headers:{Accept:"application/json"}},20000);
+  if(!r.ok)return {image:null,normal:null,large:null};
+  const c=await r.json();
+  const face=c.card_faces?.[0];
+  const small=c.image_uris?.small||face?.image_uris?.small||c.image_uris?.normal||face?.image_uris?.normal||null;
+  const normal=c.image_uris?.normal||face?.image_uris?.normal||small;
+  const large=c.image_uris?.large||face?.image_uris?.large||normal;
+  return {image:small,normal,large};
+}
+async function resolveDeckPreview(session,deckId){
+  const id=Number(deckId),summary=(session.decks||[]).find(d=>Number(d.id)===id);
+  if(!id)throw new Error("deckId inválido.");
+  if(!session.deckPreviewCache)session.deckPreviewCache=new Map();
+  const cacheKey=`${id}:${summary?.updatedAt||""}`;
+  const memory=session.deckPreviewCache.get(cacheKey);
+  if(memory?.commander&&memory?.commanderImage)return memory;
+
+  const disk=await loadDeckDiskCache(session),previous=disk.decks?.[String(id)]||{};
+  let commander=String(summary?.commander||previous.commander||deckCachedCommander(previous.cards)||"").trim()||null;
+  let image=null,large=null,previewMethod="cache";
+
+  // Fast path (validated Method 1): reuse Commander identity + Scryfall disk cache.
+  if(commander){
+    const sf=await fetchExactScryfallPreview(commander);
+    image=sf.normal||sf.image||null;large=sf.large||image;
+    if(!image){
+      // Commander is already known, so use Discover's proven Scryfall pipeline without
+      // needlessly downloading the Archidekt deck again.
+      const hit=await discoverCommanderExact(commander);
+      image=hit?.image||null;large=hit?.largeImage||image;previewMethod="cache-discover";
     }
   }
-  Promise.all(Array.from({length:Math.min(CONCURRENCY,targets.length)},worker))
-    .then(()=>console.log(`[timing] prefetch-deck-sizes:TOTAL: ${Date.now()-t0}ms · ${done}/${targets.length} mazos`));
+
+  // Fallback (validated Method 5): FULL Archidekt -> isPremier -> Discover pipeline.
+  if(!commander||!image){
+    const payload=await fetchFullArchidektPayload(session,id,{attempts:3});
+    const commanders=detectPremierCommanders(payload);
+    commander=commanders[0]||null;
+    if(!commander)throw new Error("El deck completo no expuso una categoría premier para el Commander.");
+    const hit=await discoverCommanderExact(commander);
+    if(!hit?.image)throw new Error(`Discover no devolvió imagen para ${commander}.`);
+    image=hit.image;large=hit.largeImage||hit.image;previewMethod="full-premier-discover";
+  }
+
+  const out={
+    id,name:summary?.name||`Deck ${id}`,commander,
+    commanderImage:image,commanderImageLarge:large||image,
+    exactMainCount:Number.isFinite(Number(summary?.exactMainCount))?Number(summary.exactMainCount):Number.isFinite(Number(summary?.mainCount))?Number(summary.mainCount):Number.isFinite(Number(previous.size))?Number(previous.size):null,
+    url:`https://archidekt.com/decks/${id}`,previewMethod
+  };
+  if(summary){
+    summary.commander=commander;summary.commanderImage=image;summary.commanderImageLarge=large||image;summary.previewMethod=previewMethod;
+  }
+  disk.decks[String(id)]={...previous,updatedAt:summary?.updatedAt||previous.updatedAt||null,commander,previewMethod,savedAt:Date.now()};
+  await saveDeckDiskCache(session);
+  session.deckPreviewCache.set(cacheKey,out);
+  return out;
 }
+
+function prefetchDeckSizes(session){
+  const initialTargets=(session.decks||[]).filter(d=>d.exactMainCount==null);
+  if(!initialTargets.length)return;
+  const t0=Date.now();
+  (async()=>{
+    let pending=initialTargets;
+    const delays=[0,4000,9000];
+    for(let round=0;round<delays.length && pending.length;round++){
+      if(delays[round])await new Promise(r=>setTimeout(r,delays[round]));
+      const next=[];let cursor=0;
+      async function worker(){
+        while(cursor<pending.length){
+          const deck=pending[cursor++];
+          try{
+            const partition=await fetchDeckPartition(session,deck.id);
+            if(partition){deck.exactMainCount=partition.size;deck.mainCount=partition.size;deck.commander=partition.commanders?.[0]||deck.commander||null;continue}
+          }catch{}
+          next.push(deck);
+        }
+      }
+      await Promise.all(Array.from({length:Math.min(round?2:4,pending.length)},worker));
+      pending=next;
+    }
+    console.log(`[timing] prefetch-deck-sizes:TOTAL: ${Date.now()-t0}ms · ${initialTargets.length-pending.length}/${initialTargets.length} mazos${pending.length?` · ${pending.length} pendientes`:""}`);
+  })().catch(e=>console.log(`[timing] prefetch-deck-sizes:FAILED (${String(e.message||e)})`));
+}
+
 function getSession(req){
   const sid=req.headers["x-manashelf-session"];
-  return sid ? sessions.get(String(sid)) : null;
+  if(!sid)return null;
+  const session=sessions.get(String(sid));
+  if(session)session.lastSeen=Date.now();
+  return session;
 }
 
 
@@ -1007,14 +1254,14 @@ function edhrecTagEvidence(tag,meta){
 }
 function roleQty(cards,role){return cards.filter(c=>c.roles.includes(role)).reduce((n,c)=>n+Number(c.quantity||1),0)}
 function healthBand(value,low,high){return value<low?"Bajo":value>high?"Alto":"Adecuado"}
-async function buildDeckHealth(session,deckId){
+async function buildDeckHealth(session,deckId,{includeDeckMetrics=false}={}){
   if(!session.deckDetails)session.deckDetails=new Map();
   let deck=session.deckDetails.get(Number(deckId));
   if(!deck){deck=await fetchRawDeckDetail(session,deckId);session.deckDetails.set(Number(deckId),deck)}
   if(!session.healthCache)session.healthCache=new Map();
-  const deckSignature=JSON.stringify((deck.mainboard||[]).map(c=>[c.name,c.quantity,c.primaryCategory]));
+  const deckSignature=JSON.stringify({cards:(deck.mainboard||[]).map(c=>[c.name,c.quantity,c.primaryCategory]),metricsVersion:METRICS_ENGINE_VERSION,classificationVersion:CLASSIFICATION_VERSION,simulationVersion:SIMULATION_VERSION});
   const cachedHealth=session.healthCache.get(Number(deckId));
-  if(cachedHealth?.deckSignature===deckSignature)return cachedHealth.data;
+  if(cachedHealth?.deckSignature===deckSignature && (!includeDeckMetrics||cachedHealth.data?.deckMetrics))return cachedHealth.data;
   const names=[...new Set((deck.mainboard||[]).map(c=>c.name).concat(deck.commander?[deck.commander]:[]))];
   const meta=await batchScryfallImages(names),expanded=[];
   for(const entry of deck.mainboard||[]){const m=meta.get(entry.name)||{typeLine:"",oracleText:"",cmc:0};expanded.push({...entry,meta:m,roles:classifyRoles(m),themes:themeSignals(m)})}
@@ -1076,6 +1323,14 @@ async function buildDeckHealth(session,deckId){
   if(graveHate===0)gaps.push({type:"Graveyard hate",severity:"A considerar",why:"No detecté respuestas directas a cementerios. Muchos mazos Commander usan el cementerio como recurso; tener al menos alguna respuesta puede evitar que una estrategia rival opere sin oposición.",basis:"Se buscó texto Oracle que exile cartas/cementerios o limite el uso del cementerio. Resultado: 0 detectadas. No se impone una cuota fija porque depende mucho de tu mesa."});
   if(wipes===0)gaps.push({type:"Board wipe",severity:"A considerar",why:"No detecté limpiezas amplias. Una respuesta global puede ser importante cuando un rival desarrolla una mesa que el removal uno-a-uno no alcanza a controlar.",basis:"Se detectaron 0 wipes mediante patrones de efectos globales. No significa que el deck esté mal: estrategias muy rápidas, proactivas o asimétricas pueden elegir no usarlos."});
   if(protection===0 && commanderCmc>=5)gaps.push({type:"Protección / resiliencia",severity:"A considerar",why:"El Commander es relativamente costoso y no detecté protección directa. Si el plan depende de mantenerlo en mesa, recastearlo repetidamente puede ser caro.",basis:`Commander CMC ${commanderCmc}; protección detectada: ${protection}. Esta advertencia es contextual y no se usa si el Commander es barato.`});
+  // v2.4.18 — chequeo de tamaño reglamentario (100 cartas exactas, formato Commander). A
+  // diferencia de las demás recomendaciones (heurísticas, "a considerar"), esto es una
+  // regla de formato dura: se muestra solo si el mazo NO tiene exactamente 100, con
+  // severidad distinta (roja, no ámbar) para que se note que no es una sugerencia opcional.
+  if(Number(deck.size)!==100){
+    const diff=100-Number(deck.size||0);
+    gaps.push({type:"Tamaño del mazo",severity:diff>0?"Faltan cartas":"Sobran cartas",why:diff>0?`El mazo tiene ${deck.size} cartas — le faltan ${diff} para llegar a las 100 que exige el formato Commander (99 + Commander).`:`El mazo tiene ${deck.size} cartas — le sobran ${Math.abs(diff)} para el límite de 100 que exige el formato Commander (99 + Commander).`,basis:`Size real calculado por Method 6 (excluye Sideboard/Maybeboard): ${deck.size}. El formato Commander exige exactamente 100 cartas totales, incluyendo el Commander.`});
+  }
   if(lands<landLow)gaps.push({type:"Tierras / base de maná",severity:"A revisar",why:`Detecté ${lands} tierras, por debajo de la referencia contextual ${landLow} para esta curva. Si el mazo falla land drops, revisaría primero la base de maná antes de agregar más cartas de coste alto.`,basis:`Tierras detectadas: ${lands}. CMC medio no-tierra ${avgCmc.toFixed(1)}; Commander CMC ${commanderCmc||"?"}. La referencia no cuenta MDFC/hechizos que funcionen como tierra si Scryfall no los clasifica como Land.`});
   if(graveyardPlan>=5&&recursion===0)gaps.push({type:"Recursión",severity:"A considerar",why:`Detecté ${graveyardPlan} cartas que usan o alimentan tu cementerio, pero ninguna pieza clara de recursión. Si el cementerio forma parte del plan, recuperar amenazas o recursos puede mejorar la resiliencia.`,basis:`Se detectaron ${graveyardPlan} cartas con señales de plan de cementerio y ${recursion} piezas clasificadas como Recursion.`});
 
@@ -1088,7 +1343,7 @@ async function buildDeckHealth(session,deckId){
     for(const c of expanded){const w=edhrecTagEvidence(tag.name,c.meta);if(w>0){cards.push(c.name);weights.push(w*Number(c.quantity||1))}}
     const unique=[...new Set(cards)],score=weights.reduce((n,x)=>n+x,0);
     return {...tag,cards:unique,cardCount:unique.length,score};
-  }).filter(x=>x.cardCount>=2).sort((a,b)=>b.score-a.score||b.count-a.count);
+  }).filter(x=>x.cardCount>=2).sort((a,b)=>Number(b.count||0)-Number(a.count||0)||b.score-a.score);
   const themes=scoredTags.slice(0,5).map((t,idx)=>{
     const density=deck.size?Math.round(t.cardCount/deck.size*100):0;
     const confidence=t.cardCount>=8?"Alta":t.cardCount>=4?"Media":"Baja";
@@ -1102,10 +1357,11 @@ async function buildDeckHealth(session,deckId){
     const tribalCards=expanded.filter(c=>(c.themes||[]).some(t=>t.name===`Tribal: ${tribal.type}`));
     const tribalCardCount=tribalCards.length;
     const density=deck.size?Math.round(tribalCardCount/deck.size*100):0;
-    themes.unshift({name:`Tribal: ${tribal.type}`,confidence:tribal.count>=12?"Alta":"Media",density,cardCount:tribalCardCount,
-      cards:tribalCards.map(c=>c.name),commanderEvidence:false,tier:"Theme principal",edhrecCount:null,
-      explanation:`ManaShelf detectó ${tribal.count} criaturas de subtipo ${tribal.type} (${Math.round(tribal.count/tribal.totalCreatures*100)}% de las criaturas del mazo) — evidencia local por conteo de subtipos, no un tag de EDHREC. ${tribalCardCount} cartas totales (criaturas de ese tipo + soporte tribal explícito) cuentan como evidencia.`});
-    themes.length=Math.min(themes.length,5);
+    // A local-only tribal signal is useful context, but it must not outrank themes that
+    // EDHREC explicitly associates with this Commander. Keep it as a secondary fallback.
+    if(themes.length<5)themes.push({name:`Tribal: ${tribal.type}`,confidence:tribal.count>=12?"Alta":"Media",density,cardCount:tribalCardCount,
+      cards:tribalCards.map(c=>c.name),commanderEvidence:false,tier:"Theme secundario",edhrecCount:null,
+      explanation:`ManaShelf detectó ${tribal.count} criaturas de subtipo ${tribal.type} (${Math.round(tribal.count/tribal.totalCreatures*100)}% de las criaturas del mazo). Es evidencia local útil, pero no desplaza temáticas que EDHREC relaciona directamente con ${deck.commander}. ${tribalCardCount} cartas totales cuentan como evidencia tribal.`});
   }
 
   let lists=[];if(deck.commander){const k=deck.commander.toLocaleLowerCase("en-US");try{lists=cache.edhrec.get(k)||await edhrec(deck.commander);cache.edhrec.set(k,lists)}catch(e){edhrecWarning=edhrecWarning||`EDHREC recomendaciones no disponibles: ${String(e.message||e)}`}}
@@ -1146,8 +1402,12 @@ async function buildDeckHealth(session,deckId){
     }
     return {cmc:cmc===6?"6+":String(cmc),count,types,cardsByType,cards:bucket.map(c=>c.name)};
   });
+  // v2.4.17 — el donut incluía tierras pese a que el texto de ayuda dice "sin contar
+  // tierras" (confirmado por auditoría: el dato y la copy se contradecían). Se usa `nonlands`
+  // (la misma lista que ya excluye tierras para la Curva de maná) para que los dos gráficos
+  // sean consistentes entre sí y con lo que dicen mostrar.
   const typeMap=new Map();
-  for(const c of expanded){const t=primaryType(c.meta.typeLine),q=Number(c.quantity||1);typeMap.set(t,(typeMap.get(t)||0)+q)}
+  for(const c of nonlands){const t=primaryType(c.meta.typeLine),q=Number(c.quantity||1);typeMap.set(t,(typeMap.get(t)||0)+q)}
   const typeDistribution=[...typeMap].map(([type,count])=>({type,count})).sort((a,b)=>b.count-a.count);
 
   // Initial contextual CUT model. It protects scarce structural roles and rewards
@@ -1213,13 +1473,21 @@ async function buildDeckHealth(session,deckId){
   // (Identidad del mazo). Reusa el meta de Scryfall ya cargado en `expanded`, sin pedir nada de más.
   const cardImages={};
   for(const c of expanded){if(!cardImages[c.name])cardImages[c.name]={image:c.meta?.small||c.meta?.normal||null,imageLarge:c.meta?.large||c.meta?.normal||null}}
+  // v2.5 Lab metrics engine — deterministic semantic metrics + cached lightweight development simulation.
+  // It deliberately does not simulate opponents/combat and advanced outputs expose lower confidence.
+  const deckMetrics=includeDeckMetrics?buildDeckMetrics(expanded,{
+    commanderName:deck.commander||"",
+    tribalType:tribal?.type||null,
+    iterations:5000,
+    deckSignature
+  }):null;
   const healthResult={experimental:true,readOnly:true,edhrecWarning,deck:{id:deck.id,name:deck.name,commander:deck.commander,size:deck.size,mainboardCount:deck.size,url:deck.url},context:{
     commanderCmc,
     avgCmc:Math.round(avgCmc*10)/10,
     lands,ramp,draw,removal,counters,wipes,interaction,
     graveHate,protection,recursion,
     landLow,rampLow,drawLow,interactionLow,curve,typeDistribution
-  },health,gaps,structuralRules,themes,suggestions,cutCandidates,swaps,cardImages,caveats:["Theme es inferido por evidencia del Commander y densidad funcional del mazo.","Los rangos estructurales son orientativos; no conocen tu metajuego ni intención exacta.","La clasificación usa Oracle text y puede omitir funciones implícitas, combos o interacciones complejas."]};
+  },health,gaps,structuralRules,themes,suggestions,cutCandidates,swaps,cardImages,deckMetrics,caveats:["Theme es inferido por evidencia del Commander y densidad funcional del mazo.","Los rangos estructurales son orientativos; no conocen tu metajuego ni intención exacta.","La clasificación usa Oracle text y puede omitir funciones implícitas, combos o interacciones complejas."]};
   session.healthCache.set(Number(deckId),{deckSignature,data:healthResult,savedAt:Date.now()});
   return healthResult;
 }
@@ -1340,7 +1608,7 @@ async function rebuildUsageFromDisk(session,job,{force=false}={}){
       if(force||!Array.isArray(cards)){
         const response=await bridgePost("/api/personal-deck-cards",{account:session.account,deck_id:deck.id,include_deleted:false});
         cards=response.cards||[];
-        disk.decks[String(deck.id)]={updatedAt:deck.updatedAt||null,size:Number.isFinite(Number(deck.size))?Number(deck.size):null,cards,savedAt:Date.now()};
+        disk.decks[String(deck.id)]={updatedAt:deck.updatedAt||null,size:Number.isFinite(Number(deck.size))?Number(deck.size):null,commander:deck.commander||deckCachedCommander(cards||[])||null,cards,savedAt:Date.now()};
       }
       addDeckCardsToUsage(state,deck,cards||[]);
       deck.commander=deckCachedCommander(cards||[])||deck.commander;
@@ -1386,13 +1654,15 @@ async function runCacheSection(session,section,job){
       try{
         const response=await bridgePost("/api/personal-deck-cards",{account:session.account,deck_id:deck.id,include_deleted:false});
         const cards=response.cards||[];
-        disk.decks[String(deck.id)]={updatedAt:deck.updatedAt||null,size:Number.isFinite(Number(deck.size))?Number(deck.size):null,cards,savedAt:Date.now()};
+        disk.decks[String(deck.id)]={updatedAt:deck.updatedAt||null,size:Number.isFinite(Number(deck.size))?Number(deck.size):null,commander:deck.commander||deckCachedCommander(cards||[])||null,cards,savedAt:Date.now()};
         session.deckDetails?.delete(deck.id);
         session.healthCache?.delete(Number(deck.id));
         // Pull raw detail too; Size remains the Archidekt summary value.
         const detail=await fetchRawDeckDetail(session,deck.id);
         session.deckDetails?.set(deck.id,detail);
         deck.commander=detail.commander||deck.commander;
+        const cacheEntry=disk.decks[String(deck.id)]||{};
+        disk.decks[String(deck.id)]={...cacheEntry,size:detail.size,commander:deck.commander||cacheEntry.commander||null,savedAt:Date.now()};
       }catch(e){job.errors.push(`${deck.name}: ${String(e.message||e)}`)}
     }
     await saveDeckDiskCache(session);
@@ -1441,6 +1711,11 @@ function startCacheJob(session,section){
   return job;
 }
 async function api(req,res,p){
+  // Parse the request URL once for every API route. Several preview/catalog routes
+  // read query parameters; keeping this at API scope prevents a route from
+  // accidentally referencing an undefined `u` while routes with their own local
+  // URL object may still shadow it safely.
+  const u=new URL(req.url,`http://${req.headers.host}`);
   try{
     if(p==="/api/cache/status"&&req.method==="GET"){
       const session=getSession(req);if(!session)return send(res,401,{error:"Conectá una colección primero."});
@@ -1481,7 +1756,7 @@ async function api(req,res,p){
         console.log(`[timing] login:decks-v3-updatedAt: FAILED, usando catálogo del login (${String(e.message||e)})`);
         decks=normalizeDecksFromLogin(auth.raw);
       }
-      sessions.set(sessionId,{
+      registerSession(sessionId,{
         account:auth.account,
         collectionId:auth.collectionId,
         collectionCacheKey:`collection:${auth.collectionId}`,
@@ -1534,7 +1809,7 @@ async function api(req,res,p){
         decks,deckUsage:null,deckSyncPromise:null,deckDetails:new Map()
       };
       session.deckUsage=freshUsageState(session);session.deckUsage.status="done";
-      sessions.set(sessionId,session);
+      registerSession(sessionId,session);
       prefetchDeckSizes(session);
       return send(res,200,{
         ok:true,sessionId,username:user,accessMode:"public",
@@ -1552,10 +1827,10 @@ async function api(req,res,p){
     if(p==="/api/lab/deck-health"&&req.method==="POST"){
       const session=getSession(req);
       if(!session)return send(res,401,{error:"Conectá una colección primero."});
-      const {deckId}=await body(req);
+      const {deckId,includeMetrics=false}=await body(req);
       const id=Number(deckId);
       if(!id)return send(res,400,{error:"Elegí un mazo."});
-      try{return send(res,200,await buildDeckHealth(session,id))}
+      try{return send(res,200,await buildDeckHealth(session,id,{includeDeckMetrics:Boolean(includeMetrics)}))}
       catch(e){return send(res,502,{error:"El LAB no pudo completar Deck Health.",detail:String(e.message||e)})}
     }
 
@@ -1572,24 +1847,57 @@ async function api(req,res,p){
       return send(res,200,session.deckDetails.get(id));
     }
 
+
     if(p==="/api/deck-catalog"&&req.method==="GET"){
       const session=getSession(req);
       if(!session)return send(res,401,{error:"Conectá una colección primero."});
-      const disk=session.account?await loadDeckDiskCache(session):{decks:{}};
+      const hydrateMissing=u.searchParams.get("hydrate")==="1";
+      // The deck cache is useful for public sessions too: userCacheKey already falls back to
+      // collectionId/username. This keeps Commander previews consistent in every mode.
+      const disk=await loadDeckDiskCache(session);
+      if(hydrateMissing){
+        const missing=(session.decks||[]).filter(deck=>{
+          const cached=disk.decks?.[String(deck.id)],cards=Array.isArray(cached?.cards)?cached.cards:null;
+          return !String(deck.commander||cached?.commander||(cards?deckCachedCommander(cards):null)||"").trim();
+        });
+        let cursor=0,dirty=false;
+        async function hydrateWorker(){
+          while(cursor<missing.length){
+            const deck=missing[cursor++];
+            try{
+              const preview=await resolveDeckPreview(session,deck.id);
+              deck.commander=preview.commander||deck.commander||null;
+              deck.commanderImage=preview.commanderImage||deck.commanderImage||null;
+              deck.commanderImageLarge=preview.commanderImageLarge||deck.commanderImageLarge||null;
+              deck.mainCount=preview.exactMainCount;deck.exactMainCount=preview.exactMainCount;
+              dirty=true;
+            }catch(e){console.warn(`[deck-catalog] preview metadata failed for ${deck.id}: ${String(e.message||e)}`)}
+          }
+        }
+        await Promise.all(Array.from({length:Math.min(2,missing.length)},hydrateWorker));
+        if(dirty)await saveDeckDiskCache(session);
+      }
       const commanderNames=[];
       const rows=[];
-      for(const deck of session.decks){
+      let missingMetadata=0;
+      for(const deck of session.decks||[]){
         const cached=disk.decks?.[String(deck.id)],cards=Array.isArray(cached?.cards)?cached.cards:null;
-        let commander=deck.commander||(cards?deckCachedCommander(cards):null);
-        let mainCount=Number.isFinite(Number(deck.size))?Number(deck.size):null;
-        // v2.4.1: keep initial catalog cheap; hydrate a missing Commander only
-        // after the user explicitly selects that deck.
-        if(commander)commanderNames.push(commander);
-        rows.push({...deck,commander,mainCount,size:mainCount});
+        const commander=String(deck.commander||cached?.commander||(cards?deckCachedCommander(cards):null)||"").trim()||null;
+        const exactMainCount=Number.isFinite(Number(deck.exactMainCount))?Number(deck.exactMainCount):Number.isFinite(Number(deck.mainCount))?Number(deck.mainCount):Number.isFinite(Number(cached?.size))?Number(cached.size):Number.isFinite(Number(deck.size))?Number(deck.size):null;
+        if(commander){commanderNames.push(commander);deck.commander=commander;if(cached&&!cached.commander)cached.commander=commander}
+        else missingMetadata++;
+        rows.push({...deck,commander,mainCount:exactMainCount,exactMainCount,size:exactMainCount,previewMethod:cached?.previewMethod||deck.previewMethod||null});
       }
       const images=await batchScryfallImages(commanderNames);
-      for(const d of rows)if(d.commander)d.commanderImage=images.get(d.commander)?.small||null;
-      return send(res,200,{decks:rows});
+      let missingImages=0;
+      for(const d of rows)if(d.commander){
+        const m=images.get(d.commander)||{};d.commanderImage=m.small||m.normal||m.large||null;d.commanderImageLarge=m.large||m.normal||m.small||null;
+        if(!d.commanderImage&&hydrateMissing){
+          try{const hit=await discoverCommanderExact(d.commander);d.commanderImage=hit?.image||null;d.commanderImageLarge=hit?.largeImage||hit?.image||null;}catch{}
+        }
+        if(!d.commanderImage)missingImages++;
+      }
+      return send(res,200,{decks:rows,missingMetadata,missingImages});
     }
 
     if(p==="/api/logout"&&req.method==="POST"){
@@ -1611,6 +1919,10 @@ async function api(req,res,p){
         fetchedDecks:s.fetchedDecks||0,
         errors:(s.errors||[]).map(e=>({deckId:e.deckId,deckName:e.deckName,error:e.error})),
         currentDeck:s.currentDeck,
+        phase:s.phase||"idle",
+        retryRound:s.retryRound||0,
+        maxRetryRounds:s.maxRetryRounds||3,
+        lastProgressAt:s.lastProgressAt||null,
         startedAt:s.startedAt,
         finishedAt:s.finishedAt
       });
@@ -1619,7 +1931,10 @@ async function api(req,res,p){
     if(p==="/api/sync-retry"&&req.method==="POST"){
       const session=getSession(req);
       if(!session)return send(res,401,{error:"Primero conectate con Archidekt."});
-      if(session.deckUsage?.failedDecks>0)startDeckUsageSync(session,{retryOnly:true});
+      const errors=session.deckUsage?.errors||[];
+      const hasSpecificFailures=errors.some(e=>Number(e.deckId)>0);
+      if(session.deckUsage?.failedDecks>0)startDeckUsageSync(session,{retryOnly:hasSpecificFailures});
+      else startDeckUsageSync(session);
       const s=session.deckUsage;
       return send(res,200,{status:s.status,totalDecks:s.totalDecks,completedDecks:s.completedDecks,failedDecks:s.failedDecks});
     }
@@ -1788,7 +2103,7 @@ async function loadCommanderCatalog({force=false,onProgress=null}={}){
       page++;
       onProgress?.({current:page-1,total:0,message:`Catálogo de Commanders · página ${page}`});
       const r=await scryfallRequest(url,{
-        headers:{"Accept":"application/json;q=0.9,*/*;q=0.8","User-Agent":"ManaShelf/2.4.15"}
+        headers:{"Accept":"application/json;q=0.9,*/*;q=0.8","User-Agent":`ManaShelf/${APP_VERSION}`}
       },30000);
       if(r.status===404)break;
       if(!r.ok){
@@ -2047,15 +2362,67 @@ async function commanderBuildability(session,name){
     }
 
     send(res,404,{error:"No encontrado"});
-  }catch(e){send(res,502,{error:"No pude completar la consulta.",detail:e.message})}
+  }catch(e){
+    if(e.code==="PAYLOAD_TOO_LARGE")return send(res,413,{error:e.message});
+    if(e.code==="BAD_JSON")return send(res,400,{error:e.message});
+    send(res,502,{error:"No pude completar la consulta.",detail:e.message})
+  }
 }
 
 const mime={".html":"text/html; charset=utf-8",".css":"text/css; charset=utf-8",".js":"text/javascript; charset=utf-8"};
+// v2.4.16 — P0 de seguridad confirmado por auditoría externa y verificado en vivo antes de
+// corregir: path.join(PUBLIC_DIR, p) no evita que p contenga "..", así que un pedido como
+// "/..%2Fserver.mjs" devolvía el código fuente del servidor (confirmado con curl: HTTP 200
+// y el contenido real de server.mjs). Grave desde v2.4.13, que empezó a escuchar en 0.0.0.0
+// para poder hostear en Render — deja de estar limitado a localhost. Corregido resolviendo
+// la ruta final y rechazando cualquier resultado que caiga fuera de PUBLIC_DIR.
+// v2.4.17 — limpieza periódica de sesiones inactivas (>24h sin actividad) y jobs terminados
+// hace más de 1h. Corre cada 30 minutos; no bloquea nada, es solo higiene de memoria.
+const SESSION_TTL_MS=24*60*60*1000;
+const JOB_TTL_MS=60*60*1000;
+setInterval(()=>{
+  const now=Date.now();
+  let removedSessions=0,removedJobs=0;
+  for(const [id,session] of sessions){
+    if(now-(session.lastSeen||0)>SESSION_TTL_MS){sessions.delete(id);removedSessions++}
+  }
+  for(const [id,job] of jobs){
+    if(job.finishedAt && now-job.finishedAt>JOB_TTL_MS){jobs.delete(id);removedJobs++}
+  }
+  if(removedSessions||removedJobs)console.log(`[timing] limpieza periódica: ${removedSessions} sesiones inactivas, ${removedJobs} jobs viejos removidos`);
+},30*60*1000);
+
+// v2.4.17 — security headers básicos, a partir de la auditoría. CSP moderado: estricto en
+// script-src (el mayor valor de defensa contra XSS, y bajo riesgo de romper algo, porque
+// solo hay un <script> legítimo, /app.js) pero permisivo en estilos/imágenes/fuentes, que
+// no pude verificar visualmente en un navegador real — preferí no arriesgar romper algo que
+// no puedo comprobar (la app usa mucho style="" inline para colores dinámicos, y carga
+// imágenes de Scryfall/EDHREC desde múltiples hosts).
+const SECURITY_HEADERS={
+  "X-Content-Type-Options":"nosniff",
+  "X-Frame-Options":"DENY",
+  "Referrer-Policy":"no-referrer",
+  "Content-Security-Policy":[
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    "img-src 'self' https: data:",
+    "connect-src 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "frame-ancestors 'none'"
+  ].join("; ")
+};
+
+const PUBLIC_ROOT=path.resolve(PUBLIC_DIR)+path.sep;
 http.createServer(async(req,res)=>{
   const u=new URL(req.url,`http://${req.headers.host}`),p=decodeURIComponent(u.pathname);
   if(p.startsWith("/api/"))return api(req,res,p);
   try{
-    const f=path.join(PUBLIC_DIR,p==="/"?"/index.html":p),data=await fs.readFile(f);
-    res.writeHead(200,{"Content-Type":mime[path.extname(f)]||"application/octet-stream","Cache-Control":"no-cache"});res.end(data);
-  }catch{res.writeHead(404);res.end("No encontrado")}
-}).listen(PORT,"0.0.0.0",()=>console.log(`ManaShelf → http://127.0.0.1:${PORT}`));
+    const f=path.resolve(PUBLIC_DIR,"."+(p==="/"?"/index.html":p));
+    if(f!==path.resolve(PUBLIC_DIR,"index.html") && !f.startsWith(PUBLIC_ROOT)){res.writeHead(403,SECURITY_HEADERS);return res.end("Forbidden")}
+    const data=await fs.readFile(f);
+    res.writeHead(200,{"Content-Type":mime[path.extname(f)]||"application/octet-stream","Cache-Control":"no-cache",...SECURITY_HEADERS});res.end(data);
+  }catch{res.writeHead(404,SECURITY_HEADERS);res.end("No encontrado")}
+}).listen(PORT,"127.0.0.1",()=>console.log(`ManaShelf v${APP_VERSION} → http://127.0.0.1:${PORT}`));

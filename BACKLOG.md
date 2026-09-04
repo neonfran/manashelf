@@ -1,5 +1,43 @@
 # ManaShelf backlog — v2.0
 
+
+## v2.5.26-beta — navegación LAB/Improve sin solaparse
+- [x] La build vuelve a identificarse explícitamente como BETA; no es release candidate ni release pública.
+- [x] Los menús sticky de Improve y LAB ya no se superponen con sus Deck Lists: cuando el ribbon está activo, el drawer se apila debajo con altura de viewport recalculada.
+- [x] LAB: el tab flotante `Reglas` pasa a `Estructura`; la sección `Recomendaciones estructurales` pasa a `Estructura del mazo`, y el copy visible usa `criterios` para describir mejor qué se evalúa.
+
+## v2.5.22-beta — preview method validation + LAB navigation
+
+- Deck-search Commander thumbnails now hydrate through the validated full Archidekt deck payload → `isPremier` → Scryfall path.
+- Preview hydration is on-demand, retryable, cached, and shared by Improve + LAB.
+- Improve no longer changes the main content width when the Deck List opens.
+- LAB selected-deck actions follow the production layout more closely.
+- LAB Deck Health now has sticky section navigation: Resumen / Salud / Reglas / Identidad / IN-OUT / Métricas.
+
+## v2.5.15-beta — pre-release UI / reliability audit
+
+- Commander thumbnails now recover when older Scryfall cache entries stored null images; Deck Detail exposes Commander images directly.
+- LAB selected-deck panel reuses the production deck-summary layout, including Commander preview, Archidekt link, Analyze and Export actions.
+- Deck List sort is a single compact dropdown with ascending/descending choices; header spacing, size alignment and top accent were polished.
+- Improve analysis tabs use a viewport-floating mode so Deck Check / IN-OUT / EDHREComendaciones remain available consistently.
+- Segmented theme bars use a single child-width renderer and fill strictly left-to-right.
+- Visible internal/project-note copy was removed or rewritten for end users; confidence/status pills were centered.
+
+
+## v2.5.13-beta — Deck Metrics Engine en LAB
+
+- Se agregó `lib/deck-metrics.mjs`, un motor sin dependencias externas para las métricas del Technical Spec.
+- El nuevo motor se ejecuta **solo cuando LAB pide `includeMetrics:true`**; Mejorar mazo sigue usando el Deck Health existente sin pagar el costo de simulación.
+- Clasificación semántica determinística y cacheada en memoria por carta/Oracle/version.
+- Scryfall cache ampliado con `manaCost` y `producedMana` (`metaVersion:3`).
+- 18 familias de métricas implementadas: mana reliability, early development, resource flow, interaction density/coverage/efficiency, threat/payoff, engines, functional density, setup/payoff, consistency, synergy, dependency/bottlenecks, dead-card proxy, structural resilience, effective MV, turn of relevance, closing power y goldfish development.
+- Simulador de desarrollo limitado a opening hand/London mulligan/land drops/ramp/fixing/setup/disponibilidad/casteabilidad; **no** simula oponentes, combate ni win rate.
+- 5.000 simulaciones en LAB por análisis; resultado cacheado por el `healthCache` de sesión/deck signature/version.
+- Nueva sección `07 · Deck Metrics Engine` en LAB con cards, coverage, simulación T1–T7, clasificación semántica y debug de heurísticas.
+- Métricas heurísticas exponen menor confidence; no se promocionaron todavía a Deck Analysis/Deck Improvement.
+- Pendiente de validación funcional con mazos reales antes de promoción a producción.
+
+
 ## Implementado
 - [x] Colección pública sin login.
 - [x] Colección privada con login.
@@ -401,3 +439,46 @@ Privado hace DOS pasadas de fondo por cada mazo después de conectar: `startDeck
 - **`!important` subió de 247 a 255** (algunos de los fixes de hoy lo necesitaron para ganarle a reglas `!important` previas ya existentes). Sigue siendo la señal de deuda técnica más clara del proyecto: clases como `.swap-grid`, `.swap-side`, `.swap-card`, `.improve-tabs`, `.visual-dashboard` y `.curve-col` están **redefinidas 3 veces cada una** en distintos puntos del archivo, señal de parches acumulados en vez de ediciones integradas — esto fue la causa directa del bug de z-index de hoy.
 - Hay lógica de "traer detalle de mazo uno por uno desde el bridge" duplicada en 3 lugares (`startDeckUsageSync`, `rebuildUsageFromDisk`, `runCacheSection`). Solo el primero tiene la optimización de concurrencia de v2.4.3; los otros dos siguen secuenciales y con su propia copia casi idéntica del mismo bloque try/catch.
 - Ninguno de estos puntos es urgente por sí solo, pero si se sigue creciendo sin consolidar, el costo de cada cambio puntual va a seguir subiendo.
+
+## v2.4.16 — PARCHE DE SEGURIDAD URGENTE (path traversal) — a partir de auditoría externa
+- [x] **P0 confirmado y corregido: path traversal en el servidor de archivos estáticos.** Una auditoría externa reportó que `path.join(PUBLIC_DIR, p)` no evita que `p` (con `..` decodificado) escape del directorio público. Verificado en vivo antes de tocar nada: `GET /..%2Fserver.mjs` devolvía HTTP 200 con el código fuente real de `server.mjs`. Grave desde v2.4.13 (el server pasó a escuchar en `0.0.0.0` para poder hostear en Render), dejando de estar limitado a localhost.
+- [x] Corregido resolviendo la ruta final con `path.resolve()` y rechazando con 403 cualquier resultado que caiga fuera de `PUBLIC_DIR`.
+- [x] Probado con 5 variantes del ataque (simple, múltiples `../` hacia `/etc/passwd`, sin encodear, apuntando a `package.json`, doble-encodeado) — las 5 bloqueadas. Pedidos legítimos (`/`, `/app.js`, `/styles.css`) siguen respondiendo 200 sin cambios.
+- [ ] El resto de la auditoría (concurrencia de Archidekt con condición de carrera real en `archidektPace`, exageración matemática en la barra segmentada de Temáticas, inconsistencia donut/tierras, memory lifecycle de sesiones, modularización, accesibilidad, tests) queda pendiente de trabajo — ver informe de auditoría completo para el detalle punto por punto. Se verificaron 3 hallazgos de alto impacto contra el código real (path traversal, race condition de pacing, y matemática de segmentos) y los 3 resultaron precisos, por lo que el resto del informe se considera confiable como punto de partida, no una lista para aplicar a ciegas.
+
+## v2.4.17 — resto del hardening P1 de la auditoría
+- [x] **Límite de tamaño de body (1MB)**: implementado. En el primer intento usé `req.destroy()` al detectar el exceso, lo que cortaba la conexión antes de poder mandar una respuesta 413 clara — el cliente veía un corte abrupto. Corregido para dejar que la promesa se rechace normalmente; probado con un payload real de 2MB contra `/api/login` (endpoint que lee el body sin gate de sesión previo): ahora da 413 limpio con mensaje. Pedidos normales sin cambios.
+- [x] **Cola real para el pacing de Archidekt** (arregla la condición de carrera confirmada la vez pasada). Probado de forma comparativa: la versión vieja hacía que 4 de 5 workers "concurrentes" pasaran en la misma ventana de 5ms (ráfaga real); la cola nueva los escalona genuinamente cada ~120ms.
+- [x] **Limpieza periódica de sesiones y jobs viejos**: TTL de 24h para sesiones inactivas (se actualiza `lastSeen` en cada uso vía `getSession`), 1h para jobs terminados, corre cada 30 min. Probada en aislado con casos mixtos (vieja/fresca/corriendo).
+- [x] **Donut de tipos incluía tierras pese al texto** ("sin contar tierras"): confirmado el bug de datos, corregido reusando `nonlands` (la misma lista que ya usa Curva de maná) para consistencia entre gráficos y con la copy.
+- [x] **Segmentos de Temáticas exagerando densidades chicas** (1% se veía como 10%, confirmado con matemática): corregido con relleno proporcional real por segmento (ej. 15% = 1 segmento completo + 50% del siguiente), en vez de "mínimo 1 segmento entero".
+- [x] **Security headers básicos**: `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, y un `Content-Security-Policy` moderado (estricto en `script-src 'self'`, que es el mayor valor contra XSS y de bajo riesgo porque solo hay un `<script>` legítimo; permisivo en estilos/imágenes/fuentes porque no pude verificar visualmente en un navegador real que restringirlos no rompiera algo — la app usa mucho `style=""` inline para colores dinámicos). Aplicados a las dos vías de respuesta (`send()` y el servidor de archivos estáticos). Confirmado con `curl -D -` que los headers realmente llegan en ambas.
+- [x] **README.md, HANDOFF.md y START-HERE.txt actualizados**: quedaban con título/baseline en v2.4.1 pese a que la app ya estaba en v2.4.16+. No se reescribió el contenido técnico (sigue siendo válido en su mayoría), solo se corrigió el título/baseline y se agregó un aviso explícito de que `BACKLOG.md` es la fuente de verdad para el estado más reciente.
+- [ ] Pendiente del plan de hardening original: nada más marcado como P0/P1 crítico — lo que sigue (modularización, tests, accesibilidad, consolidación de CSS restante) es P1/P2 de mejora continua, no urgencias de seguridad.
+
+## v2.4.18-beta — botón X, alineación, chequeo de 100, exportar, tema claro
+- [x] **Etiqueta BETA agregada** (título, pill visual en el header, footer, `package.json`) — versión ahora `v2.4.18-beta`, a pedido explícito del usuario.
+- [x] Botón "×" descentrado dentro del círculo (`.input-clear`, "Borrar texto"): corregido el centrado (era `place-items:center` sin compensar el desplazamiento típico del glifo × en la mayoría de las fuentes). Mismo tratamiento aplicado a `.toast-close` (Cerrar del toast de error) para consistencia.
+- [x] **"Analizar mazo" — tercera vuelta, con diagnóstico distinto esta vez**: el mecanismo (`justify-content:space-between` / `margin-left:auto`) SÍ calcaba a "Analizar colección", pero el contenido a la izquierda es más angosto en "Mejorar mi mazo", haciendo que el mismo mecanismo deje un hueco mucho más grande y visible. Cambiado de "empujar al borde" a "pegado al contenido con gap normal".
+- [x] **Chequeo de 100 cartas**: nueva tarjeta en el sistema de Recomendaciones existente (mismo componente reusado), en rojo en vez de ámbar para diferenciarla de las heurísticas "A considerar" — es una regla de formato dura, no una sugerencia. Solo aparece si el mazo no tiene exactamente 100. Probada la lógica con varios casos (100/99/101/60/0).
+- [x] **Botón de exportar decklist**: junto a "Analizar mazo", en el formato de texto estándar que ya leen Archidekt/Moxfield/MTGGoldfish/Arena. Probada la construcción del texto con datos simulados — el Commander queda separado y no se duplica en la lista principal.
+- [x] **Tema claro/oscuro agregado**, con una advertencia honesta documentada: el archivo tiene ~245 colores hardcodeados contra 133 usos de variables CSS. Se consolidaron los patrones más repetidos (fondos de panel, texto principal/secundario — 48 reemplazos) en variables nuevas (`--panel-alt`, `--text-soft`, `--muted2`) antes de armar el tema claro, para que la cobertura sea real y no solo las 6 variables originales. **Bug propio encontrado y corregido en el camino**: el script de consolidación tocó por accidente la propia definición de `:root`, dejando variables auto-referenciadas sin valor real — corregido antes de seguir. No es cobertura 100% de cada color de la app; puede necesitar ajustes puntuales.
+- [x] **Explicación de carga de datos entregada al usuario** (investigada en el código, no supuesta): confirmado que el connect inicial solo trae Size + nombres (liviano), y recién al seleccionar un mazo puntual se trae el detalle enriquecido con Scryfall (imágenes, tipos) — por diseño, para no pagar ese costo en los 55 mazos de una sola vez.
+- [ ] **Especificación técnica "Deck Metrics Engine" recibida, NO implementada**: es un roadmap de 6 fases (clasificación semántica de cartas, métricas deterministas, simulación Monte Carlo de desarrollo temprano, motor de recomendación IN/OUT basado en evidencia). Se le propuso al usuario arrancar por la Fase 1 exacta que el propio documento indica ("Card Classification Lab, sin recomendaciones todavía"), no una implementación completa de una sola vez. Guardar el .md original como referencia para cuando se decida arrancar.
+
+### v2.5.13 UX / reliability pass
+- Archidekt direct-request pacing increased to 850 ms between request starts (~70/min max before retries), below the ~80 requests/60s limit discussed by Archidekt staff; `Retry-After` is now honored up to 45s and the request helper gets 4 attempts.
+- Deck-usage sync now performs one automatic recovery pass for up to 5 transiently failed decks, so the common N-1/N state should not require manual Retry.
+- Commander theme ordering now prioritizes EDHREC Commander association; locally inferred Tribal can no longer displace a Commander-backed primary theme.
+- Deck Metrics card layout fixed at the root cause: metric cards no longer use the global `<header>` element styling.
+- Metric cards, Interaction Coverage and Fragile Roles can filter the right-hand deck list.
+- "Bottlenecks" renamed/reframed as Fragile Roles with human-readable explanations.
+- Development Simulation column definitions added via info controls.
+- All metric tables are sortable by clicking column headers.
+- Deck inspector now shows Commander under deck name, labels its select as Ordenar, removes “Auditoría”, and uses “Limpiar filtro”.
+- Shortlist begins empty on every app start.
+- Light theme received explicit surface/contrast overrides across Lab, inspectors, cards, tables, overlays, controls and tabs; Lab amber uses a darker orange in light mode for contrast.
+
+## Planned: Build From Collection
+- LAB-first Commander deck generator using owned cards, selected EDHREC theme/tags, semantic roles, dynamic structural targets, mana-base calculation, existing Deck Metrics validation, and explicit shortage/backfill reporting.
+- Detailed concept: `docs/Collection_Deck_Builder_Concept.md`.

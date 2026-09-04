@@ -2,28 +2,31 @@
 <html lang="es">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ManaShelf v2.4.15</title>
+<title>ManaShelf v2.5.26-beta</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://cards.scryfall.io" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
 <div class="grid-bg"></div><div class="glow glow-a"></div><div class="glow glow-b"></div>
 <header>
-  <div class="brand"><span>✦</span> ManaShelf <small>v2.4.15</small></div>
-  <div class="header-actions"><button id="historyBtn" class="ghost">Historial</button><button id="shortlistBtn" class="ghost">★ Shortlist <b id="shortlistCount">0</b></button></div>
+  <div class="brand"><span>✦</span> ManaShelf <small>v2.5.26</small><span class="beta-pill">BETA</span></div>
+  <!-- EXPERIMENTAL: removable terminal-style sticky context indicator -->
+  <div id="terminalStatus" class="terminal-status" aria-live="polite" aria-label="Contexto actual"><span class="terminal-prompt">›</span><span id="terminalText">ready</span><i class="terminal-cursor" aria-hidden="true"></i></div>
+  <div class="header-actions"><button id="themeToggle" class="ghost" title="Cambiar entre tema oscuro y claro" aria-label="Cambiar tema">☾</button><button id="langToggle" class="ghost language-toggle" title="Cambiar idioma" aria-label="Cambiar idioma">ES</button><button id="historyBtn" class="ghost">Historial</button><button id="shortlistBtn" class="ghost">★ Shortlist <b id="shortlistCount">0</b></button></div>
 </header>
 <main>
 <section class="hero">
-  <div class="kicker">COLLECTION-AWARE COMMANDER TOOL</div>
+  <div class="kicker">HERRAMIENTA COMMANDER BASADA EN TU COLECCIÓN</div>
   <h1>Tu colección.<br><span>Tu próximo deck.</span></h1>
 </section>
 
 <section id="loginPanel" class="login-panel">
   <div class="access-tabs">
     <button id="accessPublic" class="access-tab active">Colección pública</button>
-    <button id="accessPrivate" class="access-tab">Colección privada / mi cuenta</button>
+    <button id="accessPrivate" class="access-tab">Colección privada</button>
   </div>
   <div class="panel">
     <div class="panel-label" id="accessLabel">LEER COLECCIÓN PÚBLICA</div>
@@ -34,21 +37,67 @@
   </div>
 </section>
 
-<section id="accountBar" class="account-bar hidden">
-  <div class="account-id"><i></i><strong id="accountName"></strong><span id="accountStats"></span><em id="accessBadge"></em></div>
-  <div id="syncMini" class="sync-mini hidden">
-    <div class="sync-head"><span id="syncMiniTitle">Sincronizando mazos</span><strong id="syncCount">0 / 0</strong></div>
-    <progress id="syncMiniProgress" max="1" value="0"></progress>
-    <div class="sync-sub"><span id="syncMiniText">Preparando…</span><span id="syncTime"></span></div>
-    <div id="syncActions" class="sync-actions hidden"><button id="showSyncErrors" class="tiny">Ver errores</button><button id="retrySync" class="tiny accent">Reintentar</button></div>
+<section id="accountBar" class="account-bar account-panel-v2 hidden">
+  <div class="account-top-row-v2">
+    <div class="account-identity-v2">
+      <span class="account-online-dot" aria-hidden="true"></span>
+      <div id="accountAvatar" class="account-avatar-v2" aria-hidden="true">M</div>
+      <div class="account-identity-copy-v2">
+        <strong id="accountName" class="account-name-v2"></strong>
+        <span id="accountStats" class="account-meta-v2"></span>
+      </div>
+      <em id="accessBadge" class="account-status-pill-v2"></em>
+    </div>
+
+    <div class="account-actions account-actions-v2">
+      <button id="cacheBtn" class="account-action-btn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h12m0 0-3-3m3 3-3 3M20 17H8m0 0 3 3m-3-3 3-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span><strong>Caché</strong><small>Actualizar / Borrar</small></span>
+      </button>
+      <button id="reconnect" class="account-action-btn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 7h12m0 0-3-3m3 3-3 3M17 17H5m0 0 3 3m-3-3 3-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span><strong>Cambiar colección</strong></span>
+      </button>
+      <button id="logout" class="account-action-btn account-action-danger" type="button">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M10 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4M14 8l4 4-4 4M9 12h9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span><strong>Cerrar sesión</strong></span>
+      </button>
+    </div>
   </div>
-  <div class="account-actions"><button id="cacheBtn" class="ghost">Caché · Actualizar / Borrar</button><button id="reconnect" class="ghost">⇄ Cambiar colección</button><span class="account-actions-sep"></span><button id="logout" class="ghost danger-ghost">⎋ Cerrar sesión</button></div>
-</section>
 
-<section id="dashboard" class="dashboard hidden">
-  <div><div class="kicker">RESUMEN</div><h2>Biblioteca conectada</h2><p id="dashText"></p></div>
-</section>
+  <div id="dashboard" class="account-metrics-v2 hidden" aria-label="Resumen de colección">
+    <div class="account-metric-v2 metric-purple">
+      <span class="account-metric-icon-v2" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M5 6h14l-1 14H6L5 6Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M4 3h16v3H4V3Zm5 7h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+      <div><small>Mazos</small><strong id="accountMetricDecks">0</strong><span>gestionados</span></div>
+    </div>
+    <div class="account-metric-v2 metric-pink">
+      <span class="account-metric-icon-v2" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="m12 3 8 4-8 4-8-4 8-4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m4 12 8 4 8-4M4 17l8 4 8-4" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></span>
+      <div><small>Cartas únicas</small><strong id="accountMetricUnique">0</strong><span>nombres de carta</span></div>
+    </div>
+    <div class="account-metric-v2 metric-teal">
+      <span class="account-metric-icon-v2" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="8" y="8" width="10" height="11" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M6 15H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1" stroke="currentColor" stroke-width="1.8"/></svg></span>
+      <div><small>Copias</small><strong id="accountMetricCopies">0</strong><span>copias en total</span></div>
+    </div>
+    <div class="account-metric-v2 metric-amber">
+      <span class="account-metric-icon-v2" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M5 5h14v14H5z" stroke="currentColor" stroke-width="1.8"/><path d="M8 9h8M8 12h8M8 15h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+      <div><small>Registros Archidekt</small><strong id="accountMetricRecords">0</strong><span>filas informadas</span></div>
+    </div>
+  </div>
 
+  <div id="syncMini" class="sync-mini sync-panel-v2 hidden">
+    <div class="sync-title-v2"><span class="sync-symbol-v2">↻</span><strong id="syncMiniTitle">Sincronizando mazos</strong></div>
+    <div class="sync-layout-v2">
+      <div class="sync-progress-v2">
+        <div class="sync-head-v2"><span></span><strong id="syncCount">0 / 0</strong></div>
+        <progress id="syncMiniProgress" max="1" value="0"></progress>
+        <div class="sync-sub-v2"><span id="syncMiniText">Preparando…</span></div>
+      </div>
+      <span id="syncTime" class="sync-time-pill-v2"></span>
+    </div>
+    <div id="syncActions" class="sync-actions hidden"><button id="showSyncErrors" class="tiny">Ver errores</button><button id="retrySync" class="tiny accent">↻ Recargar mazos</button></div>
+  </div>
+  <p id="dashText" class="hidden" aria-hidden="true"></p>
+</section>
 <section class="mode-tabs">
   <button id="modeExplore" class="mode active"><b>01</b><span>Explorar Commander<small>Cualquier leyenda</small></span></button>
   <button id="modeImprove" class="mode"><b>02</b><span>Mejorar mi mazo<small>Deck existente</small></span></button>
@@ -68,6 +117,12 @@
   </div>
 </section>
 
+  <nav id="improveTabs" class="ribbon-tabs hidden" aria-label="Secciones del análisis">
+    <button type="button" data-improve-tab="deckcheck" class="active">Chequeo del mazo</button>
+    <button type="button" data-improve-tab="changes">SWAPS</button>
+    <button type="button" data-improve-tab="recommendations">EDHREComendaciones</button>
+  </nav>
+
 <section id="improveFlow" class="flow-panel hidden">
   <div class="flow-head"><span>MEJORAR MI MAZO</span></div>
   <div class="deck-autocomplete">
@@ -82,20 +137,18 @@
       <div class="deck-counts"><span><b>SIZE</b> · <strong id="mainCount">0</strong> cartas</span><small id="sizeAudit"></small></div>
       <a id="openDeckLink" class="ghost-link hidden" target="_blank" rel="noopener">Abrir en Archidekt ↗</a>
     </div>
-    <div class="improve-actions"><button id="analyzeImprove" class="primary big">Analizar mazo →</button></div>
+    <div class="improve-actions"><button id="analyzeImprove" class="primary big">Analizar mazo →</button><button id="exportDeckBtn" class="ghost">Exportar decklist ⇩</button></div>
   </div>
   <div id="deckError" class="status bad hidden"></div>
   <div id="improveHealthLoading" class="lab-loading hidden"><span></span><p>Analizando recomendaciones, estructura, curva e identidad…</p></div>
-  <nav id="improveTabs" class="ribbon-tabs hidden" aria-label="Secciones del análisis">
-    <button type="button" data-improve-tab="deckcheck" class="active">Deck Check</button>
-    <button type="button" data-improve-tab="changes">SWAPS</button>
-    <button type="button" data-improve-tab="recommendations">EDHREComendaciones</button>
-  </nav>
+
   <div id="improveHealthResults" class="lab-results improve-health-results" data-view="deckcheck"></div>
   <aside id="improveDeckInspector" class="deck-inspector hidden">
-    <button type="button" id="improveDeckInspectorToggle" class="deck-inspector-toggle" title="Ocultar/mostrar la lista del mazo" aria-label="Ocultar/mostrar la lista del mazo">»</button>
-    <div class="deck-inspector-head"><div><span>DECK LIST</span><strong id="improveDeckInspectorTitle">Mazo</strong><small id="improveDeckInspectorCount">Size · —</small></div>
-      <label class="deck-sort-label"><span>Ordenar por</span><select id="improveDeckSort" aria-label="Ordenar deck"><option value="type">Tipo</option><option value="category">Categoría</option><option value="cmc">CMC</option><option value="name">Nombre</option></select></label>
+    <button type="button" id="improveDeckInspectorToggle" class="deck-inspector-toggle" title="Colapsar Deck List" aria-label="Colapsar Deck List"><span class="deck-toggle-triangle collapse">▶</span></button>
+    <div class="deck-inspector-head">
+      <div class="deck-inspector-titlebar"><span>DECK LIST</span></div>
+      <div class="deck-inspector-context"><strong id="improveDeckInspectorTitle">Mazo</strong><small id="improveDeckInspectorCommander">Commander · —</small></div>
+      <div class="deck-inspector-tools"><small id="improveDeckInspectorCount" class="deck-size-pill">Size · —</small><label class="deck-sort-label"><select id="improveDeckSort" aria-label="Ordenar deck"><option value="" selected>Ordenar…</option><option value="type:asc">Tipo ↑</option><option value="type:desc">Tipo ↓</option><option value="category:asc">Categoría ↑</option><option value="category:desc">Categoría ↓</option><option value="cmc:asc">CMC ↑</option><option value="cmc:desc">CMC ↓</option><option value="name:asc">Nombre ↑</option><option value="name:desc">Nombre ↓</option></select></label></div>
     </div>
     <div id="improveDeckFilter" class="deck-inspector-filter hidden"></div>
     <div id="improveDeckList" class="deck-card-list"></div>
@@ -144,22 +197,40 @@
 <section id="loading" class="loading hidden"><i></i><div class="analysis-progress"><strong id="loadingTitle">Analizando…</strong><span id="loadingText"></span><div class="analysis-track"><b></b></div><small id="loadingElapsed">0s · progreso de red no cuantificable</small></div></section>
 
 
+<nav id="labTabs" class="ribbon-tabs lab-ribbon-tabs hidden" aria-label="Secciones de Deck Health Lab">
+  <button type="button" data-lab-tab="summary" class="active">Resumen</button>
+  <button type="button" data-lab-tab="health">Salud</button>
+  <button type="button" data-lab-tab="rules">Estructura</button>
+  <button type="button" data-lab-tab="identity">Identidad</button>
+  <button type="button" data-lab-tab="changes">IN/OUT</button>
+  <button type="button" data-lab-tab="metrics">Métricas</button>
+</nav>
+
 <section id="labFlow" class="flow-panel lab-panel hidden">
   <div class="lab-banner"><b>⚗ MANASHELF LAB</b><span>FUNCIÓN EXPERIMENTAL · SOLO LECTURA · NO MODIFICA ARCHIDEKT</span></div>
-  <div class="flow-head"><span>DECK HEALTH + THEME HEALTH</span><p>Probá el análisis contextual en un mazo real sin cambiar el funcionamiento estable de ManaShelf.</p></div>
+  <div class="flow-head"><span>SALUD DEL MAZO + SALUD DE TEMÁTICAS</span><p>Analizá un mazo con métricas experimentales sin modificar tu lista en Archidekt.</p></div>
   <div class="deck-autocomplete">
     <div class="control lab-control"><span>⌕</span><input id="labDeckSearch" placeholder="Buscar mazo para analizar…" autocomplete="off"></div>
     <div id="labDeckPicker" class="deck-picker deck-dropdown hidden"></div>
   </div>
-  <div id="labDeckChosen" class="lab-deck-chosen hidden"></div>
-  <button id="labAnalyze" class="lab-primary hidden">Analizar Deck Health →</button>
+  <div id="labDeckChosen" class="deck-summary lab-deck-summary hidden">
+    <div id="labDeckCommanderArt" class="deck-art commander-click"></div>
+    <div class="deck-info"><div class="panel-label">DECK SELECCIONADO</div><h2 id="labDeckName"></h2>
+      <div class="deck-commander"><span>Commander</span><strong id="labDeckCommander"></strong></div>
+      <div class="deck-counts"><span><b>SIZE</b> · <strong id="labMainCount">—</strong> cartas</span><small id="labSizeAudit"></small></div>
+      <a id="labOpenDeckLink" class="ghost-link hidden" target="_blank" rel="noopener">Abrir en Archidekt ↗</a>
+    </div>
+    <div class="improve-actions"><button id="labAnalyze" class="primary big">Analizar Deck Health →</button><button id="labExportDeckBtn" class="ghost">Exportar decklist ⇩</button></div>
+  </div>
   <div id="labLoading" class="lab-loading hidden"><span></span><p>Clasificando cartas y detectando el plan del mazo…</p></div>
   <div class="lab-workspace">
     <div id="labResults" class="lab-results"></div>
     <aside id="labDeckInspector" class="deck-inspector lab-inspector hidden">
-      <button type="button" class="deck-inspector-toggle" title="Ocultar/mostrar la lista del mazo" aria-label="Ocultar/mostrar la lista del mazo">»</button>
-      <div class="deck-inspector-head"><div><span>DECK LIST · AUDITORÍA</span><strong id="labDeckInspectorTitle">Mazo</strong><small id="labDeckInspectorCount">Size · —</small></div>
-        <select id="labDeckSort" aria-label="Ordenar deck del LAB"><option value="type">Tipo</option><option value="category">Categoría</option><option value="cmc">CMC</option><option value="name">Nombre</option></select>
+      <button type="button" class="deck-inspector-toggle" title="Colapsar Deck List" aria-label="Colapsar Deck List"><span class="deck-toggle-triangle collapse">▶</span></button>
+      <div class="deck-inspector-head">
+        <div class="deck-inspector-titlebar"><span>DECK LIST</span></div>
+        <div class="deck-inspector-context"><strong id="labDeckInspectorTitle">Mazo</strong><small id="labDeckInspectorCommander">Commander · —</small></div>
+        <div class="deck-inspector-tools"><small id="labDeckInspectorCount" class="deck-size-pill">Size · —</small><label class="deck-sort-label"><select id="labDeckSort" aria-label="Ordenar deck del LAB"><option value="" selected>Ordenar…</option><option value="type:asc">Tipo ↑</option><option value="type:desc">Tipo ↓</option><option value="category:asc">Categoría ↑</option><option value="category:desc">Categoría ↓</option><option value="cmc:asc">CMC ↑</option><option value="cmc:desc">CMC ↓</option><option value="name:asc">Nombre ↑</option><option value="name:desc">Nombre ↓</option></select></label></div>
       </div>
       <div id="labDeckFilter" class="deck-inspector-filter hidden"></div>
       <div id="labDeckList" class="deck-card-list"></div>
@@ -215,6 +286,6 @@
 <div id="modal" class="modal hidden"><div class="modal-card"><button id="modalClose" class="modal-x">×</button><div id="modalBody"></div></div></div>
 <div id="drawer" class="drawer hidden"><div class="drawer-head"><strong id="drawerTitle">Shortlist</strong><button id="drawerClose">×</button></div><div id="drawerBody"></div></div>
 
-<footer><span>ManaShelf · local-first</span><span>v2.4.15</span></footer>
+<footer><span>ManaShelf · local-first</span><span>v2.5.26-beta</span></footer>
 <script type="module" src="/app.js"></script>
 </body></html>

@@ -1,11 +1,11 @@
-ManaShelf v2.4.1 — START HERE
+ManaShelf — START HERE
 
 Para continuar el desarrollo:
-1. Leer HANDOFF.md
-2. Leer README.md
-3. Leer BACKLOG.md
+1. Leer BACKLOG.md primero (tiene el historial real hasta la versión vigente).
+2. Leer HANDOFF.md (decisiones de fondo, título desactualizado a v2.4.1 pero contenido en su mayoría vigente).
+3. Leer README.md.
 4. No modificar lib/archidekt-size.mjs / Method 6 sin pedido explícito.
-5. La baseline es v2.4.1.
+5. La baseline vigente es v2.5.26-beta, no v2.4.1 — ver BACKLOG.md para confirmar antes de asumir nada.
 
 Ejecutar:
   node server.mjs

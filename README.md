@@ -1,12 +1,21 @@
-# ManaShelf v2.4.1
+# ManaShelf
 
-Gran consolidación del backlog.
+> Beta vigente para testing: **v2.5.26-beta**.
+
+ManaShelf es una herramienta local-first para explorar una colección de Archidekt, analizar mazos Commander y generar recomendaciones basadas en la colección, Scryfall y EDHREC.
 
 ## Acceso Archidekt
 - Colección pública: solo usuario, sin contraseña.
-- Colección privada: login de Archidekt.
+- Colección privada: login de Archidekt. La contraseña se envía al bridge de autenticación configurado para obtener la sesión; ManaShelf no la persiste en su caché local.
 - Logout local.
 - Los datos privados requieren login; los públicos no.
+
+## Privacidad y red
+- El servidor local escucha únicamente en `127.0.0.1`; no se publica en la red local.
+- La colección pública se consulta sin contraseña.
+- Para colección privada, la contraseña se envía al bridge de autenticación configurado para obtener una sesión de Archidekt. ManaShelf no persiste la contraseña en su caché local.
+- La sesión/token de Archidekt se mantiene en memoria durante la ejecución.
+- ManaShelf guarda localmente cachés de metadata de mazos y cartas para reducir llamadas repetidas a Archidekt y Scryfall.
 
 ## Explorar + Mejorar
 Filtros estandarizados, todos con la forma “Mostrar …”:
@@ -156,7 +165,7 @@ The comparison explains own recommendations, available copies, occupied copies a
 - El catálogo de Commanders es offline-first: un caché existente se usa aunque tenga antigüedad; ante 429/error de Scryfall se conserva el último catálogo válido.
 - Scryfall usa throttling, respeta `Retry-After` y conserva datos válidos si un refresh falla.
 - EDHREC ahora también tiene caché persistente en disco.
-- Panel provisional “Administrar caché” con recache selectivo de Decks Archidekt, Uso de cartas, Scryfall, Catálogo de Commanders, EDHREC o Todo; cada trabajo muestra progreso.
+- Panel “Administrar caché” con recache selectivo de Decks Archidekt, Uso de cartas, Scryfall, Catálogo de Commanders, EDHREC o Todo; cada trabajo muestra progreso.
 - `.manashelf-cache` sigue siendo portable entre versiones. Los formatos compatibles se reutilizan.
 
 ## v2.3.1 — Correcciones de datos y UX

@@ -1,9 +1,14 @@
 {
   "name": "manashelf",
-  "version": "2.4.15",
+  "version": "2.5.26-beta.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "node server.mjs"
+    "start": "node server.mjs",
+    "test:metrics": "node tests/deck-metrics-smoke.mjs",
+    "test:i18n": "node tests/i18n-regression.mjs",
+    "test:release": "node tests/release-regression.mjs",
+    "test:query-routes": "node tests/query-route-regression.mjs",
+    "test:preview": "node tests/preview-production-regression.mjs"
   }
 }

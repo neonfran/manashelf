@@ -1,8 +1,15 @@
-# ManaShelf v2.4.1 — HANDOFF PARA CONTINUAR DESARROLLO
+# ManaShelf — HANDOFF PARA CONTINUAR DESARROLLO
 
 > **INSTRUCCIÓN PARA EL PRÓXIMO AGENTE**
 >
-> Esta es la baseline actual de ManaShelf. Antes de modificar código, leer este archivo, `README.md` y `BACKLOG.md`.
+> Este documento describe decisiones de arquitectura y diseño que siguen vigentes, pero el
+> número de versión de su título original (v2.4.1) quedó desactualizado — la baseline real
+> hoy es **v2.5.26-beta**. Para el estado actual pieza por pieza, leer `BACKLOG.md` completo
+> (tiene el historial real hasta la versión vigente); este archivo sigue siendo válido para
+> entender el "por qué" de decisiones de fondo, pero no asumir que describe el estado actual
+> exacto de cada componente sin cruzarlo contra el BACKLOG.
+>
+> Esta es la baseline de referencia de ManaShelf. Antes de modificar código, leer este archivo, `README.md` y `BACKLOG.md` (en ese orden, dándole prioridad al BACKLOG para lo más reciente).
 >
 > **NO modificar Method 6** salvo que el usuario lo pida explícitamente. Fue validado por el usuario contra sus datos reales de Archidekt.
 >
