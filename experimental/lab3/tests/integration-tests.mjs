@@ -1,0 +1,43 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import {fileURLToPath} from "node:url";
+import {Lab3RuntimeCatalog} from "../runtime-catalog.mjs";
+
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),"../../..");
+const server=fs.readFileSync(path.join(root,"server.mjs"),"utf8");
+const app=fs.readFileSync(path.join(root,"public/app.js"),"utf8");
+const html=fs.readFileSync(path.join(root,"public/index.html"),"utf8");
+const css=fs.readFileSync(path.join(root,"public/styles.css"),"utf8");
+const index=path.join(root,"data/lab3-runtime-index.jsonl.gz");
+assert.ok(fs.existsSync(index),"LAB3 runtime index seed missing");
+for(const route of ["/api/lab3/status","/api/lab3/profile","/api/lab3/progress","/api/lab3/build","/api/lab3/build-log"])assert.ok(server.includes(route),`missing ${route}`);
+for(const id of ["modeLab3","lab3Flow","lab3CommanderSearch","lab3ThemeGrid","lab3ComboPolicy","lab3Generate","lab3Summary","lab3Context","lab3DeckTable","lab3CopyArchidekt"])assert.ok(html.includes(`id=\"${id}\"`),`missing LAB3 UI id ${id}`);
+for(const fn of ["enterLab3","chooseLab3Commander","runLab3Build","renderLab3Build","lab3ArchidektText","copyLab3Archidekt","exportLab3Log"])assert.ok(app.includes(`function ${fn}`)||app.includes(`async function ${fn}`),`missing ${fn}`);
+assert.match(app,/buildDiagnosticFileName\(log,"LAB3"/,"LAB3 diagnostic filename must identify LAB3 explicitly");
+
+assert.match(app,/return `\$\{Number\(c\.quantity\|\|1\)\}x \$\{c\.name\} \[\$\{category\}\]`/,"LAB3 Archidekt export/copy must preserve categories in square brackets");
+assert.match(html,/id="lab3Export"[^>]*>Exportar para Archidekt ⇩<\/button><button id="lab3CopyArchidekt"/,"LAB3 export and copy actions must mirror LAB2 Archidekt workflow");
+const buildStart=server.indexOf("async function buildLab3(");const buildEnd=server.indexOf("async function lab2CommanderProfile",buildStart);const lab3Server=server.slice(buildStart,buildEnd);
+assert.ok(buildStart>0&&buildEnd>buildStart,"LAB3 server block missing");
+assert.ok(!lab3Server.includes("classifyCard("),"LAB3 runtime must not call Classification 7");
+assert.ok(!lab3Server.includes("builderThemeEvidence("),"LAB3 runtime must not reinterpret Oracle/theme text");
+assert.ok(server.includes("decorateEdhrecThemesForLab3(semantic,tags,{limit:18})"),"LAB3 profile must preserve the same first 18 EDHREC themes exposed by LAB2");
+assert.ok(!server.includes("tags.filter(t=>themeSupportForCard"),"LAB3 must not hide EDHREC themes merely because a semantic contract is missing");
+assert.ok(lab3Server.includes('themeMode=chosen.themeContractMode||chosen.mode'),"LAB3 build must preserve semantic vs external_fallback theme mode");
+assert.ok(!app.includes("todavía no tienen contrato semántico LAB 3"),"obsolete omitted-theme warning must not remain in LAB3 UI");
+assert.ok(app.includes("Fallback EDHREC"),"LAB3 UI must label EDHREC fallback themes instead of hiding them");
+const selectPos=lab3Server.indexOf("buildLab3Deck(");const auditPos=lab3Server.indexOf("buildDeckHealth(");assert.ok(selectPos>=0,"LAB3 semantic selection call missing");assert.ok(auditPos>selectPos,"legacy Deck Health may only audit LAB3 after semantic selection is complete");assert.ok(app.includes('renderLabResult(d.health,E.lab3Health,"lab3"'),"LAB3 must expose the same Deck Health/Deck Metrics comparison UI as LAB2");
+assert.ok(app.includes('renderDeckInspector("lab3",lab3DeckDetail)'),"LAB3 must render the same floating Deck List inspector contract as LAB2");
+assert.match(css,/lab2DeckInspector\.deck-inspector,[^}]*lab3DeckInspector\.deck-inspector/ ,"LAB3 Deck List inspector must share the sticky/floating workspace rule with LAB2");
+assert.ok(app.includes("deckInspectorFilter.lab3"),"LAB3 Deck List must preserve the same filter state machinery as LAB2");
+
+assert.ok(lab3Server.includes("commanderSpellbookVariants(commander,comboPolicy)"),"LAB3 combo policy must use the shared Commander Spellbook integration");
+assert.ok(lab3Server.includes("comboCandidates:spellbook.variants"),"LAB3 must pass exact combo candidates into the semantic builder");
+assert.ok(server.includes("actualThemeMode=build.themeMode||themeMode"),"Stress corpus must record the effective holistic theme mode chosen by the builder");
+assert.match(server,/manashelf-lab3-stress-3/,"Stress corpus v3 must use its own reproducible seed");
+assert.ok(app.includes("minimalThemeDescription"),"LAB2/LAB3 theme choices must expose concise theme descriptions instead of technical fallback copy");
+const catalog=new Lab3RuntimeCatalog({projectRoot:root,paths:[index]});const status=await catalog.status();assert.equal(status.available,true);const loaded=await catalog.ensureLoaded();assert.equal(loaded.header?.schemaVersion,2);assert.equal(loaded.header?.semantic?.compilerVersion,5);assert.equal(loaded.header?.views?.themeFeatures,1);const kess=loaded.get("Kess, Dissident Mage");assert.ok(kess,"Kess must resolve from LAB3 runtime index");assert.equal(kess.legalities?.commander,"legal");
+const signet=loaded.get("Arcane Signet");assert.equal(signet?.layout,"normal","playable exact card must win over Art Series name collision");assert.equal(signet?.legalities?.commander,"legal");const signetArt=loaded.get("Arcane Signet // Arcane Signet");assert.equal(signetArt?.layout,"art_series","explicit Art Series record may remain addressable for audit only");assert.notEqual(signetArt?.legalities?.commander,"legal");assert.equal(loaded.getByOracleId(signetArt.oracleId)?.layout,"art_series","collection printing resolution must preserve non-playable Art Series identity by oracle_id");assert.equal(loaded.getByOracleId(signet.oracleId)?.legalities?.commander,"legal","collection printing resolution must preserve playable oracle identity");
+for(const name of ["Sol Ring","Command Tower"])assert.equal(loaded.get(name)?.legalities?.commander,"legal",`${name} playable identity must not be overwritten by non-playable collectibles`);assert.ok(lab3Server.includes("getManyOracleIds"),"LAB3 collection filtering must resolve concrete collection printings by oracle_id before falling back to names");assert.ok(lab3Server.includes("printingExclusions"),"LAB3 diagnostics must retain excluded non-playable/illegal collection printings");
+console.log(`LAB3 integration tests passed · runtime aliases ${loaded.cards.size}`);

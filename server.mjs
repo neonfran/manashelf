@@ -5,7 +5,20 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { partitionArchidektDeck } from "./lib/archidekt-size.mjs";
-import { buildDeckMetrics, METRICS_ENGINE_VERSION, CLASSIFICATION_VERSION, SIMULATION_VERSION } from "./lib/deck-metrics.mjs";
+import { applySemanticClassification, buildDeckMetrics, classifyCard, deriveCardFacts, METRICS_ENGINE_VERSION, CLASSIFICATION_VERSION, SIMULATION_VERSION } from "./lib/deck-metrics.mjs";
+import { buildCollectionDeck, COLLECTION_BUILDER_VERSION, MANA_MODEL_VERSION } from "./lib/collection-deck-builder.mjs";
+import { COMBO_ENGINE_VERSION, normalizeComboPolicy, normalizeSpellbookResponse, normalizeFindMyCombosResponse, spellbookCardQuery, comboAvailabilitySummary, SPELLBOOK_BASE_URL } from "./lib/combo-engine.mjs";
+import { countThemeSupport, countPredicateThemeSupport } from "./lib/theme-support.mjs";
+import { normalizeColorIdentity } from "./lib/color-identity.mjs";
+import { cardIdentityKey, cardNameAliases, cardNameMatches, getCardAlias, hasCardAlias, setCardAlias } from "./lib/card-identity.mjs";
+import { themeEvidence as evaluateThemeEvidence, inferArchetypeSignals } from "./lib/archetype-contracts.mjs";
+import { Lab3RuntimeCatalog } from "./experimental/lab3/runtime-catalog.mjs";
+import { isDeckPlayableCard } from "./experimental/lab3/runtime-reader.mjs";
+import { buildLab3Deck, LAB3_BUILDER_VERSION, LAB3_MANA_MODEL_VERSION } from "./experimental/lab3/builder.mjs";
+import { LAB3_CONTEXT_ENGINE_VERSION, decorateEdhrecThemesForLab3, themeModeForCard } from "./experimental/lab3/deck-context.mjs";
+import { LAB3_STRESS_SCHEMA, LAB3_STRESS_VERSION, hashSeed, colorKey, selectStressCommanders, selectStressThemes, analyzeStressBuild, clusterStressIssues, summarizeStressCases, modalPotential } from "./experimental/lab3/stress-harness.mjs";
+import { createZip } from "./experimental/lab3/zip-buffer.mjs";
+
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3000;
@@ -13,9 +26,34 @@ const PORT = Number(process.env.PORT) || 3000;
 // NODE_ENV=production) must bind all interfaces so the platform proxy can reach us.
 // HOST remains overrideable for other deployment environments.
 const HOST = process.env.HOST || (process.env.NODE_ENV === "production" ? "0.0.0.0" : "127.0.0.1");
-const APP_VERSION = "2.5.27-beta";
+const APP_VERSION = "2.5.48-beta";
+// Experimental LAB access credential. The default credential is never stored in
+// plaintext. To preserve the existing beta password while hardening offline
+// guessing, verification pre-hashes the entered value with SHA-256 and feeds
+// that digest into scrypt with a per-record salt. Deployments can override the
+// full scrypt record, or keep using the legacy SHA-256 env override during
+// migration.
+const LAB_ACCESS_DEFAULT_SCRYPT = "scrypt$16384$8$1$62c4fddb0fffc6f86a6b8f1eb6bd7ceb$1bc1530c281e59cfd7d66fc8d16b369d67e1e802e5c33706f512c3c88593789d";
+const LAB_ACCESS_SCRYPT = process.env.MANASHELF_LAB_PASSWORD_SCRYPT || process.env.MANASHELF_LAB2_PASSWORD_SCRYPT || (process.env.MANASHELF_LAB2_PASSWORD_SHA256 ? "" : LAB_ACCESS_DEFAULT_SCRYPT);
+const LAB_ACCESS_LEGACY_SHA256 = process.env.MANASHELF_LAB2_PASSWORD_SHA256 || "";
+function lab2PasswordMatches(value=""){
+  const prehash=crypto.createHash("sha256").update(String(value)).digest();
+  if(LAB_ACCESS_SCRYPT){
+    const [kind,nRaw,rRaw,pRaw,saltHex,keyHex]=String(LAB_ACCESS_SCRYPT).split("$");
+    const N=Number(nRaw),r=Number(rRaw),parallel=Number(pRaw),salt=Buffer.from(saltHex||"","hex"),expected=Buffer.from(keyHex||"","hex");
+    if(kind!=="scrypt"||!N||!r||!parallel||salt.length<16||expected.length<16)return false;
+    const got=crypto.scryptSync(prehash,salt,expected.length,{N,r,p:parallel,maxmem:64*1024*1024});
+    return crypto.timingSafeEqual(got,expected);
+  }
+  if(LAB_ACCESS_LEGACY_SHA256){
+    const expected=Buffer.from(LAB_ACCESS_LEGACY_SHA256,"hex");
+    return expected.length===prehash.length&&crypto.timingSafeEqual(prehash,expected);
+  }
+  return false;
+}
 const PUBLIC_DIR = path.join(__dirname, "public");
 const ARCHIDEKT_BRIDGE = process.env.ARCHIDEKT_BRIDGE_URL || "https://akmcp.mtgate.cloud";
+const lab3Catalog = new Lab3RuntimeCatalog({projectRoot:__dirname});
 
 const send=(res,status,data)=>{res.writeHead(status,{"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store",...SECURITY_HEADERS});res.end(JSON.stringify(data));};
 // v2.4.17 — límite de tamaño de body, a partir de la auditoría: sin esto, un cliente podía
@@ -76,6 +114,16 @@ function archidektPace(){
 }
 const slug=s=>s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[’']/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
 
+// Canonical card-name joins. Display names stay untouched; only cross-source identity uses
+// normalized aliases (full multi-face name plus either face) so Archidekt/Scryfall/EDHREC/
+// Spellbook cannot disagree merely because one source surfaced "Front" and another
+// "Front // Back" or because punctuation/Unicode spacing differs.
+function cardMap(rows=[]){const out=new Map();for(const row of rows)if(row?.name)setCardAlias(out,row.name,row);return out}
+function cardSet(names=[]){const out=new Set();for(const name of names)for(const alias of cardNameAliases(name))out.add(alias);return out}
+function usageFor(usage,name){return getCardAlias(usage,name)||[]}
+function objectCardAliasGet(obj,name){for(const alias of cardNameAliases(name))if(Object.prototype.hasOwnProperty.call(obj,alias))return obj[alias];return undefined}
+function objectCardAliasSet(obj,name,value){for(const alias of cardNameAliases(name))obj[alias]=value;return value}
+
 function firstArray(x){
   if(!x||typeof x!=="object") return [];
   for(const k of ["results","items","cards","records","data"]) if(Array.isArray(x[k])) return x[k];
@@ -125,17 +173,22 @@ function parseCsv(text){
 // (no son los mismos que los "fields" que se piden en el POST; Archidekt los renombra):
 // Types, Sub-types, Super-types, Colors, Identities, Mana Value.
 // Antes se pedían (público) o ni se pedían (privado) y se descartaban sin usar; ahora se
-// usan para pre-filtrar candidatos a Commander localmente, sin pasar por Scryfall.
+// se usan como metadata local. Para filtros de color identity son sólo un pre-filtro
+// de eficiencia: primero se normalizan y sólo se descartan incompatibilidades seguras;
+// Scryfall conserva la autoridad final sobre color_identity y legalidad Commander.
 const TYPE_FIELDS=["card__types","card__subtypes","card__supertypes","card__color","card__colorIdentity","card__cmc"];
 function typeLineFromRow(row){
   const types=String(row["Types"]||"").trim();
   const subtypes=String(row["Sub-types"]||"").trim();
   const supertypes=String(row["Super-types"]||"").trim();
   const typeLine=[supertypes,types].filter(Boolean).join(" ").trim()+(subtypes?` — ${subtypes}`:"");
+  const identity=normalizeColorIdentity(row["Identities"]??row["Identity"]??row["Color Identity"]??"");
   return {
     typeLine:typeLine||null,
     cmc:Number(row["Mana Value"]||0)||0,
-    colorIdentity:String(row["Identities"]||"").split(",").map(s=>s.trim()).filter(Boolean)
+    colorIdentity:identity.colors,
+    colorIdentityTrusted:identity.trusted,
+    colorIdentityRaw:identity.raw
   };
 }
 
@@ -279,20 +332,27 @@ async function collection(collectionId, account){
     if(quantity<=0) continue;
 
     acceptedRows++;
-    const key=name.toLocaleLowerCase("en-US");
-    const current=merged.get(key);
-    const card={
-      name,
+    const current=getCardAlias(merged,name);
+    const printing={
       quantity,
       scryfallId:String(pick(row,["Scryfall ID","Scryfall Id","card__uid"])||"").trim()||null,
       oracleId:String(pick(row,["Scryfall Oracle ID","Oracle ID","Oracle Id","card__oracle__uid"])||"").trim()||null,
       set:String(pick(row,["Edition Code","Set Code","card__edition__editioncode"])||"").trim()||null,
-      collectorNumber:String(pick(row,["Collector Number","card__collectorNumber"])||"").trim()||null,
+      collectorNumber:String(pick(row,["Collector Number","card__collectorNumber"])||"").trim()||null
+    };
+    const card={
+      name,
+      quantity,
+      scryfallId:printing.scryfallId,
+      oracleId:printing.oracleId,
+      set:printing.set,
+      collectorNumber:printing.collectorNumber,
+      printings:[printing],
       image:null,
       ...typeLineFromRow(row)
     };
-    if(current) current.quantity+=quantity;
-    else merged.set(key,card);
+    if(current){current.quantity+=quantity;(current.printings||(current.printings=[])).push(printing);}
+    else setCardAlias(merged,name,card);
   }
 
   const rowDelta = totalRows > 0 ? Math.abs(acceptedRows-totalRows) : 0;
@@ -304,7 +364,7 @@ async function collection(collectionId, account){
     );
   }
 
-  const cards=[...merged.values()];
+  const cards=[...new Set(merged.values())];
   if(!cards.length){
     const headers=observedHeaders.length ? observedHeaders.join(", ") : "(sin encabezados detectables)";
     if(totalRows>0){
@@ -362,14 +422,15 @@ async function publicCollection(username){
     totalRows=Number(payload.totalRows||totalRows||0);
     for(const row of parseCsv(payload.content)){
       const name=String(row["Card Name"]||row["card__oracleCard__name"]||row.Name||"").trim();if(!name)continue;
-      const quantity=Math.max(0,Number(row.Quantity||row.quantity||1)||1),key=name.toLocaleLowerCase("en-US"),current=merged.get(key);
-      const card={name,quantity,scryfallId:row["Scryfall ID"]||null,oracleId:row["Scryfall Oracle ID"]||row["Oracle UID"]||row["card__oracle__uid"]||null,set:row["Edition Code"]||row["card__edition__editioncode"]||null,collectorNumber:row["Collector Number"]||row["card__collectorNumber"]||null,image:null,oracleText:null,edhrecRank:null,...typeLineFromRow(row)};
-      if(current)current.quantity+=quantity;else merged.set(key,card);
+      const quantity=Math.max(0,Number(row.Quantity||row.quantity||1)||1),current=getCardAlias(merged,name);
+      const printing={quantity,scryfallId:row["Scryfall ID"]||null,oracleId:row["Scryfall Oracle ID"]||row["Oracle UID"]||row["card__oracle__uid"]||null,set:row["Edition Code"]||row["card__edition__editioncode"]||null,collectorNumber:row["Collector Number"]||row["card__collectorNumber"]||null};
+      const card={name,quantity,scryfallId:printing.scryfallId,oracleId:printing.oracleId,set:printing.set,collectorNumber:printing.collectorNumber,printings:[printing],image:null,oracleText:null,edhrecRank:null,...typeLineFromRow(row)};
+      if(current){current.quantity+=quantity;(current.printings||(current.printings=[])).push(printing);}else setCardAlias(merged,name,card);
     }
     if(payload.moreContent!==true)break;
     page++;
   }
-  const cards=[...merged.values()];
+  const cards=[...new Set(merged.values())];
   if(!cards.length)throw new Error("La colección pública no devolvió cartas.");
   return {cards,totalRows:totalRows||cards.length,acceptedRows:cards.length,fetchedPages:page,collectionId};
 }
@@ -441,25 +502,20 @@ function deckCachedCommander(cards){
   const c=(cards||[]).find(x=>(x.categories||[]).some(y=>String(y).toLowerCase()==="commander"));
   return c?.name||c?.display_name||null;
 }
-function classifyRoles(meta){
-  const text=String(meta?.oracleText||"").toLowerCase();
-  const type=String(meta?.typeLine||"").toLowerCase();
-  const roles=[];
-  if(/counter target (spell|activated|triggered)/.test(text))roles.push("Counterspells");
-  if(/destroy all|exile all|all creatures get -|each creature gets -|damage to each creature/.test(text))roles.push("Board Wipes");
-  if(/destroy target|exile target|return target (creature|permanent|nonland)|deals? \d+ damage to target|target creature gets -/.test(text) && !roles.includes("Board Wipes"))roles.push("Removal");
-  if(/draw (a|two|three|x|\d+) cards?|draw cards|investigate|impulse draw|you may play .* exile/.test(text))roles.push("Draw");
-  if(!type.includes("land") && /add \{|add one mana|treasure token|search your library for (a|up to .*?) (basic )?land|search your library for .* land card/.test(text))roles.push("Ramp");
-  if(/hexproof|indestructible|phases? out|protection from|regenerate/.test(text))roles.push("Protection");
-  if(/from your graveyard to (your hand|the battlefield)|return target .* from your graveyard|cast .* from your graveyard|reanimate/.test(text))roles.push("Recursion");
-  if(/each opponent loses|damage to each opponent|extra combat|double.*power|win the game|loses the game|combat damage.*player/.test(text))roles.push("Finishers");
-  if(!roles.length){
-    if(type.includes("land"))roles.push("Lands");
-    else if(type.includes("creature"))roles.push("Creatures");
-    else roles.push("Utility");
-  }
+function healthRolesFromSemantic(semantic,meta={}){
+  const ids=new Set((semantic?.roles||[]).map(r=>r?.id||r)),type=String(meta?.typeLine||"").toLowerCase(),roles=[];
+  if(ids.has("counterspell"))roles.push("Counterspells");
+  if(ids.has("board_wipe"))roles.push("Board Wipes");
+  if(!ids.has("board_wipe")&&["removal","mass_removal","partial_sweeper","graveyard_hate","artifact_removal","enchantment_removal","creature_removal","planeswalker_removal","land_interaction"].some(r=>ids.has(r)))roles.push("Removal");
+  if(["card_draw","card_advantage","impulse_draw"].some(r=>ids.has(r)))roles.push("Draw");
+  if(ids.has("ramp"))roles.push("Ramp");
+  if(ids.has("protection"))roles.push("Protection");
+  if(ids.has("recursion"))roles.push("Recursion");
+  if(ids.has("finisher"))roles.push("Finishers");
+  if(!roles.length){if(type.includes("land"))roles.push("Lands");else if(type.includes("creature"))roles.push("Creatures");else roles.push("Utility")}
   return roles;
 }
+function classifyRoles(meta){return healthRolesFromSemantic(classifyCard({name:"",meta}),meta)}
 
 function image(c){return c?.image_uris?.normal||c?.image_uris?.large||c?.card_faces?.[0]?.image_uris?.normal||null}
 async function commanderSearch(q){
@@ -487,25 +543,36 @@ function parseEdhrec(p){
   return lists.map((l,i)=>({
     id:l.tag||`list-${i}`,
     label:l.header||l.label||String(l.tag||`Lista ${i+1}`).replace(/([a-z])([A-Z])/g,"$1 $2").replace(/[_-]+/g," ").replace(/\b\w/g,c=>c.toUpperCase()),
-    cards:(l.cardviews||l.cards||[]).filter(c=>c?.name).map(c=>({
-      name:c.name,synergy:Number(c.synergy||0),inclusion:Number(c.inclusion||0),
-      numDecks:Number(c.num_decks??c.inclusion??0),potentialDecks:Number(c.potential_decks||0),
-      image:c.image_uri||c.image||c.image_url||null
-    }))
+    cards:(l.cardviews||l.cards||[]).filter(c=>c?.name).map(c=>{
+      const numDecks=Number(c.num_decks??c.numDecks??0)||0,potentialDecks=Number(c.potential_decks??c.potentialDecks??0)||0;
+      const rawInclusion=Number(c.inclusion??0)||0;
+      const inclusion=potentialDecks>0&&numDecks>0?numDecks/potentialDecks:(rawInclusion>1?rawInclusion/100:rawInclusion);
+      return {name:c.name,synergy:Number(c.synergy||0),inclusion:Math.max(0,Math.min(1,inclusion)),numDecks,potentialDecks,image:c.image_uri||c.image||c.image_url||null};
+    })
   }));
 }
 let edhrecDiskCache=null;
+const EDHREC_CACHE_VERSION=3;
 async function loadEdhrecDiskCache(){
   if(edhrecDiskCache)return edhrecDiskCache;
-  edhrecDiskCache=await readJsonFile(path.join(CACHE_DIR,"edhrec.json"),{version:2,entries:{}});
+  edhrecDiskCache=await readStaticCacheWithSiblingImport("edhrec.json",{version:EDHREC_CACHE_VERSION,entries:{}});
+  // v3 changes the meaning of inclusion: old caches could preserve inclusion=0 even
+  // when numDecks/potentialDecks proved the card was widely played. Re-parse those
+  // entries from EDHREC instead of letting stale recommendation weights poison LAB 2.
+  if(Number(edhrecDiskCache.version||0)<EDHREC_CACHE_VERSION){
+    edhrecDiskCache={version:EDHREC_CACHE_VERSION,entries:{}};
+    cache.edhrec?.clear?.();
+    await writeJsonFile(path.join(CACHE_DIR,"edhrec.json"),edhrecDiskCache);
+  }
   if(!edhrecDiskCache.entries)edhrecDiskCache.entries={};
+  edhrecDiskCache.version=EDHREC_CACHE_VERSION;
   return edhrecDiskCache;
 }
 async function saveEdhrecDiskCache(){
   if(edhrecDiskCache)await writeJsonFile(path.join(CACHE_DIR,"edhrec.json"),edhrecDiskCache);
 }
 async function edhrec(commander,{force=false}={}){
-  const name=String(commander||"").trim(),k=name.toLocaleLowerCase("en-US");
+  const name=String(commander||"").trim(),k=cardIdentityKey(name);
   if(!force&&cache.edhrec.has(k))return cache.edhrec.get(k);
   const disk=await loadEdhrecDiskCache(),saved=disk.entries[k];
   if(!force&&saved?.lists){
@@ -524,7 +591,7 @@ async function edhrec(commander,{force=false}={}){
   return lists;
 }
 async function edhrecTags(commander){
-  const name=String(commander||"").trim(),k=name.toLocaleLowerCase("en-US"),disk=await loadEdhrecDiskCache();
+  const name=String(commander||"").trim(),k=cardIdentityKey(name),disk=await loadEdhrecDiskCache();
   if(disk.entries[k]?.tags?.length)return disk.entries[k].tags;
   const r=await get(`https://json.edhrec.com/pages/commanders/${slug(name)}.json`);
   if(!r.ok)return[];
@@ -551,7 +618,7 @@ async function edhrecSimilar(cardName){
   return candidates;
 }
 
-const cache={collections:new Map(),edhrec:new Map(),commanderCandidates:null,commanderCandidatesAt:0};
+const cache={collections:new Map(),edhrec:new Map(),spellbook:new Map(),commanderCandidates:null,commanderCandidatesAt:0};
 const sessions=new Map();
 // v2.4.17 — TTL para sesiones y jobs viejos, a partir de la auditoría: hoy nada se borra
 // salvo el logout explícito. En un proceso local esto no importa mucho, pero en un hosting
@@ -656,7 +723,7 @@ async function bridgePost(pathname, payload, attempts=5){
 
 
 const CACHE_DIR=path.join(__dirname,".manashelf-cache");
-const CACHE_SCHEMA_VERSION=3;
+const CACHE_SCHEMA_VERSION=4;
 let scryfallDiskCache=null;
 let scryfallLastRequestAt=0;
 async function scryfallRequest(url,opt={},ms=30000){
@@ -693,6 +760,34 @@ async function writeJsonFile(file,data){
     try{await fs.unlink(tmp)}catch{}
   }
 }
+const siblingStaticCacheImportAttempted=new Set();
+function betaDirVersion(name){
+  const m=String(name||"").match(/^ManaShelf-v(\d+)\.(\d+)\.(\d+)-beta$/i);
+  return m?[Number(m[1]),Number(m[2]),Number(m[3])]:null;
+}
+function compareBetaDirDesc(a,b){
+  const av=betaDirVersion(a)||[0,0,0],bv=betaDirVersion(b)||[0,0,0];
+  for(let i=0;i<3;i++)if(av[i]!==bv[i])return bv[i]-av[i];
+  return b.localeCompare(a);
+}
+async function readStaticCacheWithSiblingImport(fileName,fallback){
+  const current=path.join(CACHE_DIR,fileName),direct=await readJsonFile(current,null);
+  if(direct!==null)return direct;
+  if(siblingStaticCacheImportAttempted.has(fileName))return fallback;
+  siblingStaticCacheImportAttempted.add(fileName);
+  try{
+    const parent=path.dirname(__dirname),self=path.basename(__dirname);
+    const entries=await fs.readdir(parent,{withFileTypes:true});
+    const siblings=entries.filter(e=>e.isDirectory()&&e.name!==self&&betaDirVersion(e.name)).map(e=>e.name).sort(compareBetaDirDesc);
+    for(const dir of siblings){
+      const candidate=path.join(parent,dir,".manashelf-cache",fileName),data=await readJsonFile(candidate,null);
+      if(data===null)continue;
+      await writeJsonFile(current,data);
+      return data;
+    }
+  }catch{}
+  return fallback;
+}
 function userCacheKey(session){
   return String(session.account?.user_id||session.collectionId||session.account?.username||"default").replace(/[^a-zA-Z0-9._-]/g,"_");
 }
@@ -712,7 +807,7 @@ async function saveDeckDiskCache(session){
 }
 async function loadScryfallDiskCache(){
   if(scryfallDiskCache)return scryfallDiskCache;
-  scryfallDiskCache=await readJsonFile(path.join(CACHE_DIR,"scryfall-images.json"),{version:CACHE_SCHEMA_VERSION,cards:{}});
+  scryfallDiskCache=await readStaticCacheWithSiblingImport("scryfall-images.json",{version:CACHE_SCHEMA_VERSION,cards:{}});
   if(!scryfallDiskCache.cards)scryfallDiskCache.cards={};
   scryfallDiskCache.version=CACHE_SCHEMA_VERSION;
   return scryfallDiskCache;
@@ -727,66 +822,87 @@ function smallImage(card){
 function normalImage(card){
   return card?.image_uris?.normal||card?.card_faces?.[0]?.image_uris?.normal||smallImage(card);
 }
+function uniqueScryfallNames(names){
+  const unique=[];const seen=new Set();
+  for(const raw of names){const name=String(raw||"").trim(),k=cardIdentityKey(name);if(name&&k&&!seen.has(k)){seen.add(k);unique.push(name)}}
+  return unique;
+}
+function scryfallCacheRecordFresh(c){
+  if(!c||Number(c.metaVersion||0)<4)return false;
+  if(c.small||c.normal||c.large)return true;
+  return Boolean(c.notFound)&&Date.now()-Number(c.updatedAt||0)<24*60*60*1000;
+}
+function scryfallRecordToMeta(name,c){
+  return {
+    canonicalName:c.canonicalName||name,small:c.small||null,normal:c.normal||null,large:c.large||c.normal||null,
+    typeLine:c.typeLine||"",oracleText:c.oracleText||"",cmc:Number(c.cmc||0),manaCost:c.manaCost||"",producedMana:c.producedMana||[],colorIdentity:c.colorIdentity||[],
+    keywords:c.keywords||[],edhrecRank:c.edhrecRank??null,legalities:c.legalities||{}
+  };
+}
 async function batchScryfallImagesUnlocked(names,{force=false,onProgress=null}={}){
   const disk=await loadScryfallDiskCache();
-  const unique=[...new Set(names.map(n=>String(n).trim()).filter(Boolean))];
-  const missing=unique.filter(n=>{
-    const c=disk.cards[n.toLocaleLowerCase("en-US")];
-    if(force || !c || Number(c.metaVersion||0)<3)return true;
-    const hasImage=Boolean(c.small||c.normal||c.large);
-    if(hasImage)return false;
-    // Older builds could permanently cache a null image after a transient miss.
-    // Only a confirmed Scryfall not_found result is allowed to stay negative, and
-    // even that expires so renamed/fixed records can recover later.
-    const negativeFresh=Boolean(c.notFound)&&Date.now()-Number(c.updatedAt||0)<24*60*60*1000;
-    return !negativeFresh;
-  });
+  // Keep the caller's display names, but collapse exact normalized duplicates. Multi-face
+  // aliases are resolved against cache records rather than rewriting what is sent to Scryfall.
+  const unique=uniqueScryfallNames(names);
+  const missing=unique.filter(n=>force||!scryfallCacheRecordFresh(objectCardAliasGet(disk.cards,n))),cached=Math.max(0,unique.length-missing.length);
   const total=Math.ceil(missing.length/75);
+  onProgress?.({phase:missing.length?"fetch":"cache",current:0,total,unique:unique.length,cached,missing:missing.length,message:missing.length?`Scryfall · ${cached} en caché · ${missing.length} por validar`:`Scryfall · caché vigente · ${unique.length} carta${unique.length===1?"":"s"}`});
   for(let i=0,part=0;i<missing.length;i+=75,part++){
     const chunk=missing.slice(i,i+75);
-    onProgress?.({current:part,total,message:`Scryfall: ${Math.min(i+75,missing.length)} / ${missing.length} cartas`});
+    onProgress?.({phase:"fetch",current:part,total,unique:unique.length,cached,missing:missing.length,processed:Math.min(i+75,missing.length),message:`Scryfall · ${Math.min(i+75,missing.length)} / ${missing.length} faltantes · ${cached} en caché`});
     const r=await scryfallRequest("https://api.scryfall.com/cards/collection",{
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify({identifiers:chunk.map(name=>({name}))})
     },30000);
-    if(!r.ok){
-      // Keep any older cache. Never destroy valid local metadata because a refresh failed.
-      continue;
-    }
+    if(!r.ok)continue; // never erase valid local metadata because refresh failed
     const payload=await r.json();
     for(const c of (payload.data||[])){
       const oracleText=c.oracle_text||c.card_faces?.map(f=>f.oracle_text||"").filter(Boolean).join("\n")||"";
-      disk.cards[String(c.name).toLocaleLowerCase("en-US")]={
-        small:smallImage(c),normal:normalImage(c),large:c?.image_uris?.large||c?.card_faces?.[0]?.image_uris?.large||normalImage(c),
+      const record={
+        canonicalName:String(c.name||""),small:smallImage(c),normal:normalImage(c),large:c?.image_uris?.large||c?.card_faces?.[0]?.image_uris?.large||normalImage(c),
         typeLine:c.type_line||"",oracleText,cmc:Number(c.cmc||0),manaCost:c.mana_cost||c.card_faces?.[0]?.mana_cost||"",producedMana:c.produced_mana||[],colorIdentity:c.color_identity||[],
-        keywords:c.keywords||[],edhrecRank:c.edhrec_rank??null,legalities:c.legalities||{},notFound:false,metaVersion:3,updatedAt:Date.now()
+        keywords:c.keywords||[],edhrecRank:c.edhrec_rank??null,legalities:c.legalities||{},notFound:false,metaVersion:4,updatedAt:Date.now()
       };
+      // Scryfall's canonical multi-face name and both faces point at the same immutable
+      // metadata record. This is a join alias, not a display-name rewrite.
+      objectCardAliasSet(disk.cards,c.name,record);
     }
     for(const nf of (payload.not_found||[])){
       const n=nf?.name;
-      if(n)disk.cards[String(n).toLocaleLowerCase("en-US")]={small:null,normal:null,large:null,typeLine:"",oracleText:"",cmc:0,manaCost:"",producedMana:[],colorIdentity:[],keywords:[],legalities:{},notFound:true,metaVersion:3,updatedAt:Date.now()};
+      if(n)objectCardAliasSet(disk.cards,n,{canonicalName:String(n),small:null,normal:null,large:null,typeLine:"",oracleText:"",cmc:0,manaCost:"",producedMana:[],colorIdentity:[],keywords:[],legalities:{},notFound:true,metaVersion:4,updatedAt:Date.now()});
     }
     await saveScryfallDiskCache();
   }
   onProgress?.({current:total,total,message:`Scryfall: ${missing.length?missing.length+" actualizadas":"caché vigente"}`});
   const out=new Map();
   for(const name of unique){
-    const c=disk.cards[name.toLocaleLowerCase("en-US")];
-    if(c)out.set(name,{
-      small:c.small||null,normal:c.normal||null,large:c.large||c.normal||null,
-      typeLine:c.typeLine||"",oracleText:c.oracleText||"",cmc:Number(c.cmc||0),manaCost:c.manaCost||"",producedMana:c.producedMana||[],colorIdentity:c.colorIdentity||[],
-      keywords:c.keywords||[],edhrecRank:c.edhrecRank??null,legalities:c.legalities||{}
-    });
+    const c=objectCardAliasGet(disk.cards,name);
+    if(c)out.set(name,scryfallRecordToMeta(name,c));
   }
   return out;
 }
-let scryfallBatchQueue=Promise.resolve();
+let scryfallBatchQueue=Promise.resolve(),scryfallBatchPending=0;
 async function batchScryfallImages(names,options={}){
+  // Critical fast path: a cache-only lookup must never wait behind a large Scryfall refresh.
+  // Commander/profile previews are commonly already cached by the time the builder starts.
+  // Previously they still entered the global FIFO queue, so one background bulk validation
+  // could make a 1-card lookup appear frozen for minutes.
+  if(!options.force){
+    const disk=await loadScryfallDiskCache(),unique=uniqueScryfallNames(names);
+    if(unique.every(name=>scryfallCacheRecordFresh(objectCardAliasGet(disk.cards,name)))){
+      const out=new Map();
+      for(const name of unique){const c=objectCardAliasGet(disk.cards,name);if(c)out.set(name,scryfallRecordToMeta(name,c))}
+      options.onProgress?.({phase:"cache",current:0,total:0,unique:unique.length,cached:unique.length,missing:0,message:`Scryfall · caché vigente · ${unique.length} carta${unique.length===1?"":"s"}`});
+      return out;
+    }
+  }
+  const ahead=scryfallBatchPending++;
+  if(ahead>0)options.onProgress?.({phase:"queued",current:0,total:0,queued:ahead,message:`Scryfall · esperando ${ahead} validación${ahead===1?"":"es"} anterior${ahead===1?"":"es"}`});
   const run=()=>batchScryfallImagesUnlocked(names,options);
   const pending=scryfallBatchQueue.then(run,run);
   scryfallBatchQueue=pending.then(()=>undefined,()=>undefined);
-  return pending;
+  try{return await pending}finally{scryfallBatchPending=Math.max(0,scryfallBatchPending-1)}
 }
 function freshUsageState(session){
   return {
@@ -821,9 +937,14 @@ function addDeckCardsToUsage(state,deck,cards){
     const name=String(card?.name||card?.display_name||"").trim();
     const quantity=Math.max(0,Number(card?.quantity||0));
     if(!name||quantity<=0)continue;
-    const key=name.toLocaleLowerCase("en-US");
-    if(!state.usage.has(key))state.usage.set(key,[]);
-    state.usage.get(key).push({deckId:deck.id,deckName:deck.name,quantity,url:`https://archidekt.com/decks/${deck.id}`});
+    const entry={deckId:deck.id,deckName:deck.name,quantity,url:`https://archidekt.com/decks/${deck.id}`};
+    // Store the same logical usage row under every canonical alias. A lookup returns one
+    // alias bucket, so quantities are never double-counted, but face-only/full-face names
+    // resolve identically across public/private imports and later Scryfall canonicalization.
+    for(const key of cardNameAliases(name)){
+      if(!state.usage.has(key))state.usage.set(key,[]);
+      state.usage.get(key).push(entry);
+    }
   }
 }
 function sameDeckVersion(cacheEntry,deck){
@@ -843,11 +964,9 @@ function sameDeckVersion(cacheEntry,deck){
   return true;
 }
 function startDeckUsageSync(session,{retryOnly=false}={}){
-  if(!session.account){
-    if(!session.deckUsage)session.deckUsage=freshUsageState(session);
-    session.deckUsage.status="done";session.deckUsage.phase="done";session.deckUsage.completedDecks=0;session.deckUsage.totalDecks=0;
-    return;
-  }
+  // Public and private sessions build the same cross-deck usage model whenever Archidekt
+  // exposes the deck publicly. Authentication changes reach (private decks / write access),
+  // not the semantics of availability for data that both modes can read.
   if(session.deckSyncPromise)return;
   if(!session.deckUsage)session.deckUsage=freshUsageState(session);
 
@@ -899,12 +1018,16 @@ function startDeckUsageSync(session,{retryOnly=false}={}){
     };
     const fetchOne=async(deck)=>{
       state.currentDeck=deck.name;
-      // Preview/Commander correctness requires the FULL endpoint. The previous helper could
-      // silently fall back to /small and mark a deck successful even when /small omitted
-      // the premier category. That is the root cause of "Commander por identificar".
-      const partition=await fetchDeckPartitionFullOnly(session,deck.id);
-      if(!partition)throw new Error("Archidekt no devolvió el mazo completo.");
-      if(!partition.commanders?.length)throw new Error("El mazo completo no identificó una categoría premier para Commander.");
+      // Deck-usage synchronization and Commander identification are separate concerns.
+      // Prefer FULL because it preserves premier-category metadata. If FULL repeatedly fails,
+      // /small may still be enough to recover the card list/usage; and a deck with no premier
+      // Commander must not keep the whole account stuck at 54/55 forever.
+      let partition=null,fullError=null;
+      try{partition=await fetchDeckPartitionFullOnly(session,deck.id)}catch(e){fullError=e}
+      if(!partition){
+        partition=await fetchDeckPartitionSmallOnly(session,deck.id).catch(()=>null);
+        if(!partition)throw fullError||new Error("Archidekt no devolvió datos utilizables del mazo.");
+      }
       saveSuccess(deck,partition);
     };
 
@@ -1032,6 +1155,15 @@ async function fetchFullArchidektPayload(session,deckId,{attempts=3}={}){
 async function fetchDeckPartitionFullOnly(session,deckId){
   return partitionArchidektDeck(await fetchFullArchidektPayload(session,deckId,{attempts:3}));
 }
+async function fetchDeckPartitionSmallOnly(session,deckId){
+  const id=Number(deckId);if(!id)throw new Error("deckId inválido.");
+  const url=`https://archidekt.com/api/decks/${id}/small/`;
+  const r=await archidektRequest(url,{method:"GET",headers:{...(session.account?.token?{"Authorization":`JWT ${session.account.token}`}:{ }),"Accept":"application/json"}},2);
+  const raw=await r.text();
+  if(!r.ok)throw new Error(`Archidekt small deck HTTP ${r.status}: ${raw.slice(0,180)}`);
+  let payload={};try{payload=JSON.parse(raw)}catch{throw new Error("Archidekt small deck devolvió una respuesta no JSON.")}
+  return partitionArchidektDeck(payload);
+}
 function archidektCategoryName(x){return typeof x==="string"?x:String(x?.name||x?.category||"")}
 // Commander identity fallback validated against the in-app five-method comparison:
 // read the FULL Archidekt payload and identify cards whose primary category is premier.
@@ -1052,8 +1184,7 @@ function detectPremierCommanders(payload){
 async function discoverCommanderExact(name){
   if(!name)return null;
   const results=await commanderSearch(name);
-  const wanted=String(name).toLocaleLowerCase("en-US");
-  return (results||[]).find(x=>String(x.name||"").toLocaleLowerCase("en-US")===wanted)||(results||[])[0]||null;
+  return (results||[]).find(x=>cardNameMatches(x.name,name))||(results||[])[0]||null;
 }
 
 // v2.4.5 — precálculo de Size en segundo plano, apenas se conecta la cuenta, en vez de
@@ -1204,59 +1335,16 @@ function detectTribalType(expanded){
   if(count<6||count/totalCreatures<0.18)return null;
   return {type,count,totalCreatures};
 }
-function themeSignals(meta){  const text=String(meta?.oracleText||"").toLowerCase(),type=String(meta?.typeLine||"").toLowerCase(),out=[];
-  const add=(name,weight,why)=>out.push({name,weight,why});
-  if(/\+1\/\+1 counter/.test(text))add("+1/+1 Counters",2,"+1/+1 counters");
-  if(/\binfect\b|\btoxic\b|poison counter|poisoned/.test(text))add("Infect / Poison",4,"infect/toxic/poison");
-  if(/\bproliferate\b/.test(text))add("Proliferate",3,"proliferate");
-  if(/\bdeathtouch\b/.test(text))add("Deathtouch",2,"deathtouch");
-  if(/\bsacrifice\b|whenever .* dies|when .* dies/.test(text))add("Sacrifice / Aristocrats",2,"sacrifice/death triggers");
-  if(/return .*graveyard.*battlefield|put .*graveyard.*battlefield|reanimate/.test(text))add("Reanimator",3,"reanimation effect");
-  else if(/\bgraveyard\b|\bmill\b/.test(text))add("Graveyard",1.5,"graveyard interaction");
-  if(/create .* token|tokens? you control|populate/.test(text))add("Tokens",2,"token production/payoff");
-  if(/artifact(s)? you control|whenever .*artifact|sacrifice an artifact|artifact spell|artifact card/.test(text))add("Artifacts",2.5,"explicit artifact payoff/enabler");
-  if(/enchantment(s)? you control|whenever .*enchantment|enchantment spell|enchantment card/.test(text))add("Enchantments",2.5,"explicit enchantment payoff/enabler");
-  if(/instant or sorcery|instant and sorcery|noncreature spell|magecraft|whenever you cast .*spell/.test(text))add("Spellslinger",2.5,"spell payoff/enabler");
-  if(/choose a creature type|creatures? you control of the chosen type|creature cards? of the chosen type/.test(text))add("Kindred",3,"explicit creature-type payoff");
-  if(/equipment you control|equipped creature|attach .*equipment|equipment spell/.test(text))add("Equipment",2.5,"equipment payoff/enabler");
-  if(/\blandfall\b|whenever a land enters|lands? you control.*(graveyard|battlefield)|play an additional land/.test(text))add("Lands Matter",2.5,"land payoff/enabler");
-  if(/whenever you gain life|if you gained life|life you gained/.test(text))add("Lifegain",2.5,"lifegain payoff");
-  if(/\bblink\b|exile .* then return|exile .* return .* battlefield/.test(text))add("Blink / ETB",2.5,"blink/ETB engine");
-  return out;
-}
 function edhrecTagEvidence(tag,meta){
-  const t=String(tag||"").toLowerCase(),text=String(meta?.oracleText||"").toLowerCase(),type=String(meta?.typeLine||"").toLowerCase();
-  const local=new Set(themeSignals(meta).map(x=>x.name.toLowerCase()));
-  if(local.has(t))return 3;
-  if(t==="burn"&&/(deals? .*damage to (any target|target player|target opponent|each opponent)|damage can't be prevented)/.test(text))return 4;
-  if(t==="group slug"&&/(each opponent (loses|takes)|deals? .*damage to each opponent|whenever an opponent|at the beginning of each opponent|players can't gain life)/.test(text))return 4;
-  if(t==="group hug"&&/(each player draws|each player may|each player.*add|opponents? .*draw|another player|target opponent.*draw)/.test(text))return 3;
-  if(t==="chaos"&&/(at random|coin flip|flip a coin|randomly|exchange control|choose .* at random)/.test(text))return 4;
-  if(t==="infect"&&/\binfect\b|\btoxic\b|poison counter|poisoned/.test(text))return 5;
-  if(t==="aristocrats"&&(/whenever .* dies|when .* dies/.test(text)||(/sacrifice/.test(text)&&/creature/.test(text))))return 3;
-  if(t==="sacrifice"&&/sacrifice/.test(text))return 3;
-  if(t==="spellslinger"&&/instant or sorcery|instant and sorcery|magecraft|whenever you cast .*spell/.test(text))return 3;
-  if(t==="proliferate"&&/\bproliferate\b/.test(text))return 4;
-  if(t==="+1/+1 counters"&&/\+1\/\+1 counter/.test(text))return 4;
-  if(t==="lifegain"&&/gain .*life|whenever you gain life/.test(text))return 3;
-  if(t==="lifedrain"&&/(opponent loses .*life|each opponent loses).*gain/.test(text))return 4;
-  if(t==="artifacts"&&(type.includes("artifact")||/artifact/.test(text)))return 2;
-  if(t==="enchantress"&&(type.includes("enchantment")||/enchantment/.test(text)))return 2;
-  if(t==="tokens"&&/create .*token|tokens? you control/.test(text))return 3;
-  if(t==="graveyard"&&/\bgraveyard\b/.test(text))return 2;
-  if(t==="reanimator"&&/graveyard.*battlefield|return .* from .*graveyard/.test(text))return 4;
-  if(t==="landfall"&&/\blandfall\b|whenever a land enters/.test(text))return 4;
-  if(t==="lands matter"&&(/land/.test(text)&&/(graveyard|battlefield|additional land|land card)/.test(text)))return 2;
-  if(t==="equipment"&&(type.includes("equipment")||/equipped creature|equipment/.test(text)))return 3;
-  if(t==="auras"&&(type.includes("aura")||/\baura\b/.test(text)))return 3;
-  if(t==="wheels"&&/(each player.*discard|each player.*draw|discard your hand.*draw)/.test(text))return 4;
-  if(t==="discard"&&/discard/.test(text))return 2;
-  if(t==="card draw"&&/draw .*card/.test(text))return 2;
-  if(t==="forced combat"&&/(goad|attacks each combat|must attack|can't attack you)/.test(text))return 4;
-  if(t==="politics"&&/(opponent chooses|player of your choice|choose an opponent|vote|votes)/.test(text))return 3;
-  return 0;
+  const semantic=classifyCard({meta}),contract=evaluateThemeEvidence({meta,semantic},tag,0);
+  // One semantic source of truth for every recognized theme. Unknown themes deliberately
+  // return no local evidence rather than falling back to a second Oracle-regex classifier;
+  // EDHREC context can still rank them when a theme page exists.
+  return contract.explicit?Math.round(contract.archetype*5):0;
 }
 function roleQty(cards,role){return cards.filter(c=>c.roles.includes(role)).reduce((n,c)=>n+Number(c.quantity||1),0)}
+function reliableRoleContribution(q){q=Number(q||0);return q>=.82?1:q>=.66?.82:q>=.50?.58:q>=.38?.30:0}
+function generatedReliableRoleQty(cards,role){return Number((cards||[]).reduce((n,c)=>n+reliableRoleContribution(c.builder?.roleQualities?.[role])*Number(c.quantity||1),0).toFixed(1))}
 function healthBand(value,low,high){return value<low?"Bajo":value>high?"Alto":"Adecuado"}
 async function buildDeckHealth(session,deckId,{includeDeckMetrics=false}={}){
   if(!session.deckDetails)session.deckDetails=new Map();
@@ -1267,8 +1355,9 @@ async function buildDeckHealth(session,deckId,{includeDeckMetrics=false}={}){
   const cachedHealth=session.healthCache.get(Number(deckId));
   if(cachedHealth?.deckSignature===deckSignature && (!includeDeckMetrics||cachedHealth.data?.deckMetrics))return cachedHealth.data;
   const names=[...new Set((deck.mainboard||[]).map(c=>c.name).concat(deck.commander?[deck.commander]:[]))];
-  const meta=await batchScryfallImages(names),expanded=[];
-  for(const entry of deck.mainboard||[]){const m=meta.get(entry.name)||{typeLine:"",oracleText:"",cmc:0};expanded.push({...entry,meta:m,roles:classifyRoles(m),themes:themeSignals(m)})}
+  const meta=await batchScryfallImages(names),baseExpanded=[];
+  for(const entry of deck.mainboard||[]){const m=meta.get(entry.name)||{typeLine:"",oracleText:"",cmc:0};baseExpanded.push({...entry,meta:m,themes:[]})}
+  const expanded=applySemanticClassification(baseExpanded,{commanderName:deck.commander}).map(c=>({...c,roles:healthRolesFromSemantic(c.semantic,c.meta)}));
   // v2.4.12 — si hay un subtipo tribal dominante, etiquetar cartas de soporte tribal
   // (texto que menciona ese tipo como payoff) como evidencia del theme "Tribal: X", para
   // que dejen de verse como "sin evidencia clara" en el corte de cartas.
@@ -1288,21 +1377,23 @@ async function buildDeckHealth(session,deckId,{includeDeckMetrics=false}={}){
   const lands=expanded.filter(c=>String(c.meta.typeLine||"").toLowerCase().includes("land")).reduce((n,c)=>n+Number(c.quantity||1),0);
   const rampCards=expanded.filter(c=>c.roles.includes("Ramp")),drawCards=expanded.filter(c=>c.roles.includes("Draw")),removalCards=expanded.filter(c=>c.roles.includes("Removal")),counterCards=expanded.filter(c=>c.roles.includes("Counterspells")),wipeCards=expanded.filter(c=>c.roles.includes("Board Wipes")),landCards=expanded.filter(c=>String(c.meta.typeLine||"").toLowerCase().includes("land"));
   const ramp=roleQty(expanded,"Ramp"),draw=roleQty(expanded,"Draw"),removal=roleQty(expanded,"Removal"),counters=roleQty(expanded,"Counterspells"),wipes=roleQty(expanded,"Board Wipes");
-  const interaction=removal+counters+wipes;
+  const interaction=removal+counters+wipes,hasBuilderWeights=Boolean(deck.generated&&expanded.some(c=>c.builder?.roleQualities));
+  const reliableRamp=hasBuilderWeights?generatedReliableRoleQty(expanded,"ramp"):ramp,reliableInteraction=hasBuilderWeights?generatedReliableRoleQty(expanded,"interaction"):interaction,reliableWipes=hasBuilderWeights?generatedReliableRoleQty(expanded,"wipes"):wipes;
+  const rampSignal=hasBuilderWeights?reliableRamp:ramp,interactionSignal=hasBuilderWeights?reliableInteraction:interaction,wipeSignal=hasBuilderWeights?reliableWipes:wipes;
   const commanderDraws=/draw|exile .*you may (play|cast)|look at .*top.*(play|cast)/.test(commanderText);
   const rampLow=(avgCmc>=3.5?9:avgCmc<=2.5?6:8)+(commanderCmc>=6?1:0);
   const drawLow=commanderDraws?6:8;
   const interactionLow=8;
   const health=[
-    {key:"mana",label:"Maná",value:ramp,refMin:rampLow,refMax:rampLow+5,level:healthBand(ramp,rampLow,rampLow+5),display:`${lands} tierras · ${ramp} ramp`,refs:[{label:`${lands} tierras`,cards:landCards.map(c=>c.name)},{label:`${ramp} ramp`,cards:rampCards.map(c=>c.name)}],basis:`Se detectaron ${lands} tierras y ${ramp} fuentes de aceleración no-tierra. Las tierras que simplemente producen maná NO cuentan como ramp. CMC medio no-tierra ${avgCmc.toFixed(1)}; Commander CMC ${commanderCmc||"?"}. Rango orientativo de ramp ${rampLow}–${rampLow+5}; el coste del Commander solo modifica levemente el piso.`},
+    {key:"mana",label:"Maná",value:rampSignal,refMin:rampLow,refMax:rampLow+5,level:healthBand(rampSignal,rampLow,rampLow+5),display:hasBuilderWeights?`${lands} tierras · ${ramp} efectos ramp · ${reliableRamp} equiv. fiables`:`${lands} tierras · ${ramp} ramp`,refs:[{label:`${lands} tierras`,cards:landCards.map(c=>c.name)},{label:`${ramp} efectos ramp`,cards:rampCards.map(c=>c.name)}],basis:hasBuilderWeights?`Se detectaron ${ramp} efectos de aceleración y el builder los pondera como ${reliableRamp} equivalentes fiables según coste/condición. Para el rango estructural se usa la cifra ponderada. CMC medio no-tierra ${avgCmc.toFixed(1)}; Commander CMC ${commanderCmc||"?"}.`:`Se detectaron ${lands} tierras y ${ramp} fuentes de aceleración no-tierra. Las tierras que simplemente producen maná NO cuentan como ramp. CMC medio no-tierra ${avgCmc.toFixed(1)}; Commander CMC ${commanderCmc||"?"}. Rango orientativo de ramp ${rampLow}–${rampLow+5}; el coste del Commander solo modifica levemente el piso.`},
     {key:"advantage",label:"Card Advantage",value:draw,refMin:drawLow,refMax:drawLow+5,level:healthBand(draw,drawLow,drawLow+5),display:`${draw} fuentes detectadas`,refs:[{label:`${draw} fuentes`,cards:drawCards.map(c=>c.name)}],basis:`Se detectaron ${draw} fuentes de robo/ventaja. Rango orientativo ${drawLow}–${drawLow+5}. ${commanderDraws?"El Commander parece generar ventaja de cartas, por eso el piso se reduce.":"El Commander no parece aportar robo repetible de forma clara, por eso no se reduce el piso."}`},
-    {key:"interaction",label:"Interacción",value:interaction,refMin:interactionLow,refMax:15,level:healthBand(interaction,interactionLow,15),display:`${removal} removal · ${counters} counters · ${wipes} wipes`,refs:[{label:`${removal} removal`,cards:removalCards.map(c=>c.name)},{label:`${counters} counters`,cards:counterCards.map(c=>c.name)},{label:`${wipes} wipes`,cards:wipeCards.map(c=>c.name)}],basis:`Interacción agrupa respuestas puntuales, counters y wipes: ${removal} + ${counters} + ${wipes} = ${interaction}. Rango orientativo 8–15. El número no presupone un metajuego concreto; sirve para señalar extremos.`},
+    {key:"interaction",label:"Interacción",value:interactionSignal,refMin:interactionLow,refMax:15,level:healthBand(interactionSignal,interactionLow,15),display:hasBuilderWeights?`${interaction} efectos · ${reliableInteraction} equiv. fiables · ${wipes} wipes`:`${removal} removal · ${counters} counters · ${wipes} wipes`,refs:[{label:`${removal} removal`,cards:removalCards.map(c=>c.name)},{label:`${counters} counters`,cards:counterCards.map(c=>c.name)},{label:`${wipes} wipes`,cards:wipeCards.map(c=>c.name)}],basis:hasBuilderWeights?`La clasificación detecta ${interaction} efectos de interacción; las ponderaciones usadas al construir equivalen a ${reliableInteraction} piezas fiables. Wipes estructurales: ${wipes}.`:`Interacción agrupa respuestas puntuales, counters y wipes: ${removal} + ${counters} + ${wipes} = ${interaction}. Rango orientativo 8–15. El número no presupone un metajuego concreto; sirve para señalar extremos.`},
     {key:"curve",label:"Curva",value:avgCmc,refMin:2,refMax:4,level:avgCmc>4?"Alta":avgCmc<2?"Muy baja":"Adecuada",display:`CMC medio ${avgCmc.toFixed(1)}`,refs:[{label:"Ver cartas por CMC",cards:nonlands.map(c=>c.name)}],basis:`CMC medio calculado sobre cartas no-tierra: ${avgCmc.toFixed(1)}. No se marca como “mala” por sí sola: se usa para interpretar el maná y detectar curvas excepcionalmente altas o bajas.`}
   ];
 
   // Structural recommendations: every rule is evaluated independently.
   // Multiple recommendations may be returned for the same deck.
-  const graveHateCards=expanded.filter(c=>/exile .*graveyard|exile all cards from .*graveyard|cards in graveyards can't|graveyard.*exile/.test(String(c.meta.oracleText||"").toLowerCase()));
+  const graveHateCards=expanded.filter(c=>(c.semantic?.roles||[]).some(r=>(r.id||r)==="graveyard_hate"));
   const graveHate=graveHateCards.reduce((n,c)=>n+Number(c.quantity||1),0);
   const protectionCards=expanded.filter(c=>c.roles.includes("Protection")),recursionCards=expanded.filter(c=>c.roles.includes("Recursion"));
   const protection=roleQty(expanded,"Protection");
@@ -1311,21 +1402,21 @@ async function buildDeckHealth(session,deckId,{includeDeckMetrics=false}={}){
   const landLow=(avgCmc>=3.8?36:avgCmc<=2.5?32:34)+(commanderCmc>=6?1:0);
   const gaps=[];
   const structuralRules=[
-    {type:"Ramp",triggered:ramp<rampLow,summary:`${ramp} detectadas · referencia ${rampLow}+`,cards:rampCards.map(c=>c.name)},
+    {type:"Ramp",triggered:rampSignal<rampLow,summary:hasBuilderWeights?`${ramp} efectos · ${reliableRamp} equiv. fiables · referencia ${rampLow}+`:`${ramp} detectadas · referencia ${rampLow}+`,cards:rampCards.map(c=>c.name)},
     {type:"Card Advantage",triggered:draw<drawLow,summary:`${draw} fuentes · referencia ${drawLow}+`,cards:drawCards.map(c=>c.name)},
-    {type:"Interacción",triggered:interaction<interactionLow,summary:`${interaction} piezas · referencia ${interactionLow}+`,cards:[...removalCards,...counterCards,...wipeCards].map(c=>c.name)},
+    {type:"Interacción",triggered:interactionSignal<interactionLow,summary:hasBuilderWeights?`${interaction} efectos · ${reliableInteraction} equiv. fiables · referencia ${interactionLow}+`:`${interaction} piezas · referencia ${interactionLow}+`,cards:[...removalCards,...counterCards,...wipeCards].map(c=>c.name)},
     {type:"Graveyard hate",triggered:graveHate===0,summary:`${graveHate} respuestas detectadas`,cards:graveHateCards.map(c=>c.name)},
-    {type:"Board wipe",triggered:wipes===0,summary:`${wipes} wipes detectados`,cards:wipeCards.map(c=>c.name)},
+    {type:"Board wipe",triggered:wipeSignal<.3,summary:hasBuilderWeights?`${wipes} detectados · ${reliableWipes} equiv. fiables`:`${wipes} wipes detectados`,cards:wipeCards.map(c=>c.name)},
     {type:"Protección / resiliencia",triggered:protection===0&&commanderCmc>=5,summary:`${protection} protección · Commander CMC ${commanderCmc||"?"}`,cards:protectionCards.map(c=>c.name)},
     {type:"Tierras / base de maná",triggered:lands<landLow,summary:`${lands} tierras · referencia contextual ${landLow}+`,cards:landCards.map(c=>c.name)},
     {type:"Recursión",triggered:graveyardPlan>=5&&recursion===0,summary:`${recursion} recursión · ${graveyardPlan} cartas con plan de cementerio`,cards:recursionCards.map(c=>c.name)}
   ];
 
-  if(ramp<rampLow)gaps.push({type:"Ramp",severity:"A considerar",why:`Detecté ${ramp} fuentes de ramp y, por la curva/Commander de este mazo, el piso orientativo es ${rampLow}. Si el mazo se siente lento, sumar aceleración barata es una mejora estructural posible.`,basis:`Ramp detectado: ${ramp}. CMC medio no-tierra ${avgCmc.toFixed(1)}; Commander CMC ${commanderCmc||"?"}. El piso contextual calculado es ${rampLow}.`});
+  if(rampSignal<rampLow)gaps.push({type:"Ramp",severity:"A considerar",why:`Detecté ${ramp} fuentes de ramp y, por la curva/Commander de este mazo, el piso orientativo es ${rampLow}. Si el mazo se siente lento, sumar aceleración barata es una mejora estructural posible.`,basis:`Ramp detectado: ${ramp}. CMC medio no-tierra ${avgCmc.toFixed(1)}; Commander CMC ${commanderCmc||"?"}. El piso contextual calculado es ${rampLow}.`});
   if(draw<drawLow)gaps.push({type:"Card Advantage",severity:"A considerar",why:`Detecté ${draw} fuentes de robo o ventaja de cartas, por debajo del piso orientativo ${drawLow}. El mazo puede quedarse sin recursos en partidas largas.`,basis:`Fuentes detectadas: ${draw}. ${commanderDraws?"El Commander parece aportar ventaja, por eso el piso ya está reducido.":"El Commander no parece aportar robo repetible claro."}`});
-  if(interaction<interactionLow)gaps.push({type:"Interacción",severity:"A considerar",why:`Detecté ${interaction} piezas de interacción entre removal, counters y wipes. Es un volumen bajo para responder a permanentes o jugadas rivales de forma consistente.`,basis:`Removal ${removal} + counters ${counters} + wipes ${wipes} = ${interaction}. Piso orientativo actual: ${interactionLow}.`});
+  if(interactionSignal<interactionLow)gaps.push({type:"Interacción",severity:"A considerar",why:`Detecté ${interaction} piezas de interacción entre removal, counters y wipes. Es un volumen bajo para responder a permanentes o jugadas rivales de forma consistente.`,basis:`Removal ${removal} + counters ${counters} + wipes ${wipes} = ${interaction}. Piso orientativo actual: ${interactionLow}.`});
   if(graveHate===0)gaps.push({type:"Graveyard hate",severity:"A considerar",why:"No detecté respuestas directas a cementerios. Muchos mazos Commander usan el cementerio como recurso; tener al menos alguna respuesta puede evitar que una estrategia rival opere sin oposición.",basis:"Se buscó texto Oracle que exile cartas/cementerios o limite el uso del cementerio. Resultado: 0 detectadas. No se impone una cuota fija porque depende mucho de tu mesa."});
-  if(wipes===0)gaps.push({type:"Board wipe",severity:"A considerar",why:"No detecté limpiezas amplias. Una respuesta global puede ser importante cuando un rival desarrolla una mesa que el removal uno-a-uno no alcanza a controlar.",basis:"Se detectaron 0 wipes mediante patrones de efectos globales. No significa que el deck esté mal: estrategias muy rápidas, proactivas o asimétricas pueden elegir no usarlos."});
+  if(wipeSignal<.3)gaps.push({type:"Board wipe",severity:"A considerar",why:"No detecté limpiezas amplias. Una respuesta global puede ser importante cuando un rival desarrolla una mesa que el removal uno-a-uno no alcanza a controlar.",basis:"Se detectaron 0 wipes mediante patrones de efectos globales. No significa que el deck esté mal: estrategias muy rápidas, proactivas o asimétricas pueden elegir no usarlos."});
   if(protection===0 && commanderCmc>=5)gaps.push({type:"Protección / resiliencia",severity:"A considerar",why:"El Commander es relativamente costoso y no detecté protección directa. Si el plan depende de mantenerlo en mesa, recastearlo repetidamente puede ser caro.",basis:`Commander CMC ${commanderCmc}; protección detectada: ${protection}. Esta advertencia es contextual y no se usa si el Commander es barato.`});
   // v2.4.18 — chequeo de tamaño reglamentario (100 cartas exactas, formato Commander). A
   // diferencia de las demás recomendaciones (heurísticas, "a considerar"), esto es una
@@ -1343,45 +1434,63 @@ async function buildDeckHealth(session,deckId,{includeDeckMetrics=false}={}){
   let edhrecWarning=null,commanderTags=[];
   if(deck.commander){try{commanderTags=await edhrecTags(deck.commander)}catch(e){edhrecWarning=`EDHREC tags no disponibles: ${String(e.message||e)}`}}
   const scoredTags=commanderTags.map(tag=>{
-    const cards=[],weights=[];
-    for(const c of expanded){const w=edhrecTagEvidence(tag.name,c.meta);if(w>0){cards.push(c.name);weights.push(w*Number(c.quantity||1))}}
-    const unique=[...new Set(cards)],score=weights.reduce((n,x)=>n+x,0);
-    return {...tag,cards:unique,cardCount:unique.length,score};
-  }).filter(x=>x.cardCount>=2).sort((a,b)=>Number(b.count||0)-Number(a.count||0)||b.score-a.score);
-  const themes=scoredTags.slice(0,5).map((t,idx)=>{
+    const support=countThemeSupport(expanded,tag.name,(themeName,c)=>edhrecTagEvidence(themeName,c.meta),{excludeName:deck.commander});
+    let score=0;for(const c of expanded){if(cardNameMatches(c.name,deck.commander))continue;const w=edhrecTagEvidence(tag.name,c.meta);if(w>0)score+=w*Number(c.quantity||1)}
+    return {...tag,...support,score};
+  }).filter(x=>x.cardCount>=2).sort((a,b)=>b.cardCount-a.cardCount||b.score-a.score||Number(b.count||0)-Number(a.count||0)||String(a.name).localeCompare(String(b.name)));
+  let themes=scoredTags.slice(0,5).map((t,idx)=>{
     const density=deck.size?Math.round(t.cardCount/deck.size*100):0;
     const confidence=t.cardCount>=8?"Alta":t.cardCount>=4?"Media":"Baja";
     return {name:t.name,confidence,density,cardCount:t.cardCount,cards:t.cards,commanderEvidence:true,
       tier:idx===0?"Theme principal":"Theme secundario",edhrecCount:t.count,
-      explanation:`EDHREC etiqueta a ${deck.commander} con “${t.name}” (${t.count} decks). ManaShelf encontró ${t.cardCount} cartas de tu lista con evidencia compatible y usa esa evidencia local para ordenar los tags del Commander.`};
+      explanation:`EDHREC ofrece “${t.name}” como theme posible para ${deck.commander} (${t.count} decks). ManaShelf encontró ${t.cardCount} cartas de tu lista con evidencia compatible; el orden y el Theme principal se determinan primero por esa evidencia local, y la popularidad global de EDHREC sólo desempata.`};
   });
+  // Generated LAB 2 decks carry the builder's semantic evidence for the exact requested
+  // theme. Health must audit that evidence instead of hiding an obvious Cats/Spiders/Clones
+  // plan behind five broader EDHREC tags such as Artifacts or Card Draw. This remains
+  // generic: no Commander or card names are special-cased.
+  if(deck.generated&&deck.generatedTheme?.name){
+    const requested=String(deck.generatedTheme.name),requestedKey=requested.toLocaleLowerCase("en-US"),support=countPredicateThemeSupport(expanded,c=>Number(c.builder?.effectiveThemeAffinity||0)>=.45,{excludeName:deck.commander}),cardNames=support.cards,themeCardCount=support.cardCount;
+    if(themeCardCount>=2){
+      const matchingTag=commanderTags.find(t=>String(t.name||"").toLocaleLowerCase("en-US")===requestedKey),entry={name:requested,confidence:themeCardCount>=8?"Alta":themeCardCount>=4?"Media":"Baja",density:deck.size?Math.round(themeCardCount/deck.size*100):0,cardCount:themeCardCount,uniqueCardCount:support.uniqueCardCount,cards:cardNames,commanderEvidence:Boolean(matchingTag),tier:"Theme secundario",edhrecCount:matchingTag?.count??null,generatedThemeEvidence:true,explanation:`ManaShelf construyó explícitamente alrededor de “${requested}” y el builder conserva ${themeCardCount} cartas con evidencia suficiente para ese plan. Cada carta puede contar simultáneamente para otros themes que también sostenga; EDHREC aporta contexto, no exclusividad temática.`};
+      themes=[...themes.filter(t=>String(t.name||"").toLocaleLowerCase("en-US")!==requestedKey),entry].sort((a,b)=>Number(b.cardCount||0)-Number(a.cardCount||0)||Number(Boolean(b.commanderEvidence))-Number(Boolean(a.commanderEvidence))).slice(0,5);
+      themes=themes.map((t,idx)=>({...t,tier:idx===0?"Theme principal":"Theme secundario"}));
+    }
+  }
   // v2.4.12 — si se detectó un subtipo tribal dominante y ningún tag de EDHREC ya lo cubre
   // (ej. "Elves"), se agrega como theme propio, con evidencia local, no de EDHREC.
   if(tribal&&!themes.some(t=>t.name.toLowerCase().includes(tribal.type.toLowerCase()))){
-    const tribalCards=expanded.filter(c=>(c.themes||[]).some(t=>t.name===`Tribal: ${tribal.type}`));
-    const tribalCardCount=tribalCards.length;
+    const tribalSupport=countPredicateThemeSupport(expanded,c=>(c.themes||[]).some(t=>t.name===`Tribal: ${tribal.type}`),{excludeName:deck.commander});
+    const tribalCards=tribalSupport.cards,tribalCardCount=tribalSupport.cardCount;
     const density=deck.size?Math.round(tribalCardCount/deck.size*100):0;
     // A local-only tribal signal is useful context, but it must not outrank themes that
     // EDHREC explicitly associates with this Commander. Keep it as a secondary fallback.
     if(themes.length<5)themes.push({name:`Tribal: ${tribal.type}`,confidence:tribal.count>=12?"Alta":"Media",density,cardCount:tribalCardCount,
-      cards:tribalCards.map(c=>c.name),commanderEvidence:false,tier:"Theme secundario",edhrecCount:null,
+      cards:tribalCards,uniqueCardCount:tribalSupport.uniqueCardCount,commanderEvidence:false,tier:"Theme secundario",edhrecCount:null,
       explanation:`ManaShelf detectó ${tribal.count} criaturas de subtipo ${tribal.type} (${Math.round(tribal.count/tribal.totalCreatures*100)}% de las criaturas del mazo). Es evidencia local útil, pero no desplaza temáticas que EDHREC relaciona directamente con ${deck.commander}. ${tribalCardCount} cartas totales cuentan como evidencia tribal.`});
   }
 
-  let lists=[];if(deck.commander){const k=deck.commander.toLocaleLowerCase("en-US");try{lists=cache.edhrec.get(k)||await edhrec(deck.commander);cache.edhrec.set(k,lists)}catch(e){edhrecWarning=edhrecWarning||`EDHREC recomendaciones no disponibles: ${String(e.message||e)}`}}
-  const collection=cache.collections.get(collectionCacheKeyFor(session))||[],mine=new Map(collection.map(c=>[c.name.toLocaleLowerCase("en-US"),c])),usage=session.deckUsage?.usage||new Map(),mainNames=new Set((deck.mainboard||[]).map(c=>c.name.toLocaleLowerCase("en-US"))),recMap=new Map();
-  for(const l of lists)for(const c of l.cards){const k=c.name.toLocaleLowerCase("en-US");if(!recMap.has(k)||c.synergy>recMap.get(k).synergy)recMap.set(k,{...c,category:l.label})}
-  const candidates=[...recMap.values()].filter(c=>{const k=c.name.toLocaleLowerCase("en-US"),o=mine.get(k);if(!o||mainNames.has(k))return false;const used=(usage.get(k)||[]).reduce((n,d)=>n+Number(d.quantity||0),0);return Number(o.quantity||0)-used>0}).sort((a,b)=>b.synergy-a.synergy).slice(0,50);
+  let lists=[];if(deck.commander){const k=cardIdentityKey(deck.commander);try{
+    if(deck.generated&&deck.generatedTheme?.name){const themed=await edhrecThemeLists(deck.commander,deck.generatedTheme);if(themed.lists?.length)lists=themed.lists;else lists=cache.edhrec.get(k)||await edhrec(deck.commander)}
+    else lists=cache.edhrec.get(k)||await edhrec(deck.commander);
+    if(!cache.edhrec.has(k)&&lists?.length)cache.edhrec.set(k,lists);
+  }catch(e){edhrecWarning=edhrecWarning||`EDHREC recomendaciones no disponibles: ${String(e.message||e)}`}}
+  const collection=cache.collections.get(collectionCacheKeyFor(session))||[],mine=cardMap(collection),usage=session.deckUsage?.usage||new Map(),mainNames=cardSet((deck.mainboard||[]).map(c=>c.name)),recMap=new Map(),generatedThemeMode=Boolean(deck.generated&&deck.generatedTheme?.name);
+  const recommendationScore=c=>{const inclusion=clamp01(Number(c.inclusion||0)),synergy=Math.max(0,Number(c.synergy||0));return clamp01(.70*inclusion+.30*clamp01((synergy+.04)/.70))};
+  for(const l of lists)for(const c of l.cards){const candidate={...c,category:l.label,recommendationScore:recommendationScore(c)},prev=getCardAlias(recMap,c.name);if(!prev||(generatedThemeMode?candidate.recommendationScore>prev.recommendationScore:Number(c.synergy||0)>Number(prev.synergy||0)))setCardAlias(recMap,c.name,candidate)}
+  const uniqueRecommendations=[...new Map([...recMap.values()].map(c=>[cardIdentityKey(c.name),c])).values()];
+  const candidates=uniqueRecommendations.filter(c=>{const o=getCardAlias(mine,c.name);if(!o||hasCardAlias(mainNames,c.name))return false;const used=usageFor(usage,c.name).reduce((n,d)=>n+Number(d.quantity||0),0);return Number(o.quantity||0)-used>0}).sort((a,b)=>generatedThemeMode?(b.recommendationScore-a.recommendationScore||Number(b.synergy||0)-Number(a.synergy||0)):(Number(b.synergy||0)-Number(a.synergy||0))).slice(0,50);
   const candMeta=await batchScryfallImages(candidates.map(c=>c.name));
   const lowKeys=new Set(health.filter(h=>h.level==="Bajo").map(h=>h.key));
   const suggestions=candidates.map(c=>{const m=candMeta.get(c.name)||{},roles=classifyRoles(m);let inclusionType="",reason="";
     if(lowKeys.has("mana")&&roles.includes("Ramp")){inclusionType="Corrige carencia · Ramp";reason="Aporta ramp y el eje Maná quedó bajo en este análisis."}
     else if(lowKeys.has("advantage")&&roles.includes("Draw")){inclusionType="Corrige carencia · Draw";reason="Aporta robo/ventaja y Card Advantage quedó bajo."}
     else if(lowKeys.has("interaction")&&(roles.includes("Removal")||roles.includes("Counterspells")||roles.includes("Board Wipes"))){inclusionType="Corrige carencia · Interacción";reason=`Aporta ${roles.find(r=>["Removal","Counterspells","Board Wipes"].includes(r))||"interacción"} y ese eje quedó bajo.`}
-    else if(Number(c.synergy||0)>=.12){inclusionType="Alta sinergia EDHREC";reason="Tiene sinergia EDHREC alta para este Commander y hay copia disponible."}
+    else if(generatedThemeMode&&Number(c.inclusion||0)>=.35){inclusionType="Alta inclusión EDHREC · Theme";reason=`Está presente en ${Math.round(Number(c.inclusion||0)*100)}% de la muestra EDHREC disponible para este Commander/theme y hay copia disponible.`}
+    else if(Number(c.synergy||0)>=.12){inclusionType="Alta sinergia EDHREC";reason="Tiene sinergia EDHREC alta para este Commander/theme y hay copia disponible."}
     else if((roles||[]).some(r=>!["Utility","Creatures","Lands"].includes(r))){const role=roles.find(r=>!["Utility","Creatures","Lands"].includes(r));inclusionType=`Refuerza rol · ${role}`;reason=`EDHREC la recomienda y ManaShelf detecta el rol ${role}.`}
     else {inclusionType="Recomendación EDHREC";reason="Aparece en las recomendaciones EDHREC del Commander y hay copia disponible."}
-    return {...c,roles,inclusionType,typeLine:m.typeLine||"",image:m.normal||m.small||null,imageNormal:m.normal||m.large||m.small||null,reason}}).sort((a,b)=>b.synergy-a.synergy).slice(0,8);
+    return {...c,roles,inclusionType,typeLine:m.typeLine||"",image:m.normal||m.small||null,imageNormal:m.normal||m.large||m.small||null,reason}}).sort((a,b)=>generatedThemeMode?(Number(b.recommendationScore||0)-Number(a.recommendationScore||0)||Number(b.synergy||0)-Number(a.synergy||0)):(Number(b.synergy||0)-Number(a.synergy||0))).slice(0,8);
   const primaryType=typeLine=>{
     const left=String(typeLine||"").split("—")[0].toLowerCase();
     if(left.includes("land"))return "Land";
@@ -1429,7 +1538,7 @@ async function buildDeckHealth(session,deckId,{includeDeckMetrics=false}={}){
   }).map(c=>{
     const roles=c.roles||[],cmc=Number(c.meta.cmc||0);
     const protectedRoles=roles.filter(protectedRole);
-    const themeHits=(c.themes||[]).filter(t=>themeNames.has(String(t).toLowerCase())).length;
+    const themeHits=themes.slice(0,3).filter(t=>edhrecTagEvidence(t.name,c.meta)>0).length;
     let score=0,reasons=[];
     if(cmc>=6){score+=3;reasons.push(`CMC ${cmc}: ocupa el tramo alto de la curva`)}
     else if(cmc>=5){score+=2;reasons.push(`CMC ${cmc}: coste relativamente alto`)}
@@ -1508,13 +1617,9 @@ async function ownedLegendaryCreatureCandidates(cards,onProgress=null){
   // total de la colección (6000+ cartas) solo para saber esto; ahora se consulta Scryfall
   // únicamente para los candidatos ya filtrados localmente, más una red de seguridad para
   // las cartas sin tipo local (nombres agrupados de más de una fila, importaciones viejas, etc.).
-  const byName=new Map();
-  for(const c of (cards||[])){
-    const key=String(c.name||"").trim();
-    if(key && !byName.has(key)) byName.set(key,c);
-  }
+  const byName=cardMap(cards||[]);
   const toQuery=names.filter(name=>{
-    const local=byName.get(name);
+    const local=getCardAlias(byName,name);
     return !local?.typeLine || isLegendaryCreatureTypeLine(local.typeLine);
   });
   const meta=await batchScryfallImages(toQuery,{onProgress});
@@ -1523,8 +1628,8 @@ async function ownedLegendaryCreatureCandidates(cards,onProgress=null){
     const m=meta.get(name);if(!m)continue;
     const tl=String(m.typeLine||"").toLowerCase();
     if(tl.includes("legendary")&&tl.includes("creature")&&String(m.legalities?.commander||"")==="legal"){
-      const owned=(cards||[]).filter(c=>String(c.name||"").toLocaleLowerCase("en-US")===name.toLocaleLowerCase("en-US")).reduce((n,c)=>n+Number(c.quantity||0),0);
-      const signals=[...new Set(themeSignals(m).map(x=>x.name))];
+      const owned=(cards||[]).filter(c=>cardNameMatches(c.name,name)).reduce((n,c)=>n+Number(c.quantity||0),0);
+      const semantic=classifyCard({meta:m}),signals=[...new Set(inferArchetypeSignals({meta:m,semantic}).map(x=>x.name))];
       out.push({name,image:m.normal||m.small||null,imageLarge:m.large||m.normal||null,colorIdentity:m.colorIdentity||[],edhrecRank:m.edhrecRank??null,ownedQuantity:owned,typeLine:m.typeLine||"",signals,cmc:Number(m.cmc||0)});
     }
   }
@@ -1633,7 +1738,7 @@ async function deleteCacheSection(session,section){
 }
 async function cacheStatus(session){
   const sf=await loadScryfallDiskCache(),ed=await loadEdhrecDiskCache();
-  if(commanderCatalogDiskCache===null)commanderCatalogDiskCache=await readJsonFile(path.join(CACHE_DIR,"commander-catalog.json"),{version:2,updatedAt:0,cards:[]});
+  if(commanderCatalogDiskCache===null)commanderCatalogDiskCache=await readStaticCacheWithSiblingImport("commander-catalog.json",{version:2,updatedAt:0,cards:[]});
   const deckDisk=session?.account?await loadDeckDiskCache(session):{decks:{}};
   const deckEntries=Object.values(deckDisk.decks||{});
   return {
@@ -1714,6 +1819,305 @@ function startCacheJob(session,section){
   })();
   return job;
 }
+
+
+// ---- LAB 2 · Build From Collection -------------------------------------------------
+// Isolated experimental path. It reuses collection/Scryfall/EDHREC facts but does not
+// mutate Archidekt and does not alter Improve/LAB production behavior.
+function clamp01(n){return Math.max(0,Math.min(1,Number(n)||0))}
+function recMapFromLists(lists){
+  const out=new Map();
+  for(const list of (lists||[]))for(const card of (list.cards||[])){
+    const name=String(card.name||"").trim();if(!name)continue;
+    const synergy=Number(card.synergy||0),incl=Number(card.potentialDecks||0)>0?Number(card.numDecks||0)/Number(card.potentialDecks):Number(card.inclusion||0)>1?Number(card.inclusion||0)/100:Number(card.inclusion||0);
+    // Inclusion answers "how common is this card in this Commander/theme?" while synergy
+    // answers "how over-represented is it vs comparable decks?". Inclusion is the stronger
+    // quality prior; synergy is valuable but must not masquerade as absolute card quality.
+    const positiveSynergy=clamp01((synergy+.04)/.70),score=clamp01(.68*clamp01(incl)+.32*positiveSynergy),value={score,synergy,inclusion:clamp01(incl),numDecks:Number(card.numDecks||0),potentialDecks:Number(card.potentialDecks||0),category:list.label||"EDHREC"};
+    const prev=getCardAlias(out,name);
+    if(!prev||score>prev.score)setCardAlias(out,name,value);
+  }
+  return out;
+}
+async function edhrecThemeLists(commander,theme){
+  const themeSlug=String(theme?.slug||slug(theme?.name||"")).trim();
+  if(!themeSlug)return {lists:[],source:"none",warning:"Theme sin slug utilizable."};
+  const ck=`theme:${cardIdentityKey(commander)}:${themeSlug}`;
+  if(cache.edhrec.has(ck))return {lists:cache.edhrec.get(ck),source:"cache",warning:null};
+  const url=`https://json.edhrec.com/pages/commanders/${slug(String(commander||""))}/${encodeURIComponent(themeSlug)}.json`;
+  try{
+    const r=await get(url);if(!r.ok)return {lists:[],source:"base-fallback",warning:`EDHREC no expuso una página específica para ${theme?.name||themeSlug} (HTTP ${r.status}).`};
+    const lists=parseEdhrec(await r.json());cache.edhrec.set(ck,lists);return {lists,source:"theme-page",warning:null};
+  }catch(e){return {lists:[],source:"base-fallback",warning:`No pude consultar la página temática de EDHREC: ${String(e.message||e)}`}}
+}
+function escapeRegexText(value){return String(value||"").replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}
+function builderThemeEvidence(themeName,meta){
+  const semantic=classifyCard({meta}),contract=evaluateThemeEvidence({meta,semantic},themeName,0);
+  // Never maintain a second theme classifier here. The shared archetype contract engine
+  // owns semantic membership; EDHREC/theme-page data remains contextual ranking evidence.
+  return contract.explicit?clamp01(contract.archetype):0;
+}
+function prefilterCollectionByColorIdentity(cards,commanderColors,commanderName=""){
+  const allowed=new Set(commanderColors||[]),eligible=[],excluded=[],uncertain=[];
+  for(const c of (cards||[])){
+    if(!c?.name||cardNameMatches(c.name,commanderName))continue;
+    const normalized=normalizeColorIdentity(c.colorIdentityRaw??c.colorIdentity);
+    // Current Archidekt rows explicitly mark whether the identity parser trusted the value.
+    // Old cached rows may not. A non-empty, fully-recognized W/U/B/R/G array is still safe.
+    const trusted=c.colorIdentityTrusted===true||normalized.trusted;
+    if(trusted&&normalized.colors.some(x=>!allowed.has(x))){excluded.push({name:c.name,stage:"archidekt-prefilter",reason:"off_color",raw:c.colorIdentityRaw??c.colorIdentity,normalized:normalized.colors});continue}
+    eligible.push(c);if(!trusted)uncertain.push(c.name);
+  }
+  return {eligible,excluded,uncertain};
+}
+async function commanderSpellbookVariants(commander,policy="synergistic"){
+  const name=String(commander||"").trim();if(!name)return {variants:[],source:"disabled",warning:null,query:null};
+  const infiniteOnly=normalizeComboPolicy(policy)==="infinite",query=spellbookCardQuery(name,{infiniteOnly}),ck=`${cardIdentityKey(name)}|${infiniteOnly?"infinite":"all"}`,cached=cache.spellbook.get(ck);if(cached&&Date.now()-cached.at<6*60*60*1000)return {variants:cached.variants,source:"cache",warning:null,query};
+  const variants=[];let offset=0,next=true;const limit=100,max=500;
+  try{
+    while(next&&variants.length<max){
+      const u=new URL(`${SPELLBOOK_BASE_URL}/variants/`);u.searchParams.set("q",query);u.searchParams.set("limit",String(limit));u.searchParams.set("offset",String(offset));
+      const r=await get(u.toString(),{},15000);if(!r.ok)throw new Error(`HTTP ${r.status}`);const payload=await r.json(),page=normalizeSpellbookResponse(payload,name);variants.push(...page);
+      next=Boolean(payload?.next)&&page.length>0;offset+=limit;if(!next||page.length<limit)break;if(variants.length<max)await new Promise(r=>setTimeout(r,220));
+    }
+    const unique=[...new Map(variants.filter(v=>v.id).map(v=>[v.id,v])).values()];cache.spellbook.set(ck,{at:Date.now(),variants:unique});return {variants:unique,source:"api",warning:null,query};
+  }catch(e){return {variants:cached?.variants||[],source:cached?.variants?.length?"stale-cache":"unavailable",warning:`Commander Spellbook no estuvo disponible (${String(e.message||e)}). El build continúa sin forzar combos.`,query}}
+}
+
+async function spellbookFindMyCombos(commander,mainboard){
+  const name=String(commander||"").trim();if(!name||!Array.isArray(mainboard)||!mainboard.length)return {source:"disabled",included:[],almostIncluded:[],almostIncludedByAddingColors:[],warning:null};
+  try{
+    const body={commanders:[{card:name,quantity:1}],main:mainboard.filter(c=>!c.isCommander&&String(c.name||"").trim()).map(c=>({card:c.name,quantity:Math.max(1,Number(c.quantity||1))}))};
+    const r=await get(`${SPELLBOOK_BASE_URL}/find-my-combos`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)},15000);if(!r.ok)throw new Error(`HTTP ${r.status}`);
+    const payload=await r.json(),normalized=normalizeFindMyCombosResponse(payload,name);return {source:"api",...normalized,warning:null};
+  }catch(e){return {source:"unavailable",included:[],almostIncluded:[],almostIncludedByAddingColors:[],warning:`Commander Spellbook Find My Combos no estuvo disponible (${String(e.message||e)}). El build principal no se modifica.`}}
+}
+
+
+function lab3RuntimeTypeLine(card){return (card?.faces||[]).map(f=>f.typeLine).filter(Boolean).join(" // ")}
+function lab3ManaCost(card){return (card?.faces||[]).map(f=>f.manaCost).filter(Boolean).join(" // ")}
+function lab3ManaValue(card){return Math.max(0,...(card?.faces||[]).map(f=>Number(f.manaValue||0)))}
+function lab3IsLegendaryCreature(card){const line=lab3RuntimeTypeLine(card);return /legendary/i.test(line)&&/creature/i.test(line)}
+function lab3LocalThemes(card){
+  const out=[];
+  for(const [name,r] of Object.entries(card?.archetypes||{}))if(r?.adjudication==="positive"&&Number(r.score||0)>=.45)out.push({name,slug:slug(name),count:0,localSemantic:true,score:Number(r.score||0)});
+  const common=new Set(["human","wizard","warrior","soldier","rogue","cleric","shaman","advisor"]),subs=[...new Set((card?.faces||[]).flatMap(f=>f.subtypes||[]))];
+  for(const st of subs)if(st&&!common.has(String(st).toLowerCase()))out.push({name:`${st} Kindred`,slug:slug(`${st} Kindred`),count:0,localSemantic:true,score:.65});
+  return [...new Map(out.sort((a,b)=>(b.score||0)-(a.score||0)).map(x=>[x.name.toLowerCase(),x])).values()].slice(0,10);
+}
+async function lab3CommanderProfile(session,commander){
+  const name=String(commander||"").trim();if(!name)throw new Error("Elegí una criatura legendaria.");
+  const semantic=await lab3Catalog.get(name);if(!semantic)throw new Error("Ese Commander no está en el índice semántico de LAB 3.");
+  if(semantic.status==="coverage_gap")throw new Error("LAB 3 todavía no tiene cobertura semántica suficiente para ese Commander.");
+  if(!lab3IsLegendaryCreature(semantic))throw new Error("La carta elegida no es una criatura legendaria.");
+  if(semantic.legalities?.commander!=="legal")throw new Error("La carta elegida no es legal como Commander.");
+  const tags=await edhrecTags(name).catch(()=>[]),cards=cache.collections.get(collectionCacheKeyFor(session))||[],owned=cards.find(c=>cardNameMatches(c.name,name));
+  const preview=await fetchExactScryfallPreview(name).catch(()=>({}));
+  const local=lab3LocalThemes(semantic),fallback={name:"Balanced / Good Stuff",slug:"balanced-good-stuff",count:0,fallback:true,semanticSupported:true,semanticContractKey:"Balanced",mode:"semantic",themeContractMode:"semantic",themeSource:"structural-fallback"};
+  // LAB2 and LAB3 must expose the same EDHREC choices for the same Commander.
+  // Semantic coverage changes HOW LAB3 evaluates a selected theme, never WHETHER
+  // the user is allowed to select an EDHREC theme. Unknown contracts use an
+  // explicit external_fallback mode instead of disappearing from the UI.
+  const edhrecThemes=decorateEdhrecThemesForLab3(semantic,tags,{limit:18}).map(t=>({...t,themeContractMode:t.mode}));
+  const localThemes=local.map(t=>({...t,semanticSupported:true,semanticContractKey:themeModeForCard(semantic,t.name).semanticContractKey,mode:"semantic",themeContractMode:"semantic",themeSource:"semantic-local"}));
+  const themes=edhrecThemes.length?edhrecThemes:[...new Map([...localThemes,fallback].map(t=>[String(t.name||"").toLowerCase(),t])).values()].slice(0,18);
+  const externalFallbackCount=edhrecThemes.filter(t=>t.themeContractMode==="external_fallback").length;
+  return {commander:{name:semantic.name,typeLine:lab3RuntimeTypeLine(semantic),manaCost:lab3ManaCost(semantic),cmc:lab3ManaValue(semantic),colorIdentity:semantic.colorIdentity||[],image:preview.normal||preview.image||null,imageLarge:preview.large||preview.normal||null,ownedQuantity:Number(owned?.quantity||0),semanticStatus:semantic.status},themes,themeFilter:{edhrecTotal:tags.length,edhrecShown:edhrecThemes.length,semanticContracts:edhrecThemes.length-externalFallbackCount,externalFallback:externalFallbackCount,unsupportedOmitted:0},runtime:await lab3Catalog.status()};
+}
+function setLab3Progress(session,stage,message,extra={}){if(!session)return;session.lab3Progress={active:!["done","error"].includes(stage),stage,message:String(message||stage||"Procesando…"),updatedAt:new Date().toISOString(),...extra}}
+async function buildLab3(session,{commander,theme,settings}={}){
+  setLab3Progress(session,"profile","Preparando perfil semántico del Commander…",{commander:String(commander||"")});
+  const profile=await lab3CommanderProfile(session,commander),commanderSemantic=await lab3Catalog.get(commander);if(!commanderSemantic)throw new Error("Commander ausente del índice semántico.");
+  const requested=theme&&theme.name?theme:null,chosen=requested?profile.themes.find(t=>String(t.slug||"")===String(requested.slug||"")||String(t.name||"").toLowerCase()===String(requested.name||"").toLowerCase()):profile.themes[0];
+  if(!chosen)throw new Error("Elegí un theme válido para LAB 3.");
+  const protect=settings?.protectExistingDecks!==false;if(protect&&session.deckSyncPromise){setLab3Progress(session,"collection","Sincronizando disponibilidad de la colección…");await session.deckSyncPromise;}
+  const collection=cache.collections.get(collectionCacheKeyFor(session))||[];if(!collection.length)throw new Error("La colección todavía no está cargada.");
+  setLab3Progress(session,"semantic",`Cruce local de ${collection.length} cartas con Semantic DB…`,{theme:chosen.name});
+  const runtime=await lab3Catalog.getMany(collection.map(c=>c.name)),ownedOracleIds=[...new Set(collection.flatMap(c=>(Array.isArray(c.printings)&&c.printings.length?c.printings:[c]).map(p=>String(p?.oracleId||"").trim()).filter(Boolean)))],runtimeByOracleId=await lab3Catalog.getManyOracleIds(ownedOracleIds),allowed=new Set(commanderSemantic.colorIdentity||[]),usage=session.deckUsage?.usage||new Map();
+  const baseLists=await edhrec(String(commander).trim()).catch(()=>[]),baseRec=recMapFromLists(baseLists);
+  const themeFetch=chosen.fallback||chosen.localSemantic?{lists:[],source:chosen.localSemantic?"semantic-commander":"fallback",warning:null}:await edhrecThemeLists(commander,chosen).catch(()=>({lists:[],source:"unavailable",warning:"EDHREC theme no disponible; LAB 3 continúa con semántica local."})),themeRec=recMapFromLists(themeFetch.lists||[]);
+  const candidates=[],exclusions=[],printingExclusions=[];
+  for(const owned of collection){
+    if(!owned?.name||cardNameMatches(owned.name,commander))continue;
+    const rows=Array.isArray(owned.printings)&&owned.printings.length?owned.printings:[{quantity:Number(owned.quantity||1),oracleId:owned.oracleId||null,scryfallId:owned.scryfallId||null,set:owned.set||null,collectorNumber:owned.collectorNumber||null}],eligible=[];
+    for(const printing of rows){
+      const qty=Math.max(0,Number(printing?.quantity||0));if(qty<=0)continue;
+      const oracleId=String(printing?.oracleId||"").trim(),semantic=oracleId?runtimeByOracleId.get(oracleId):runtime.get(owned.name);
+      let reason=null;if(!semantic)reason="semantic_index_missing";else if(!isDeckPlayableCard(semantic))reason="non_playable_layout";else if(semantic.legalities?.commander!=="legal")reason="commander_illegal";else if(!(semantic.colorIdentity||[]).every(c=>allowed.has(c)))reason="off_color";
+      if(reason){printingExclusions.push({name:owned.name,quantity:qty,oracleId:oracleId||null,scryfallId:printing?.scryfallId||null,set:printing?.set||null,collectorNumber:printing?.collectorNumber||null,layout:semantic?.layout||null,legality:semantic?.legalities?.commander||null,reason});continue}
+      eligible.push({quantity:qty,semantic});
+    }
+    if(!eligible.length){const matching=printingExclusions.filter(x=>x.name===owned.name),reasons=[...new Set(matching.map(x=>x.reason))];exclusions.push({name:owned.name,reason:reasons.length===1?reasons[0]:"no_eligible_printing",printingReasons:reasons,quantity:Number(owned.quantity||0)});continue}
+    const playableQuantity=eligible.reduce((n,x)=>n+x.quantity,0),semantic=eligible.sort((a,b)=>b.quantity-a.quantity)[0].semantic;
+    const usedInDecks=usageFor(usage,owned.name),usedQuantity=usedInDecks.reduce((n,d)=>n+Number(d.quantity||0),0),availableQuantity=protect?Math.max(0,playableQuantity-usedQuantity):playableQuantity;if(availableQuantity<=0){exclusions.push({name:owned.name,reason:"no_available_copy",playableQuantity});continue}
+    const br=getCardAlias(baseRec,owned.name),tr=getCardAlias(themeRec,owned.name),baseScore=Number(br?.score||0),themeScore=Number(tr?.score||0);
+    candidates.push({name:owned.name,semanticCard:semantic,quantity:1,ownedQuantity:playableQuantity,availableQuantity,usedQuantity,usedInDecks,commanderAffinity:clamp01(baseScore),edhrecBaseScore:clamp01(baseScore),themeAffinity:clamp01(themeScore),edhrecThemeScore:clamp01(themeScore),efficiencyScore:clamp01(Math.max(baseScore*.8,themeScore*.75,.08))});
+  }
+  const comboPolicy=normalizeComboPolicy(settings?.comboPolicy);
+  if(comboPolicy!=="off")setLab3Progress(session,"spellbook","Buscando paquetes exactos en Commander Spellbook…",{commander:String(commander||""),theme:chosen.name});
+  const spellbook=comboPolicy==="off"?{variants:[],source:"disabled",warning:null,query:null}:await commanderSpellbookVariants(commander,comboPolicy);
+  const spellbookSummary=comboPolicy==="off"?{apiVariantsFetched:0,commanderCompatible:0,exactVariants:0,collectionComplete:0,infiniteComplete:0}:comboAvailabilitySummary(spellbook.variants,candidates,{commander,commanderColors:commanderSemantic.colorIdentity||[],protectExistingDecks:protect,maxPieces:6});
+  setLab3Progress(session,"build",`Evaluando ${candidates.length} candidatas con contratos + contexto…`,{theme:chosen.name});
+  const themeMode=chosen.themeContractMode||chosen.mode||(chosen.semanticSupported===false?"external_fallback":"semantic");
+  const built=buildLab3Deck({commander:commanderSemantic,theme:chosen.name,themeMode,candidates,comboCandidates:spellbook.variants,settings});
+  const selectedNames=built.deck.filter(c=>!c.syntheticBasic).map(c=>c.name),images=await batchScryfallImages(selectedNames).catch(()=>new Map());
+  const deck=built.deck.map(c=>{const m=images.get(c.name)||{};return {...c,imageNormal:m.normal||m.image||null};});
+  const result={...built,deck};
+  const id=-(200000+Number(session.lab3BuildSeq||0)+1);session.lab3BuildSeq=Number(session.lab3BuildSeq||0)+1;
+  const detail={id,name:`${commander} · ${chosen.name} [LAB 3]`,commander:String(commander),commanders:[String(commander)],commanderImage:profile.commander?.image||null,commanderImageLarge:profile.commander?.imageLarge||profile.commander?.image||null,generated:true,generatedTheme:{name:chosen.name,slug:chosen.slug||slug(chosen.name)},mainboard:deck.map(c=>{const roleQualities={ramp:Number(c.roles?.ramp||0),interaction:Math.max(Number(c.roles?.removal||0),Number(c.roles?.counterspell||0),Number(c.roles?.graveyard_hate||0)),wipes:Number(c.roles?.board_wipe||0),protection:Number(c.roles?.protection||0),recursion:Number(c.roles?.recursion||0),resources:Math.max(Number(c.roles?.card_draw||0),Number(c.roles?.tutor||0),Number(c.roles?.card_selection||0)*.5)};return {name:c.name,quantity:Number(c.quantity||1),primaryCategory:c.category||c.selectionPhase||"Generated",categories:[c.category||c.selectionPhase||"Generated"],typeLine:c.typeLine||"",cmc:Number(c.cmc||0),imageNormal:c.imageNormal||null,builder:{selectionScore:Number(c.selectionScore||0),selectionPhase:c.selectionPhase||null,selectionReason:c.selectionReason||null,themeAffinity:Number(c.themeScore||0),effectiveThemeAffinity:Number(c.themeScore||0),commanderAffinity:0,ownedQuantity:Number(c.syntheticBasic?999:1),availableQuantity:Number(c.syntheticBasic?999:1),usedQuantity:0,roleQualities,semanticRoles:Object.entries(c.roles||{}).filter(([,v])=>Number(v)>0).map(([k])=>k),semanticFacts:{status:c.semanticStatus,themeFacet:c.themeFacet,redundancyPenalty:Number(c.redundancyPenalty||0)},semanticDependencies:[],semanticProduces:[],semanticBenefitsFrom:[],comboPiece:c.comboPiece||null,syntheticBasic:Boolean(c.syntheticBasic)}}}),excluded:[],size:result.size,mainboardCount:result.size,calculatedIncludedCount:result.size,reportedSize:null,excludedCount:0,sizeAudit:{calculated:result.size,reported:null,catalog:null,payload:null,excluded:0,categories:[{name:"Commander",includedInDeck:true,isPremier:true},{name:"Generated",includedInDeck:true,isPremier:false}]},categories:[{name:"Commander",includedInDeck:true,isPremier:true},{name:"Generated",includedInDeck:true,isPremier:false}],url:null};
+  if(!session.deckDetails)session.deckDetails=new Map();session.deckDetails.set(id,detail);
+  setLab3Progress(session,"health","Auditando el mismo Deck Health/Deck Metrics usado por LAB 2…",{commander:String(commander),theme:chosen.name});
+  const health=await buildDeckHealth(session,id,{includeDeckMetrics:true});
+  const diagnostic={schema:"manashelf-lab3-build-log-v5",generatedAt:new Date().toISOString(),appVersion:APP_VERSION,engines:{builderVersion:LAB3_BUILDER_VERSION,manaModelVersion:LAB3_MANA_MODEL_VERSION,contextEngineVersion:LAB3_CONTEXT_ENGINE_VERSION,comboEngineVersion:COMBO_ENGINE_VERSION,runtime:(await lab3Catalog.status()).header?.engineVersions||null,comparisonHealthSemanticSource:`classification-v${CLASSIFICATION_VERSION}`},input:{commander:String(commander),theme:{...chosen,themeContractMode:result.themeMode||themeMode,themeUnderstanding:result.themeUnderstanding||null},settings:result.settings},pool:{collectionCards:collection.length,semanticMatched:runtime.size,candidates:candidates.length,excluded:exclusions.length,excludedPrintings:printingExclusions.length,spellbook:{source:spellbook.source,query:spellbook.query,policy:comboPolicy,...spellbookSummary},exclusions,printingExclusions},result,comparison:{deckHealth:health}};
+  if(!session.lab3BuildLogs)session.lab3BuildLogs=new Map();session.lab3BuildLogs.set(id,diagnostic);while(session.lab3BuildLogs.size>5)session.lab3BuildLogs.delete(session.lab3BuildLogs.keys().next().value);
+  setLab3Progress(session,"done","LAB 3 terminó build + análisis comparativo.",{buildId:id,commander:String(commander),theme:chosen.name});
+  return {builderVersion:LAB3_BUILDER_VERSION,contextEngineVersion:LAB3_CONTEXT_ENGINE_VERSION,themeSource:themeFetch.source,themeContractMode:result.themeMode||themeMode,candidateCount:candidates.length,exclusionCount:exclusions.length,diagnosticLogId:id,build:result,deckDetail:detail,health,runtime:await lab3Catalog.status(),warnings:[themeFetch.warning,spellbook.warning].filter(Boolean)};
+}
+
+
+// ---- LAB 3 · Stress Harness -------------------------------------------------------
+// Diagnostic-only corpus generator. v2 intentionally uses the global semantic runtime
+// instead of the connected collection so the corpus exercises a much wider card surface.
+const LAB3_STRESS_SETTING_PROFILES=[
+  {name:"balanced",settings:{themeFocus:76,ramp:"standard",interaction:"standard",curve:"normal",synergyBias:"balanced",protectExistingDecks:false,commanderDependence:"normal",landStyle:"balanced"}},
+  {name:"safe-theme",settings:{themeFocus:90,ramp:"more",interaction:"standard",curve:"normal",synergyBias:"balanced",protectExistingDecks:false,commanderDependence:"normal",landStyle:"safe"}},
+  {name:"lower-curve",settings:{themeFocus:82,ramp:"standard",interaction:"more",curve:"lower",synergyBias:"efficiency",protectExistingDecks:false,commanderDependence:"conservative",landStyle:"balanced"}},
+  {name:"synergy",settings:{themeFocus:88,ramp:"standard",interaction:"standard",curve:"normal",synergyBias:"synergy",protectExistingDecks:false,commanderDependence:"all-in",landStyle:"safe"}}
+];
+function stressSettingsFor(index){const p=LAB3_STRESS_SETTING_PROFILES[index%LAB3_STRESS_SETTING_PROFILES.length];return {profile:p.name,settings:{...p.settings}}}
+function isStressBasicLand(card){return (card?.faces||[]).some(f=>(f.cardTypes||[]).includes("Basic")&&(f.cardTypes||[]).includes("Land"));}
+function stressGlobalPool(runtimeCards=[]){
+  return [...new Map((runtimeCards||[])
+    .filter(c=>c?.name&&c?.status!=="coverage_gap"&&c?.legalities?.commander==="legal"&&isDeckPlayableCard(c)&&!isStressBasicLand(c))
+    .map(c=>[String(c.oracleId||cardIdentityKey(c.name)),c])).values()];
+}
+function stressPoolSnapshot(pool=[]){return pool.map(c=>({oracleId:c.oracleId||null,name:c.name,colorIdentity:c.colorIdentity||[],layout:c.layout||"normal",status:c.status||null}));}
+function stressCandidatesFor({poolCards,commander,baseLists,themeLists}){
+  const allowed=new Set(commander.colorIdentity||[]),baseRec=recMapFromLists(baseLists||[]),themeRec=recMapFromLists(themeLists||[]),out=[];
+  for(const sem of poolCards||[]){if(!sem?.name||cardNameMatches(sem.name,commander.name))continue;if(!(sem.colorIdentity||[]).every(c=>allowed.has(c)))continue;const br=getCardAlias(baseRec,sem.name),tr=getCardAlias(themeRec,sem.name),baseScore=Number(br?.score||0),themeScore=Number(tr?.score||0);out.push({name:sem.name,semanticCard:sem,quantity:1,ownedQuantity:1,availableQuantity:1,usedQuantity:0,usedInDecks:[],commanderAffinity:clamp01(baseScore),edhrecBaseScore:clamp01(baseScore),themeAffinity:clamp01(themeScore),edhrecThemeScore:clamp01(themeScore),efficiencyScore:clamp01(Math.max(baseScore*.8,themeScore*.75,.08))});}
+  return out;
+}
+function stressSemanticMap(commander,candidates){const map=new Map();for(const c of [commander,...candidates.map(x=>x.semanticCard)])if(c?.name)for(const alias of cardNameAliases(c.name))map.set(cardIdentityKey(alias),c);return map}
+function stressModalStats(build,semanticByName){const stats={selected:0,modalDfc:0,transform:0,chooseModes:0,repeatable:0};for(const row of build?.deck||[]){if(row.syntheticBasic)continue;const sem=semanticByName?.get?.(cardIdentityKey(row.name))||semanticByName?.get?.(row.name);if(!sem)continue;const m=modalPotential(sem);if(!m.hasModalChoice&&!m.sequential)continue;stats.selected+=Number(row.quantity||1);if(m.layout==="modal_dfc")stats.modalDfc+=Number(row.quantity||1);if(m.sequential)stats.transform+=Number(row.quantity||1);if(m.hasModalChoice)stats.chooseModes+=Number(row.quantity||1);if(m.repeatable)stats.repeatable+=Number(row.quantity||1);}return stats;}
+function compactStressCase({id,commander,theme,themeMode,settingsProfile,settings,build,anomalies,status="ok",error=null,candidateCount=0,themeSource=null,modal=null}){
+  const metrics=build?{size:build.size,lands:build.summary?.lands,nonlands:build.summary?.nonlands,basicLands:build.summary?.basicLands,nonbasicLands:build.summary?.nonbasicLands,themeCards:build.summary?.themeCards,weightedManaCoverage:build.mana?.weightedCoverage,semanticCoverage:build.validation?.semanticCoverage,shortages:build.shortages,dependencyCoverage:build.context?.summary?.dependencyCoverage,avgDependencySatisfaction:build.context?.summary?.avgDependencySatisfaction,avgDeadCardRisk:build.context?.summary?.avgDeadCardRisk}:{};
+  return {id,status,error,corpusMode:"global_runtime",commander:commander.name,colorIdentity:commander.colorIdentity||[],colorKey:colorKey(commander),theme:theme.name,themeSlug:theme.slug||slug(theme.name),themeMode,themeSource,settingsProfile,settings,candidateCount,metrics,modal:modal||{},anomalies:anomalies||[],deck:build?.deck||[],topRejected:build?.diagnostics?.topRejected?.slice(0,30)||[],themeFacets:build?.summary?.themeFacets||{},themeEvidenceCounts:build?.summary?.themeEvidenceCounts||{},themeUnderstanding:build?.themeUnderstanding||null};
+}
+function publicStressStatus(job){if(!job)return {active:false,status:"idle",message:"Stress test no iniciado."};return {active:job.status==="planning"||job.status==="running",status:job.status,message:job.message,requested:job.requested,planned:job.plan?.length||0,completed:job.completed||0,failed:job.failed||0,current:job.current||null,startedAt:job.startedAt,finishedAt:job.finishedAt||null,seed:job.seed,corpusMode:job.corpusMode||"global_runtime",summary:job.summary||null,clusters:(job.clusters||[]).slice(0,12),exportReady:job.status==="done"||job.status==="done_with_errors"};}
+async function runLab3Stress(session,{runs=200,seed="manashelf-lab3-stress-3"}={}){
+  runs=Math.max(20,Math.min(500,Math.round(Number(runs)||200)));
+  const seedNumber=hashSeed(seed),job={schema:LAB3_STRESS_SCHEMA,version:LAB3_STRESS_VERSION,corpusMode:"global_runtime",status:"planning",message:"Preparando corpus global estratificado…",requested:runs,seed:String(seed),seedNumber,startedAt:new Date().toISOString(),completed:0,failed:0,cases:[],plan:[],snapshots:{baseByCommander:{},themeByCase:{}},cancelRequested:false};session.lab3StressJob=job;
+  try{
+    const idx=await lab3Catalog.ensureLoaded(),runtimeCards=[...idx.byOracleId.values()],globalPool=stressGlobalPool(runtimeCards),wantedCommanders=Math.min(150,Math.ceil(runs/3)+14),commanders=selectStressCommanders({runtimeCards,poolCards:globalPool,commanderCount:wantedCommanders,seed:seedNumber,minPool:140}),themeUsage=new Map(),modeUsage=new Map();job.globalPoolSnapshot=stressPoolSnapshot(globalPool);job.runtimeStatus=await lab3Catalog.status();job.poolStats={runtimeCards:runtimeCards.length,globalPlayableNonbasic:globalPool.length,commandersConsidered:commanders.length};
+    let planIndex=0;
+    for(const commander of commanders){if(job.cancelRequested)break;if(job.plan.length>=runs)break;job.message=`Planificando themes · ${commander.name}`;let tags=[];try{tags=await edhrecTags(commander.name)}catch{}const themes=decorateEdhrecThemesForLab3(commander,tags,{limit:18}).map(t=>({...t,themeContractMode:t.mode}));if(!themes.length)continue;const per=Math.min(3,runs-job.plan.length),chosen=selectStressThemes(themes,{perCommander:per,seed:`${seed}:themes:${commander.name}`,themeUsage,modeUsage});for(const theme of chosen){job.plan.push({id:`case-${String(++planIndex).padStart(3,"0")}`,commander:commander.name,commanderOracleId:commander.oracleId||null,theme:{name:theme.name,slug:theme.slug,count:theme.count,themeContractMode:theme.themeContractMode||theme.mode,semanticSupported:theme.semanticSupported,semanticContractKey:theme.semanticContractKey},colorKey:colorKey(commander)});if(job.plan.length>=runs)break;}}
+    if(job.plan.length<Math.min(20,runs))throw new Error(`No se pudo formar un corpus suficiente: ${job.plan.length}/${runs} casos.`);
+    job.status="running";job.message=`Ejecutando ${job.plan.length} builds LAB 3 contra el pool global…`;
+    const commanderCache=new Map();
+    for(let i=0;i<job.plan.length;i++){
+      if(job.cancelRequested){job.status="cancelled";job.message="Stress test cancelado por el usuario.";break}
+      const planned=job.plan[i],profile=stressSettingsFor(i);job.current={index:i+1,total:job.plan.length,commander:planned.commander,theme:planned.theme.name};job.message=`LAB3 stress ${i+1}/${job.plan.length} · ${planned.commander} · ${planned.theme.name}`;
+      try{
+        let common=commanderCache.get(cardIdentityKey(planned.commander));if(!common){const commander=await lab3Catalog.get(planned.commander);if(!commander)throw new Error("Commander ausente del runtime index");const baseLists=await edhrec(planned.commander).catch(()=>[]);common={commander,baseLists};commanderCache.set(cardIdentityKey(planned.commander),common);job.snapshots.baseByCommander[planned.commander]=baseLists;}
+        const themeMode=planned.theme.themeContractMode||"semantic",themeFetch=await edhrecThemeLists(planned.commander,planned.theme).catch(e=>({lists:[],source:"unavailable",warning:String(e.message||e)})),themeLists=themeFetch.lists||[];job.snapshots.themeByCase[planned.id]={source:themeFetch.source,warning:themeFetch.warning||null,lists:themeLists};
+        const candidates=stressCandidatesFor({poolCards:globalPool,commander:common.commander,baseLists:common.baseLists,themeLists}),build=buildLab3Deck({commander:common.commander,theme:planned.theme.name,themeMode,candidates,settings:profile.settings}),actualThemeMode=build.themeMode||themeMode,semanticByName=stressSemanticMap(common.commander,candidates),anomalies=analyzeStressBuild({build,semanticByName,settings:profile.settings,themeMode:actualThemeMode}),modal=stressModalStats(build,semanticByName);
+        job.cases.push(compactStressCase({id:planned.id,commander:common.commander,theme:planned.theme,themeMode:actualThemeMode,settingsProfile:profile.profile,settings:profile.settings,build,anomalies,candidateCount:candidates.length,themeSource:themeFetch.source,modal}));job.completed++;
+      }catch(e){job.failed++;const commander=await lab3Catalog.get(planned.commander).catch(()=>null)||{name:planned.commander,colorIdentity:[]};job.cases.push(compactStressCase({id:planned.id,commander,theme:planned.theme,themeMode:planned.theme.themeContractMode||"semantic",settingsProfile:profile.profile,settings:profile.settings,status:"error",error:String(e.message||e),candidateCount:0}));}
+      if((i+1)%5===0||i===job.plan.length-1){job.clusters=clusterStressIssues(job.cases);job.summary=summarizeStressCases(job.cases);}
+    }
+    if(job.status!=="cancelled"){job.status=job.failed?"done_with_errors":"done";job.message=job.failed?`Stress terminado con ${job.failed} builds fallidos.`:"Stress test global terminado.";}job.finishedAt=new Date().toISOString();job.clusters=clusterStressIssues(job.cases);job.summary=summarizeStressCases(job.cases);
+  }catch(e){job.status="error";job.message=String(e.message||e);job.error=String(e.stack||e);job.finishedAt=new Date().toISOString();}
+  return job;
+}
+function startLab3Stress(session,payload={}){const current=session.lab3StressJob;if(current&&["planning","running"].includes(current.status))throw new Error("Ya hay un LAB3 Stress Test en ejecución.");void runLab3Stress(session,payload);return session.lab3StressJob}
+async function lab3StressZip(job){
+  if(!job||!["done","done_with_errors","cancelled"].includes(job.status))throw new Error("El corpus todavía no está listo para exportar.");const generatedAt=new Date().toISOString(),codeFiles=["experimental/lab3/builder.mjs","experimental/lab3/deck-context.mjs","experimental/lab3/stress-harness.mjs"],codeHashes={};for(const rel of codeFiles){const data=await fs.readFile(path.join(__dirname,rel));codeHashes[rel]=crypto.createHash("sha256").update(data).digest("hex");}
+  const manifest={schema:LAB3_STRESS_SCHEMA,stressVersion:LAB3_STRESS_VERSION,corpusMode:job.corpusMode||"global_runtime",generatedAt,appVersion:APP_VERSION,builderVersion:LAB3_BUILDER_VERSION,manaModelVersion:LAB3_MANA_MODEL_VERSION,contextEngineVersion:LAB3_CONTEXT_ENGINE_VERSION,requested:job.requested,seed:job.seed,seedNumber:job.seedNumber,status:job.status,runtime:job.runtimeStatus,poolStats:job.poolStats||null,codeHashes,settingProfiles:LAB3_STRESS_SETTING_PROFILES.map(x=>({name:x.name,settings:x.settings})),poolPolicy:{source:"semantic_runtime",commanderLegalOnly:true,coverageGapExcluded:true,nonPlayableLayoutsExcluded:true,basicLandsSynthetic:true,collectionRestriction:false},replayInstructions:"Use plan.json + edhrec-snapshots.json + global-pool.json with the same runtime snapshot/hash. The corpus is intentionally independent of the connected collection."};
+  const casesJsonl=(job.cases||[]).map(x=>JSON.stringify(x)).join("\n")+"\n",entries=[{name:"manifest.json",data:JSON.stringify(manifest,null,2)},{name:"summary.json",data:JSON.stringify(job.summary||{},null,2)},{name:"clusters.json",data:JSON.stringify(job.clusters||[],null,2)},{name:"plan.json",data:JSON.stringify(job.plan||[],null,2)},{name:"cases.jsonl",data:casesJsonl},{name:"global-pool.json",data:JSON.stringify(job.globalPoolSnapshot||[],null,2)},{name:"edhrec-snapshots.json",data:JSON.stringify(job.snapshots||{},null,2)}];return createZip(entries);
+}
+
+async function lab2CommanderProfile(session,commander,{reuseCached=false}={}){
+  const name=String(commander||"").trim();if(!name)throw new Error("Elegí una criatura legendaria.");
+  const profileKey=cardIdentityKey(name),cached=session?.lab2ProfileCache;
+  if(reuseCached&&cached?.key===profileKey&&cached.profile)return cached.profile;
+  const metaMap=await batchScryfallImages([name]),meta=metaMap.get(name)||{};
+  if(!/legendary/i.test(meta.typeLine||"")||!/creature/i.test(meta.typeLine||""))throw new Error("La carta elegida no es una criatura legendaria.");
+  if(meta.legalities?.commander&&meta.legalities.commander!=="legal")throw new Error("La carta elegida no es legal como Commander.");
+  const tags=await edhrecTags(name).catch(()=>[]),cards=cache.collections.get(collectionCacheKeyFor(session))||[],owned=cards.find(c=>cardNameMatches(c.name,name));
+  const img=await fetchExactScryfallPreview(name).catch(()=>({}));
+  const fallbackTag={name:"Balanced / Good Stuff",slug:"balanced-good-stuff",count:0,fallback:true};
+  const commanderSemantic=classifyCard({meta}),localThemes=inferArchetypeSignals({meta,semantic:commanderSemantic},{limit:8}).map(x=>({name:x.name,slug:slug(x.name),count:0,localFallback:true}));
+  const themes=tags.length?tags.slice(0,18):(localThemes.length?[...localThemes,fallbackTag]:[fallbackTag]);
+  const profile={commander:{name,typeLine:meta.typeLine||"",manaCost:meta.manaCost||"",cmc:Number(meta.cmc||0),colorIdentity:meta.colorIdentity||[],oracleText:meta.oracleText||"",image:img.normal||img.image||null,imageLarge:img.large||img.normal||null,ownedQuantity:Number(owned?.quantity||0)},themes};
+  if(session)session.lab2ProfileCache={key:profileKey,profile,updatedAt:Date.now()};
+  return profile;
+}
+function setLab2Progress(session,stage,message,extra={}){
+  if(!session)return;session.lab2Progress={active:!["done","error"].includes(stage),stage,message:String(message||stage||"Procesando…"),updatedAt:new Date().toISOString(),...extra};
+}
+async function buildLab2(session,{commander,theme,settings}={}){
+  setLab2Progress(session,"profile","Preparando perfil del Commander…",{commander:String(commander||"")});
+  const profile=await lab2CommanderProfile(session,commander,{reuseCached:true}),commanderMeta={...profile.commander,normal:profile.commander.image,large:profile.commander.imageLarge};
+  const requestedTheme=theme&&theme.name?theme:null;
+  const chosenTheme=requestedTheme?profile.themes.find(t=>String(t.slug||"")===String(requestedTheme.slug||"")||String(t.name||"").toLocaleLowerCase("en-US")===String(requestedTheme.name||"").toLocaleLowerCase("en-US")):profile.themes[0];
+  if(!chosenTheme)throw new Error("Elegí un theme válido para este Commander antes de generar el mazo.");
+  const protect=settings?.protectExistingDecks!==false;setLab2Progress(session,"collection",protect?"Sincronizando disponibilidad de la colección…":"Leyendo colección…",{commander:String(commander||""),theme:chosenTheme.name});if(protect&&session.deckSyncPromise)await session.deckSyncPromise;
+  const collectionCards=cache.collections.get(collectionCacheKeyFor(session))||[];if(!collectionCards.length)throw new Error("La colección todavía no está cargada.");
+  const commanderColors=[...(commanderMeta.colorIdentity||[])],commanderColorSet=new Set(commanderColors),exclusions=[];
+  // Efficient coarse filter: use Archidekt only when its identity value can be normalized
+  // confidently. Missing/unknown values are NOT rejected; Scryfall gets the final say.
+  const prefilter=prefilterCollectionByColorIdentity(collectionCards,commanderColors,commander);
+  exclusions.push(...prefilter.excluded);setLab2Progress(session,"scryfall",`Validando ${prefilter.eligible.length} candidatas con Scryfall…`,{commander:String(commander||""),theme:chosenTheme.name});
+  const meta=await batchScryfallImages(prefilter.eligible.map(c=>c.name),{onProgress:p=>setLab2Progress(session,"scryfall",p.message||`Validando ${prefilter.eligible.length} candidatas con Scryfall…`,{commander:String(commander||""),theme:chosenTheme.name,scryfall:p})});
+  setLab2Progress(session,"edhrec",`Cargando contexto EDHREC · ${chosenTheme.name}…`,{commander:String(commander||""),theme:chosenTheme.name});
+  const baseLists=await edhrec(String(commander).trim()).catch(()=>[]),baseRec=recMapFromLists(baseLists),themeFetch=chosenTheme.fallback||chosenTheme.localFallback?{lists:[],source:chosenTheme.localFallback?"commander-evidence":"fallback",warning:chosenTheme.localFallback?"EDHREC no devolvió themes; este theme se infirió del texto del Commander.":null}:await edhrecThemeLists(commander,chosenTheme),themeRec=recMapFromLists(themeFetch.lists);
+  const usage=session.deckUsage?.usage||new Map(),candidates=[];
+  for(const owned of prefilter.eligible){
+    const m=meta.get(owned.name);if(!m?.typeLine){exclusions.push({name:owned.name,stage:"scryfall",reason:"metadata_missing"});continue}
+    if(m.legalities?.commander&&m.legalities.commander!=="legal"){exclusions.push({name:owned.name,stage:"scryfall",reason:"commander_illegal",value:m.legalities.commander});continue}
+    if(!(m.colorIdentity||[]).every(x=>commanderColorSet.has(x))){exclusions.push({name:owned.name,stage:"scryfall",reason:"off_color",colorIdentity:m.colorIdentity||[]});continue}
+    const usedInDecks=usageFor(usage,owned.name),usedQuantity=usedInDecks.reduce((n,d)=>n+Number(d.quantity||0),0),availableQuantity=Math.max(0,Number(owned.quantity||0)-usedQuantity);
+    if(protect&&availableQuantity<=0){exclusions.push({name:owned.name,stage:"availability",reason:"no_available_copy",owned:Number(owned.quantity||0),used:usedQuantity});continue}
+    const br=getCardAlias(baseRec,owned.name),tr=getCardAlias(themeRec,owned.name),localTheme=chosenTheme.fallback?0:builderThemeEvidence(chosenTheme.name,m);
+    const themeAffinity=chosenTheme.fallback?clamp01(br?.score||.18):tr?clamp01(.25+.75*tr.score):clamp01(localTheme*.68);
+    const commanderAffinity=br?clamp01(.18+.82*br.score):Math.max(.08,themeAffinity*.22);
+    const rank=Number(m.edhrecRank||0),efficiencyScore=rank>0?clamp01(1-Math.log10(Math.max(10,rank))/4.2):.22;
+    candidates.push({name:owned.name,quantity:Number(owned.quantity||0),ownedQuantity:Number(owned.quantity||0),availableQuantity,usedQuantity,usedInDecks,meta:{...m,small:m.small,normal:m.normal,large:m.large},commanderAffinity,themeAffinity,efficiencyScore,edhrecCategory:tr?.category||br?.category||null,edhrecThemeScore:tr?.score||0,edhrecThemeSynergy:tr?.synergy||0,edhrecThemeInclusion:tr?.inclusion||0,edhrecBaseScore:br?.score||0,edhrecBaseSynergy:br?.synergy||0,edhrecBaseInclusion:br?.inclusion||0});
+  }
+  const nonlandCandidates=candidates.filter(c=>!/\bland\b/i.test(c.meta?.typeLine||"")),coloredCandidates=nonlandCandidates.filter(c=>(c.meta?.colorIdentity||[]).length>0).length;
+  if(commanderColors.length>=2&&collectionCards.length>=300&&nonlandCandidates.length>=80&&coloredCandidates===0)throw new Error("LAB 2 detuvo el build porque Scryfall no dejó ninguna carta coloreada en un pool multicolor grande. Esto apunta a un problema de metadata/color identity y es más seguro abortar que fabricar un mazo incoloro.");
+  commanderMeta.availableQuantity=Number(commanderMeta.ownedQuantity||0);
+  const comboPolicy=normalizeComboPolicy(settings?.comboPolicy);if(comboPolicy!=="off")setLab2Progress(session,"spellbook","Buscando paquetes exactos en Commander Spellbook…",{commander:String(commander||""),theme:chosenTheme.name});
+  const spellbook=comboPolicy==="off"?{variants:[],source:"disabled",warning:null,query:null}:await commanderSpellbookVariants(commander,comboPolicy);
+  setLab2Progress(session,"builder",`Construyendo mazo · ${candidates.length} candidatas legales…`,{commander:String(commander||""),theme:chosenTheme.name});
+  const built=buildCollectionDeck({commander,commanderMeta,theme:{name:chosenTheme.name,slug:chosenTheme.slug,count:Number(chosenTheme.count||0),source:themeFetch.source},candidates,comboCandidates:spellbook.variants,settings});
+  const spellbookSummary=comboPolicy==="off"?{apiVariantsFetched:0,commanderCompatible:0,exactVariants:0,collectionComplete:0,infiniteComplete:0}:comboAvailabilitySummary(spellbook.variants,candidates,{commander,commanderColors:commanderMeta.colorIdentity||[],protectExistingDecks:Boolean(settings?.protectExistingDecks),maxPieces:6});
+  const spellbookFallback=comboPolicy!=="off"&&!built.combo?await spellbookFindMyCombos(commander,built.mainboard):{source:built.combo?"not-needed":"disabled",included:[],almostIncluded:[],almostIncludedByAddingColors:[],warning:null};
+  const fallbackInfiniteIncluded=spellbookFallback.included.filter(v=>v.infinite&&!v.hasTemplates).length;
+  const id=-(Number(session.lab2BuildSeq||0)+1);session.lab2BuildSeq=Math.abs(id);
+  const detail={id,name:`${commander} · ${chosenTheme.name} [LAB 2]`,commander,commanders:[commander],commanderImage:commanderMeta.normal||null,commanderImageLarge:commanderMeta.large||commanderMeta.normal||null,generated:true,generatedTheme:{name:chosenTheme.name,slug:chosenTheme.slug||slug(chosenTheme.name)},mainboard:built.mainboard.map(c=>({name:c.name,quantity:c.quantity,primaryCategory:c.primaryCategory,categories:[c.primaryCategory],typeLine:c.typeLine,cmc:c.cmc,imageNormal:c.imageNormal,builder:{selectionScore:c.selectionScore,selectionContextScore:Number(c.selectionContextScore||0),selectionPhase:c.selectionPhase||null,selectionTrace:c.selectionTrace||null,selectionReason:c.selectionReason,themeAffinity:Number(c.themeAffinity||0),contextThemeAffinity:Number(c.contextThemeAffinity||0),archetypeAffinity:Number(c.archetypeAffinity||0),effectiveThemeAffinity:Number(c.effectiveThemeAffinity||0),themeEvidenceMode:c.themeEvidenceMode||null,commanderAffinity:Number(c.commanderAffinity||0),ownedQuantity:Number(c.ownedQuantity||0),availableQuantity:Number(c.availableQuantity||0),usedQuantity:Number(c.usedQuantity||0),edhrecCategory:c.edhrecCategory||null,edhrecThemeInclusion:Number(c.edhrecThemeInclusion||0),edhrecThemeSynergy:Number(c.edhrecThemeSynergy||0),roleQuality:Number(c.roleQuality||0),roleQualityName:c.roleQualityName||null,semanticRoles:Array.isArray(c.semanticRoles)?c.semanticRoles:[],semanticFacts:c.semanticFacts||{},semanticDependencies:c.semanticDependencies||[],semanticGlobalDependencies:c.semanticGlobalDependencies||[],semanticThemeDependencies:c.semanticThemeDependencies||[],semanticRoleDependencies:c.semanticRoleDependencies||{},semanticRoleDependencyGroups:c.semanticRoleDependencyGroups||{},semanticProduces:c.semanticProduces||[],semanticBenefitsFrom:c.semanticBenefitsFrom||[],roleQualities:c.roleQualities||{},themeFacets:Array.isArray(c.themeFacets)?c.themeFacets:[],comboPiece:c.comboPiece||null,syntheticBasic:Boolean(c.syntheticBasic)}})),excluded:[],size:built.size,mainboardCount:built.size,calculatedIncludedCount:built.size,reportedSize:null,excludedCount:0,sizeAudit:{calculated:built.size,reported:null,catalog:null,payload:null,excluded:0,categories:[{name:"Commander",includedInDeck:true,isPremier:true},{name:"Generated",includedInDeck:true,isPremier:false}]},categories:[{name:"Commander",includedInDeck:true,isPremier:true},{name:"Generated",includedInDeck:true,isPremier:false}],url:null};
+  if(!session.deckDetails)session.deckDetails=new Map();session.deckDetails.set(id,detail);setLab2Progress(session,"health","Auditando resultado con Deck Health + Deck Metrics…",{commander:String(commander||""),theme:chosenTheme.name});
+  const health=await buildDeckHealth(session,id,{includeDeckMetrics:true});
+  const warnings=[];if(themeFetch.warning)warnings.push(themeFetch.warning);if(spellbook.warning)warnings.push(spellbook.warning);if(spellbookFallback.warning)warnings.push(spellbookFallback.warning);if(fallbackInfiniteIncluded)warnings.push(`Commander Spellbook detectó ${fallbackInfiniteIncluded} combo(s) infinito(s) exacto(s) ya presentes en la lista final durante la auditoría Find My Combos. Se informan como detección posterior, no como paquete bloqueado por el builder.`);
+  const availabilityExcluded=exclusions.filter(x=>x.stage==="availability"&&x.reason==="no_available_copy").length;
+  if(prefilter.uncertain.length)warnings.push(`${prefilter.uncertain.length} cartas tenían color identity de Archidekt ausente/no normalizable; se conservaron en el prefiltrado y Scryfall decidió su legalidad final.`);
+  if(protect&&availabilityExcluded)warnings.push(`${availabilityExcluded} cartas candidatas quedaron fuera porque todas sus copias detectadas ya están comprometidas en otros mazos. Esto puede reducir theme, interacción, protección, cierres o fixing disponibles.`);
+  if(String(chosenTheme.name||"").toLocaleLowerCase("en-US")==="combo"&&comboPolicy==="off")warnings.push("El theme Combo de EDHREC orienta afinidad y contexto, pero no garantiza una línea completa. Activá Plan de combo para que Commander Spellbook exija todas las piezas o ninguna.");
+  if(protect&&session.deckUsage?.status&&session.deckUsage.status!=="done")warnings.push(`El uso en otros mazos estaba en estado ${session.deckUsage.status}; las copias disponibles reflejan la sincronización alcanzada hasta este momento.`);
+  const {metrics:_quickMetrics,audit:rawAudit={},...buildRest}=built,{candidateDiagnostics=[],...publicAudit}=rawAudit;
+  const selectedDiagnostics=candidateDiagnostics.filter(c=>c.selected),rejectedDiagnostics=candidateDiagnostics.filter(c=>!c.selected),diagnosticCandidates=[...selectedDiagnostics,...rejectedDiagnostics.slice(0,300)],topRejected=rejectedDiagnostics.slice(0,60),publicBuild={...buildRest,audit:{...publicAudit,diagnosticCandidateTotal:candidateDiagnostics.length}};
+  const diagnosticLog={
+    schema:"manashelf-lab2-build-log-v8",generatedAt:new Date().toISOString(),appVersion:APP_VERSION,builderVersion:COLLECTION_BUILDER_VERSION,
+    engines:{builderVersion:COLLECTION_BUILDER_VERSION,classificationVersion:CLASSIFICATION_VERSION,metricsVersion:METRICS_ENGINE_VERSION,simulationVersion:SIMULATION_VERSION,manaModelVersion:MANA_MODEL_VERSION,comboEngineVersion:COMBO_ENGINE_VERSION,healthSemanticSource:`classification-v${CLASSIFICATION_VERSION}`},
+    input:{commander:String(commander),theme:{name:chosenTheme.name,slug:chosenTheme.slug||null,source:themeFetch.source},settings:built.settings},
+    pool:{collectionCards:collectionCards.length,prefilterEligible:prefilter.eligible.length,prefilterUncertain:prefilter.uncertain.length,scryfallCandidates:candidates.length,nonlandCandidates:nonlandCandidates.length,coloredNonlandCandidates:coloredCandidates,availabilityExcluded,spellbook:{source:spellbook.source,query:spellbook.query,policy:built.settings.comboPolicy,...spellbookSummary,variantsFetched:spellbookSummary.apiVariantsFetched,findMyCombos:{source:spellbookFallback.source,included:spellbookFallback.included.length,infiniteIncluded:fallbackInfiniteIncluded,almostIncluded:spellbookFallback.almostIncluded.length,almostIncludedByAddingColors:spellbookFallback.almostIncludedByAddingColors.length}},exclusions,diagnosticCandidateTotal:candidateDiagnostics.length,diagnosticCandidatesIncluded:diagnosticCandidates.length,diagnosticCandidatesOmitted:Math.max(0,candidateDiagnostics.length-diagnosticCandidates.length),diagnosticCandidates,topRejected},
+    result:{size:built.size,complete:built.complete,invariants:built.invariants,validation:built.validation,targets:built.targets,summary:built.summary,roleCounts:built.roleCounts,typeCounts:built.typeCounts,traitCounts:built.traitCounts,themeFacetCounts:built.themeFacetCounts,combo:built.combo||null,mana:built.mana,shortages:built.shortages,audit:{...publicAudit,diagnosticCandidateTotal:candidateDiagnostics.length}},
+    deck:detail.mainboard.map(c=>({name:c.name,quantity:Number(c.quantity||1),typeLine:c.typeLine||"",category:c.primaryCategory||"",cmc:Number(c.cmc||0),selectionScore:Number(c.builder?.selectionScore||0),selectionContextScore:Number(c.builder?.selectionContextScore||0),selectionPhase:c.builder?.selectionPhase||null,selectionTrace:c.builder?.selectionTrace||null,selectionReason:c.builder?.selectionReason||"",themeAffinity:Number(c.builder?.themeAffinity||0),contextThemeAffinity:Number(c.builder?.contextThemeAffinity||0),archetypeAffinity:Number(c.builder?.archetypeAffinity||0),effectiveThemeAffinity:Number(c.builder?.effectiveThemeAffinity||0),themeEvidenceMode:c.builder?.themeEvidenceMode||null,commanderAffinity:Number(c.builder?.commanderAffinity||0),edhrecThemeInclusion:Number(c.builder?.edhrecThemeInclusion||0),edhrecThemeSynergy:Number(c.builder?.edhrecThemeSynergy||0),roleQuality:Number(c.builder?.roleQuality||0),roleQualityName:c.builder?.roleQualityName||null,semanticRoles:c.builder?.semanticRoles||[],semanticFacts:c.builder?.semanticFacts||{},semanticDependencies:c.builder?.semanticDependencies||[],semanticGlobalDependencies:c.builder?.semanticGlobalDependencies||[],semanticThemeDependencies:c.builder?.semanticThemeDependencies||[],semanticRoleDependencies:c.builder?.semanticRoleDependencies||{},semanticRoleDependencyGroups:c.builder?.semanticRoleDependencyGroups||{},semanticProduces:c.builder?.semanticProduces||[],semanticBenefitsFrom:c.builder?.semanticBenefitsFrom||[],roleQualities:c.builder?.roleQualities||{},themeFacets:c.builder?.themeFacets||[],comboPiece:c.builder?.comboPiece||null,ownedQuantity:Number(c.builder?.ownedQuantity||0),availableQuantity:Number(c.builder?.availableQuantity||0),usedQuantity:Number(c.builder?.usedQuantity||0),syntheticBasic:Boolean(c.builder?.syntheticBasic)})),health
+  };
+  if(!session.lab2BuildLogs)session.lab2BuildLogs=new Map();session.lab2BuildLogs.set(id,diagnosticLog);while(session.lab2BuildLogs.size>5)session.lab2BuildLogs.delete(session.lab2BuildLogs.keys().next().value);setLab2Progress(session,"done","Build terminado.",{commander:String(commander||""),theme:chosenTheme.name,buildId:id});
+  return {builderVersion:COLLECTION_BUILDER_VERSION,build:publicBuild,deckDetail:detail,health,warnings,themeSource:themeFetch.source,candidateCount:candidates.length,availabilityExcluded,diagnosticLogId:id};
+}
+
 async function api(req,res,p){
   // Parse the request URL once for every API route. Several preview/catalog routes
   // read query parameters; keeping this at API scope prevents a route from
@@ -1812,9 +2216,9 @@ async function api(req,res,p){
         },
         decks,deckUsage:null,deckSyncPromise:null,deckDetails:new Map()
       };
-      session.deckUsage=freshUsageState(session);session.deckUsage.status="done";
+      session.deckUsage=freshUsageState(session);
       registerSession(sessionId,session);
-      prefetchDeckSizes(session);
+      startDeckUsageSync(session);
       return send(res,200,{
         ok:true,sessionId,username:user,accessMode:"public",
         archidektRecords:imported.totalRows,uniqueCards:imported.cards.length,
@@ -1828,6 +2232,102 @@ async function api(req,res,p){
       for(const d of session.decks||[])if(d.exactMainCount!=null)sizes[d.id]=d.exactMainCount;
       return send(res,200,{sizes});
     }
+    if(p==="/api/lab3/status"&&req.method==="GET"){
+      const session=getSession(req);if(!session)return send(res,401,{error:"Conectá una colección primero."});
+      return send(res,200,await lab3Catalog.status());
+    }
+    if(p==="/api/lab3/profile"&&req.method==="POST"){
+      const session=getSession(req);if(!session)return send(res,401,{error:"Conectá una colección primero."});
+      if(session.lab2Unlocked!==true)return send(res,403,{error:"LAB 3 requiere acceso experimental."});
+      const {commander=""}=await body(req);
+      try{return send(res,200,await lab3CommanderProfile(session,commander))}
+      catch(e){return send(res,502,{error:"LAB 3 no pudo preparar ese Commander.",detail:String(e.message||e)})}
+    }
+    if(p==="/api/lab3/progress"&&req.method==="GET"){
+      const session=getSession(req);if(!session)return send(res,401,{error:"Conectá una colección primero."});
+      if(session.lab2Unlocked!==true)return send(res,403,{error:"LAB 3 requiere acceso experimental."});
+      return send(res,200,session.lab3Progress||{active:false,stage:"idle",message:"Sin procesamiento activo.",updatedAt:null});
+    }
+    if(p==="/api/lab3/build"&&req.method==="POST"){
+      const session=getSession(req);if(!session)return send(res,401,{error:"Conectá una colección primero."});
+      if(session.lab2Unlocked!==true)return send(res,403,{error:"LAB 3 requiere acceso experimental."});
+      const payload=await body(req);
+      try{return send(res,200,await buildLab3(session,payload))}
+      catch(e){setLab3Progress(session,"error",`Build detenido · ${String(e.message||e)}`,{commander:String(payload?.commander||""),theme:String(payload?.theme?.name||"")});return send(res,502,{error:"LAB 3 no pudo generar el mazo.",detail:String(e.message||e)})}
+    }
+    if(p==="/api/lab3/build-log"&&req.method==="GET"){
+      const session=getSession(req);if(!session)return send(res,401,{error:"Conectá una colección primero."});
+      if(session.lab2Unlocked!==true)return send(res,403,{error:"LAB 3 requiere acceso experimental."});
+      const id=Number(u.searchParams.get("id"));if(!id)return send(res,400,{error:"No hay un build seleccionado."});
+      const log=session.lab3BuildLogs?.get(id);if(!log)return send(res,404,{error:"El log de LAB 3 ya no está disponible. Regenerá el mazo."});
+      return send(res,200,log);
+    }
+    if(p==="/api/lab3/stress/start"&&req.method==="POST"){
+      const session=getSession(req);if(!session)return send(res,401,{error:"Conectá una colección primero."});
+      if(session.lab2Unlocked!==true)return send(res,403,{error:"LAB 3 requiere acceso experimental."});
+      const payload=await body(req);try{const job=startLab3Stress(session,payload);return send(res,202,publicStressStatus(job))}catch(e){return send(res,409,{error:String(e.message||e)})}
+    }
+    if(p==="/api/lab3/stress/status"&&req.method==="GET"){
+      const session=getSession(req);if(!session)return send(res,401,{error:"Conectá una colección primero."});
+      if(session.lab2Unlocked!==true)return send(res,403,{error:"LAB 3 requiere acceso experimental."});
+      return send(res,200,publicStressStatus(session.lab3StressJob));
+    }
+    if(p==="/api/lab3/stress/cancel"&&req.method==="POST"){
+      const session=getSession(req);if(!session)return send(res,401,{error:"Conectá una colección primero."});
+      if(session.lab2Unlocked!==true)return send(res,403,{error:"LAB 3 requiere acceso experimental."});
+      const job=session.lab3StressJob;if(!job||!["planning","running"].includes(job.status))return send(res,409,{error:"No hay un stress test activo."});job.cancelRequested=true;job.message="Cancelación solicitada; se detendrá después del caso actual.";return send(res,200,publicStressStatus(job));
+    }
+    if(p==="/api/lab3/stress/export"&&req.method==="GET"){
+      const session=getSession(req);if(!session)return send(res,401,{error:"Conectá una colección primero."});
+      if(session.lab2Unlocked!==true)return send(res,403,{error:"LAB 3 requiere acceso experimental."});
+      try{const zip=await lab3StressZip(session.lab3StressJob),stamp=new Date().toISOString().replace(/[-:]/g,"").replace(/\.\d{3}Z$/,"Z"),name=`ManaShelf-LAB3-STRESS-CORPUS-v2-${stamp}.zip`;res.writeHead(200,{"Content-Type":"application/zip","Content-Disposition":`attachment; filename=\"${name}\"`,"Content-Length":zip.length,"Cache-Control":"no-store",...SECURITY_HEADERS});res.end(zip);return}catch(e){return send(res,409,{error:String(e.message||e)})}
+    }
+
+    if(p==="/api/lab2/access"&&req.method==="GET"){
+      const session=getSession(req);if(!session)return send(res,401,{error:"Conectá una colección primero."});
+      return send(res,200,{unlocked:session.lab2Unlocked===true});
+    }
+    if(p==="/api/lab2/unlock"&&req.method==="POST"){
+      const session=getSession(req);if(!session)return send(res,401,{error:"Conectá una colección primero."});
+      const now=Date.now(),gate=session.lab2Gate||{failures:0,blockedUntil:0};
+      session.lab2Gate=gate;
+      if(Number(gate.blockedUntil||0)>now)return send(res,429,{error:"Demasiados intentos. Probá de nuevo en unos segundos."});
+      const {password=""}=await body(req);
+      if(!lab2PasswordMatches(password)){
+        gate.failures=Number(gate.failures||0)+1;
+        if(gate.failures>=5){gate.failures=0;gate.blockedUntil=now+30_000}
+        return send(res,403,{error:"Contraseña incorrecta."});
+      }
+      session.lab2Unlocked=true;gate.failures=0;gate.blockedUntil=0;
+      return send(res,200,{ok:true,unlocked:true});
+    }
+    if(p==="/api/lab2/profile"&&req.method==="POST"){
+      const session=getSession(req);if(!session)return send(res,401,{error:"Conectá una colección primero."});
+      if(session.lab2Unlocked!==true)return send(res,403,{error:"LAB 2 requiere contraseña."});
+      const {commander=""}=await body(req);
+      try{return send(res,200,await lab2CommanderProfile(session,commander))}
+      catch(e){return send(res,502,{error:"LAB 2 no pudo preparar ese Commander.",detail:String(e.message||e)})}
+    }
+    if(p==="/api/lab2/progress"&&req.method==="GET"){
+      const session=getSession(req);if(!session)return send(res,401,{error:"Conectá una colección primero."});
+      if(session.lab2Unlocked!==true)return send(res,403,{error:"LAB 2 requiere contraseña."});
+      return send(res,200,session.lab2Progress||{active:false,stage:"idle",message:"Sin procesamiento activo.",updatedAt:null});
+    }
+    if(p==="/api/lab2/build"&&req.method==="POST"){
+      const session=getSession(req);if(!session)return send(res,401,{error:"Conectá una colección primero."});
+      if(session.lab2Unlocked!==true)return send(res,403,{error:"LAB 2 requiere contraseña."});
+      const payload=await body(req);
+      try{return send(res,200,await buildLab2(session,payload))}
+      catch(e){setLab2Progress(session,"error",`Build detenido · ${String(e.message||e)}`,{commander:String(payload?.commander||""),theme:String(payload?.theme?.name||"")});return send(res,502,{error:"LAB 2 no pudo generar el mazo.",detail:String(e.message||e)})}
+    }
+    if(p==="/api/lab2/build-log"&&req.method==="GET"){
+      const session=getSession(req);if(!session)return send(res,401,{error:"Conectá una colección primero."});
+      if(session.lab2Unlocked!==true)return send(res,403,{error:"LAB 2 requiere contraseña."});
+      const id=Number(u.searchParams.get("id"));if(!id)return send(res,400,{error:"No hay un build seleccionado."});
+      const log=session.lab2BuildLogs?.get(id);if(!log)return send(res,404,{error:"El log de este build ya no está disponible. Regenerá el mazo para crear uno nuevo."});
+      return send(res,200,log);
+    }
+
     if(p==="/api/lab/deck-health"&&req.method==="POST"){
       const session=getSession(req);
       if(!session)return send(res,401,{error:"Conectá una colección primero."});
@@ -1957,7 +2457,7 @@ async function api(req,res,p){
     if(p==="/api/collection/lookup"&&req.method==="GET"){
       const session=getSession(req);if(!session)return send(res,401,{error:"Conectá una colección primero."});
       const u=new URL(req.url,`http://${req.headers.host}`),name=String(u.searchParams.get("name")||"").trim(),cards=cache.collections.get(collectionCacheKeyFor(session))||[];
-      const row=cards.find(c=>String(c.name||"").toLocaleLowerCase("en-US")===name.toLocaleLowerCase("en-US"));
+      const row=cards.find(c=>cardNameMatches(c.name,name));
       return send(res,200,{owned:Boolean(row),quantity:Number(row?.quantity||0)});
     }
     if(p==="/api/collection"&&req.method==="POST"){
@@ -1989,7 +2489,7 @@ async function api(req,res,p){
         cards=imported.cards;cache.collections.set(uk,cards)
       }
       let lists=cache.edhrec.get(ck); if(!lists){lists=await edhrec(String(commander).trim());cache.edhrec.set(ck,lists)}
-      const mine=new Map(cards.map(c=>[c.name.toLocaleLowerCase("en-US"),c]));
+      const mine=cardMap(cards);
       const deckUsage=session.deckUsage||freshUsageState(session);
       startDeckUsageSync(session);
 
@@ -1998,11 +2498,10 @@ async function api(req,res,p){
         label:l.label,
         totalEdhrec:l.cards.length,
         matches:l.cards
-          .filter(c=>includeMissing || mine.has(c.name.toLocaleLowerCase("en-US")))
+          .filter(c=>includeMissing || hasCardAlias(mine,c.name))
           .map(c=>{
-            const key=c.name.toLocaleLowerCase("en-US");
-            const o=mine.get(key)||null;
-            const usedInDecks=deckUsage.usage.get(key)||[];
+            const o=getCardAlias(mine,c.name)||null;
+            const usedInDecks=usageFor(deckUsage.usage,c.name);
             const usedQuantity=o ? usedInDecks.reduce((n,d)=>n+d.quantity,0) : 0;
             const availableQuantity=o ? Math.max(0,o.quantity-usedQuantity) : 0;
             return {
@@ -2050,7 +2549,7 @@ async function api(req,res,p){
       const uniqueRecommended=new Map();
       for(const cat of categories){
         for(const c of cat.matches){
-          const key=c.name.toLocaleLowerCase("en-US");
+          const key=cardIdentityKey(c.name);
           if(!uniqueRecommended.has(key)) uniqueRecommended.set(key,c);
         }
       }
@@ -2093,7 +2592,7 @@ let commanderCatalogDiskCache=null;
 async function loadCommanderCatalog({force=false,onProgress=null}={}){
   const cacheFile=path.join(CACHE_DIR,"commander-catalog.json");
   if(commanderCatalogDiskCache===null){
-    commanderCatalogDiskCache=await readJsonFile(cacheFile,{version:2,updatedAt:0,cards:[]});
+    commanderCatalogDiskCache=await readStaticCacheWithSiblingImport("commander-catalog.json",{version:2,updatedAt:0,cards:[]});
   }
   const previous=Array.isArray(commanderCatalogDiskCache.cards)?commanderCatalogDiskCache.cards:[];
   // Normal use is offline-first: if a copied catalog exists, use it regardless of age.
@@ -2147,10 +2646,10 @@ async function commanderCandidatesFromOwnedMetadata(cards,onProgress=null){
   return out;
 }
 async function ownedCommanderCandidates(cards,onProgress=null){
-  const owned=new Set(cards.map(c=>String(c.name||"").toLocaleLowerCase("en-US")).filter(Boolean));
+  const owned=cardSet(cards.map(c=>c.name));
   let catalog=[];
   try{catalog=await loadCommanderCatalog()}catch{}
-  const hits=catalog.filter(c=>owned.has(String(c.name||"").toLocaleLowerCase("en-US")));
+  const hits=catalog.filter(c=>hasCardAlias(owned,c.name));
   if(hits.length)return hits;
   return commanderCandidatesFromOwnedMetadata(cards,onProgress);
 }
@@ -2158,24 +2657,24 @@ async function ownedCommanderCandidates(cards,onProgress=null){
 async function commanderBuildability(session,name){
   const commanderName=String(name||"").trim();if(!commanderName)throw new Error("Falta el Commander.");
   const cards=cache.collections.get(collectionCacheKeyFor(session))||[];
-  const mine=new Map(cards.map(c=>[String(c.name||"").toLocaleLowerCase("en-US"),c]));
-  const usage=session.deckUsage?.usage||new Map(), commanderOwned=mine.has(commanderName.toLocaleLowerCase("en-US"));
+  const mine=cardMap(cards);
+  const usage=session.deckUsage?.usage||new Map(), commanderOwned=hasCardAlias(mine,commanderName);
   if(!commanderOwned)throw new Error("¿Qué Commander puedo armar? solo analiza criaturas legendarias que tenés en tu colección.");
   const ownMeta=await batchScryfallImages([commanderName]),cm=ownMeta.get(commanderName)||{};
   if(!(String(cm.typeLine||"").toLowerCase().includes("legendary")&&String(cm.typeLine||"").toLowerCase().includes("creature")))throw new Error("La carta elegida no es una criatura legendaria de tu colección.");
-  const commanderKey=commanderName.toLocaleLowerCase("en-US");
+  const commanderKey=cardIdentityKey(commanderName);
   let lists=cache.edhrec.get(commanderKey);if(!lists){lists=await edhrec(commanderName);cache.edhrec.set(commanderKey,lists)}
   const rec=new Map();
-  for(const l of lists)for(const c of l.cards){const k=c.name.toLocaleLowerCase("en-US");if(!rec.has(k)||c.synergy>rec.get(k).synergy)rec.set(k,c)}
-  const vals=[...rec.values()];let owned=0,available=0,occupied=0,synergy=0;
-  for(const c of vals){const k=c.name.toLocaleLowerCase("en-US"),o=mine.get(k);if(!o)continue;owned++;synergy+=Number(c.synergy||0);const used=(usage.get(k)||[]).reduce((n,d)=>n+Number(d.quantity||0),0);if(Number(o.quantity||0)-used>0)available++;else occupied++}
+  for(const l of lists)for(const c of l.cards){const prev=getCardAlias(rec,c.name);if(!prev||c.synergy>prev.synergy)setCardAlias(rec,c.name,c)}
+  const vals=[...new Map([...rec.values()].map(c=>[cardIdentityKey(c.name),c])).values()];let owned=0,available=0,occupied=0,synergy=0;
+  for(const c of vals){const o=getCardAlias(mine,c.name);if(!o)continue;owned++;synergy+=Number(c.synergy||0);const used=usageFor(usage,c.name).reduce((n,d)=>n+Number(d.quantity||0),0);if(Number(o.quantity||0)-used>0)available++;else occupied++}
   const ownedSections=[];
   for(const l of lists){
     const seen=new Set(),sectionCards=[];
     for(const c of l.cards){
-      const k=c.name.toLocaleLowerCase("en-US");if(seen.has(k))continue;seen.add(k);
-      const o=mine.get(k);if(!o)continue;
-      const usedInDecks=usage.get(k)||[],usedQty=usedInDecks.reduce((n,d)=>n+Number(d.quantity||0),0);
+      const k=cardIdentityKey(c.name);if(seen.has(k))continue;seen.add(k);
+      const o=getCardAlias(mine,c.name);if(!o)continue;
+      const usedInDecks=usageFor(usage,c.name),usedQty=usedInDecks.reduce((n,d)=>n+Number(d.quantity||0),0);
       sectionCards.push({name:c.name,ownedQuantity:Number(o.quantity||0),availableQuantity:Math.max(0,Number(o.quantity||0)-usedQty),synergy:Number(c.synergy||0),inclusionPct:c.potentialDecks?Math.round((c.numDecks/c.potentialDecks)*1000)/10:c.inclusion,usedInDecks});
     }
     if(sectionCards.length)ownedSections.push({id:l.id,label:l.label,cards:sectionCards.sort((a,b)=>b.synergy-a.synergy)});
@@ -2198,16 +2697,16 @@ async function commanderBuildability(session,name){
     if(p==="/api/edhrec/tag-commanders"&&req.method==="POST"){
       const session=getSession(req);if(!session)return send(res,401,{error:"Conectá una colección primero."});
       const {tags=[]}=await body(req),slugs=[...new Set((Array.isArray(tags)?tags:[]).map(x=>String(x).trim()).filter(Boolean))].slice(0,6);
-      const cards=cache.collections.get(collectionCacheKeyFor(session))||[],owned=await ownedLegendaryCreatureCandidates(cards),ownedMap=new Map(owned.map(x=>[x.name.toLocaleLowerCase("en-US"),x]));
+      const cards=cache.collections.get(collectionCacheKeyFor(session))||[],owned=await ownedLegendaryCreatureCandidates(cards),ownedMap=cardMap(owned);
       if(!slugs.length)return send(res,200,{results:owned});
       let allowed=null;
       for(const tag of slugs){
         const r=await get(`https://json.edhrec.com/pages/tags/${encodeURIComponent(tag)}.json`);if(!r.ok)continue;
         const payload=await r.json(),root=payload?.container?.json_dict||payload?.json_dict||payload,lists=root?.cardlists||[],names=new Set();
-        for(const l of lists){const label=String(l.tag||l.header||"").toLowerCase();if(!label.includes("commander"))continue;for(const c of (l.cardviews||l.cards||[]))if(c?.name)names.add(c.name.toLocaleLowerCase("en-US"))}
+        for(const l of lists){const label=String(l.tag||l.header||"").toLowerCase();if(!label.includes("commander"))continue;for(const c of (l.cardviews||l.cards||[]))if(c?.name)for(const alias of cardNameAliases(c.name))names.add(alias)}
         allowed=allowed===null?names:new Set([...allowed].filter(x=>names.has(x)));
       }
-      return send(res,200,{results:allowed===null?owned:owned.filter(x=>allowed.has(x.name.toLocaleLowerCase("en-US")))});
+      return send(res,200,{results:allowed===null?owned:owned.filter(x=>hasCardAlias(allowed,x.name))});
     }
     if(p==="/api/owned-commanders/start"&&req.method==="POST"){
       const session=getSession(req);if(!session)return send(res,401,{error:"Conectá una colección primero."});
@@ -2229,18 +2728,18 @@ async function commanderBuildability(session,name){
       const session=getSession(req);if(!session)return send(res,401,{error:"Conectá una colección primero."});
       const {commanders=[]}=await body(req),names=[...new Set((Array.isArray(commanders)?commanders:[]).map(x=>String(x).trim()).filter(Boolean))];
       if(names.length<2||names.length>10)return send(res,400,{error:"Elegí entre 2 y 10 Commanders."});
-      const cards=cache.collections.get(collectionCacheKeyFor(session))||[],owned=await ownedLegendaryCreatureCandidates(cards),allowed=new Map(owned.map(x=>[x.name.toLocaleLowerCase("en-US"),x]));
-      if(names.some(n=>!allowed.has(n.toLocaleLowerCase("en-US"))))return send(res,400,{error:"Todos los Commanders deben ser criaturas legendarias Commander-legales de tu colección."});
+      const cards=cache.collections.get(collectionCacheKeyFor(session))||[],owned=await ownedLegendaryCreatureCandidates(cards),allowed=cardMap(owned);
+      if(names.some(n=>!hasCardAlias(allowed,n)))return send(res,400,{error:"Todos los Commanders deben ser criaturas legendarias Commander-legales de tu colección."});
       const results=[],failures=[];
-      for(const name of names){try{const result=await commanderBuildability(session,name);results.push({...result,...allowed.get(name.toLocaleLowerCase("en-US"))})}catch(e){failures.push({name,error:String(e.message||e)})}}
+      for(const name of names){try{const result=await commanderBuildability(session,name);results.push({...result,...getCardAlias(allowed,name)})}catch(e){failures.push({name,error:String(e.message||e)})}}
       results.sort((a,b)=>b.owned-a.owned||b.available-a.available||b.coveragePct-a.coveragePct);
       return send(res,200,{results,failures});
     }
     if(p==="/api/alternatives"&&req.method==="POST"){
       const session=getSession(req);if(!session)return send(res,401,{error:"Conectá una colección primero."});
-      const {card=""}=await body(req),cards=cache.collections.get(collectionCacheKeyFor(session))||[],mine=new Map(cards.map(c=>[String(c.name||"").toLocaleLowerCase("en-US"),c]));
+      const {card=""}=await body(req),cards=cache.collections.get(collectionCacheKeyFor(session))||[],mine=cardMap(cards);
       const similar=await edhrecSimilar(card),usage=session.deckUsage?.usage||new Map();
-      const owned=similar.filter(x=>mine.has(x.name.toLocaleLowerCase("en-US"))).map(x=>{const o=mine.get(x.name.toLocaleLowerCase("en-US")),used=(usage.get(x.name.toLocaleLowerCase("en-US"))||[]).reduce((n,d)=>n+Number(d.quantity||0),0);return {...x,ownedQuantity:Number(o.quantity||0),availableQuantity:Math.max(0,Number(o.quantity||0)-used)}}).filter(x=>x.availableQuantity>0);
+      const owned=similar.filter(x=>hasCardAlias(mine,x.name)).map(x=>{const o=getCardAlias(mine,x.name),used=usageFor(usage,x.name).reduce((n,d)=>n+Number(d.quantity||0),0);return {...x,ownedQuantity:Number(o.quantity||0),availableQuantity:Math.max(0,Number(o.quantity||0)-used)}}).filter(x=>x.availableQuantity>0);
       const meta=await batchScryfallImages(owned.map(x=>x.name));
       return send(res,200,{results:owned.slice(0,6).map(x=>{const m=meta.get(x.name)||{};return {...x,image:m.normal||m.small||null,typeLine:m.typeLine||"",cmc:Number(m.cmc||0)}})});
     }
@@ -2314,19 +2813,19 @@ async function commanderBuildability(session,name){
       if(confirm!=="CONFIRMAR")return send(res,400,{error:"Falta confirmación explícita."});
       const id=Number(deckId);if(!id||!Array.isArray(names)||!names.length)return send(res,400,{error:"Faltan deck y cartas."});
       const current=await bridgePost("/api/personal-deck-cards",{account:session.account,deck_id:id,include_deleted:false});
-      const existing=new Set((current.cards||[]).map(c=>String(c.name||"").toLocaleLowerCase("en-US")));
-      const wanted=[...new Set(names.map(n=>String(n).trim()).filter(Boolean))].filter(n=>!existing.has(n.toLocaleLowerCase("en-US")));
+      const existing=cardSet((current.cards||[]).map(c=>c.name));
+      const wanted=[...new Set(names.map(n=>String(n).trim()).filter(Boolean))].filter(n=>!hasCardAlias(existing,n));
       if(!wanted.length)return send(res,200,{ok:true,affected:0,notes:["Todas las cartas ya estaban en el mazo."]});
       const lookup=await bridgePost("/api/cards/search",{filters:{exact_name:wanted,game:1,all_editions:false,page:1}},3);
       const refs=new Map();
       for(const r of (lookup.results||[])){
-        const requested=String(r.requested_exact_name||r.name||"").toLocaleLowerCase("en-US");
-        if(!refs.has(requested))refs.set(requested,r);
+        const requested=String(r.requested_exact_name||r.name||"");
+        if(!getCardAlias(refs,requested))setCardAlias(refs,requested,r);
       }
       const mutations=[];
       const unresolved=[];
       for(const name of wanted){
-        const ref=refs.get(name.toLocaleLowerCase("en-US"));
+        const ref=getCardAlias(refs,name);
         if(!ref?.card_id){unresolved.push(name);continue}
         mutations.push({action:"add",card_id:Number(ref.card_id),categories:[],modifications:{quantity:1}});
       }
@@ -2351,14 +2850,14 @@ async function commanderBuildability(session,name){
       const lookup=await bridgePost("/api/cards/search",{filters:{exact_name:wanted,game:1,all_editions:false,page:1}},3);
       const refs=new Map();
       for(const r of (lookup.results||[])){
-        const requested=String(r.requested_exact_name||r.name||"").toLocaleLowerCase("en-US");
-        if(!refs.has(requested))refs.set(requested,r);
+        const requested=String(r.requested_exact_name||r.name||"");
+        if(!getCardAlias(refs,requested))setCardAlias(refs,requested,r);
       }
       const mutations=[];
       for(const cardName of wanted){
-        const ref=refs.get(cardName.toLocaleLowerCase("en-US"));if(!ref?.card_id)continue;
+        const ref=getCardAlias(refs,cardName);if(!ref?.card_id)continue;
         mutations.push({action:"add",card_id:Number(ref.card_id),
-          categories:cardName.toLocaleLowerCase("en-US")===String(commander).trim().toLocaleLowerCase("en-US")?["Commander"]:[],
+          categories:cardNameMatches(cardName,String(commander).trim())?["Commander"]:[],
           modifications:{quantity:1}});
       }
       if(mutations.length)await bridgePost("/api/personal-decks/modify-cards",{account:session.account,deck_id:deckId,cards:mutations},3);

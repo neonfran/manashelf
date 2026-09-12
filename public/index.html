@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ManaShelf v2.5.27-beta</title>
+<title>ManaShelf v2.5.48-beta</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://cards.scryfall.io" crossorigin>
@@ -12,7 +12,7 @@
 <body>
 <div class="grid-bg"></div><div class="glow glow-a"></div><div class="glow glow-b"></div>
 <header>
-  <div class="brand"><span>✦</span> ManaShelf <small>v2.5.27</small><span class="beta-pill">BETA</span></div>
+  <div class="brand"><span>✦</span> ManaShelf <small>v2.5.48</small><span class="beta-pill">BETA</span></div>
   <!-- EXPERIMENTAL: removable terminal-style sticky context indicator -->
   <div id="terminalStatus" class="terminal-status" aria-live="polite" aria-label="Contexto actual"><span class="terminal-prompt">›</span><span id="terminalText">ready</span><i class="terminal-cursor" aria-hidden="true"></i></div>
   <div class="header-actions"><button id="themeToggle" class="ghost" title="Cambiar entre tema oscuro y claro" aria-label="Cambiar tema">☾</button><button id="langToggle" class="ghost language-toggle" title="Cambiar idioma" aria-label="Cambiar idioma">ES</button><button id="historyBtn" class="ghost">Historial</button><button id="shortlistBtn" class="ghost">★ Shortlist <b id="shortlistCount">0</b></button></div>
@@ -101,8 +101,10 @@
 <section class="mode-tabs">
   <button id="modeExplore" class="mode active"><b>01</b><span>Explorar Commander<small>Cualquier leyenda</small></span></button>
   <button id="modeImprove" class="mode"><b>02</b><span>Mejorar mi mazo<small>Deck existente</small></span></button>
-  <button id="modeRank" class="mode"><b>03</b><span>¿Qué Commander puedo armar?<small>Uno específico o toda tu colección</small></span></button>
-  <button id="modeLab" class="mode lab-mode"><b>⚗</b><span>LAB<small>Experimental</small></span></button>
+  <button id="modeRank" class="mode"><b>03</b><span>¿Qué Commander puedo armar?<small>Desde tu colección</small></span></button>
+  <button id="modeLab" class="mode lab-mode"><b>⚗1</b><span>LAB 1<small>Deck check++</small></span></button>
+  <button id="modeLab2" class="mode lab2-mode lab-locked" aria-label="LAB 2 · bloqueado"><b>⚗2</b><span>LAB 2<small>Deck builder++</small></span><i id="modeLab2Lock" class="lab-lock" aria-hidden="true">🔒</i></button>
+  <button id="modeLab3" class="mode lab3-mode lab-locked" aria-label="LAB 3 · bloqueado"><b>⚗3</b><span>LAB 3<small>Semantic builder</small></span><i id="modeLab3Lock" class="lab-lock" aria-hidden="true">🔒</i></button>
 </section>
 
 <section id="exploreFlow" class="flow-panel">
@@ -238,6 +240,80 @@
   </div>
 </section>
 
+<section id="lab2Flow" class="flow-panel lab2-panel hidden">
+  <div class="lab2-banner"><b>⚗2 MANASHELF LAB 2</b><span>GENERADOR EXPERIMENTAL · CONSTRUYE DESDE TU COLECCIÓN · NO MODIFICA ARCHIDEKT</span></div>
+  <div class="flow-head"><span>BUILD FROM COLLECTION</span><p>Elegí un Commander, seleccioná uno de sus themes y ManaShelf arma un deck coherente usando las mejores cartas legales disponibles en tu colección.</p></div>
+
+  <div class="lab2-step">
+    <div class="lab2-step-head"><b>01</b><div><strong>Commander</strong><small>Buscá una criatura legendaria Commander-legal.</small></div></div>
+    <div class="commander-search lab2-commander-search">
+      <div class="control lab2-control"><span>♛</span><input id="lab2CommanderSearch" placeholder="Buscar criatura legendaria…" autocomplete="off"></div>
+      <div id="lab2CommanderDropdown" class="dropdown hidden"></div>
+    </div>
+    <div id="lab2CommanderChosen" class="chosen lab2-commander-chosen hidden"><div id="lab2CommanderCard" class="chosen-card commander-click"></div></div>
+  </div>
+
+  <div id="lab2ThemeStep" class="lab2-step hidden">
+    <div class="lab2-step-head"><b>02</b><div><strong>Theme</strong><small>La construcción prioriza esta mecánica sin sacrificar estructura, curva ni maná.</small></div></div>
+    <div id="lab2ThemeGrid" class="lab2-theme-grid"></div>
+  </div>
+
+  <div id="lab2Settings" class="lab2-step hidden">
+    <div class="lab2-step-head"><b>03</b><div><strong>Ajustes</strong><small>Definen prioridades del armado. El motor sigue respetando legalidad, estructura y validación de maná.</small></div></div>
+    <div class="lab2-settings-grid">
+      <label class="lab2-setting lab2-range-setting"><span><strong>Foco en el theme</strong><small>Cuánto espacio priorizar para cartas que realmente expresan el theme elegido.</small></span><div><input id="lab2ThemeFocus" type="range" min="35" max="100" value="72"><output id="lab2ThemeFocusValue">72%</output></div></label>
+      <label class="lab2-setting"><span><strong>Ramp</strong><small>Cuánta aceleración de maná buscar, además del ajuste automático por curva y coste del Commander.</small></span><select id="lab2Ramp"><option value="standard">Estándar</option><option value="more">Más ramp</option><option value="heavy">Mucho ramp</option></select></label>
+      <label class="lab2-setting"><span><strong>Interacción</strong><small>Cuánto espacio dedicar a removal, counters, wipes y otras respuestas.</small></span><select id="lab2Interaction"><option value="standard">Estándar</option><option value="more">Más respuestas</option></select></label>
+      <label class="lab2-setting"><span><strong>Curva</strong><small>Cuánto favorecer costes bajos y penalizar cartas caras al ordenar candidatos.</small></span><select id="lab2Curve"><option value="normal">Normal</option><option value="lower">Más baja</option><option value="fastest">Muy baja</option></select></label>
+      <label class="lab2-setting"><span><strong>Sinergia vs eficiencia</strong><small>Balancea piezas que trabajan con el plan contra cartas fuertes y eficientes por sí solas.</small></span><select id="lab2Synergy"><option value="synergy">Sinergia primero</option><option value="balanced" selected>Balanceado</option><option value="efficiency">Eficiencia primero</option></select></label>
+      <label class="lab2-setting"><span><strong>Dependencia del Commander</strong><small>Cuánto aceptar cartas cuyo rendimiento baja si el Commander no está disponible.</small></span><select id="lab2Dependence"><option value="conservative">Baja dependencia</option><option value="normal" selected>Balanceada</option><option value="all-in">Alta dependencia</option></select></label>
+      <label class="lab2-setting"><span><strong>Plan de combo</strong><small>Es independiente del theme. Usa Commander Spellbook y, si elige un combo, incluye todas sus piezas exactas o ninguna.</small></span><select id="lab2ComboPolicy"><option value="off" selected>No buscar combos</option><option value="synergistic">Sólo si encaja</option><option value="infinite">Priorizar combo infinito</option></select></label>
+      <label class="lab2-setting"><span><strong>Base de maná</strong><small>Define cuánto priorizar básicas o fixing. Siempre se validan colores producidos, pips, curva y ramp; “Básicas primero” sólo conserva no básicas realmente importantes.</small></span><select id="lab2LandStyle"><option value="basics">Básicas primero</option><option value="safe">Segura · más tierras</option><option value="balanced" selected>Balanceada</option><option value="lean">Ajustada · menos tierras</option></select></label>
+      <label class="lab2-setting lab2-switch-setting"><span><strong>Proteger mazos existentes</strong><small>No usa copias que ya están comprometidas en otros mazos cuando la sincronización puede verificarlo.</small></span><input id="lab2ProtectDecks" type="checkbox" checked><i aria-hidden="true"></i></label>
+    </div>
+    <div class="lab2-build-actions"><button id="lab2Generate" class="primary big" disabled>Generar mazo →</button><span id="lab2BuildHint">Elegí un theme para continuar.</span></div>
+  </div>
+
+  <div id="lab2Loading" class="lab-loading lab2-loading hidden"><span></span><p id="lab2LoadingText">Preparando pool legal de tu colección…</p></div>
+
+  <div id="lab2ResultWrap" class="hidden">
+    <div class="lab2-result-head"><div><span>MAZO GENERADO · LAB 2</span><h2 id="lab2ResultTitle"></h2><p id="lab2ResultMeta"></p></div><div class="lab2-result-actions"><button id="lab2Export" class="ghost">Exportar para Archidekt ⇩</button><button id="lab2CopyArchidekt" class="ghost">Copiar para Archidekt</button><button id="lab2ExportLog" class="ghost">Exportar log diagnóstico</button><button id="lab2Rebuild" class="ghost">Regenerar</button></div></div>
+    <div id="lab2Summary" class="lab2-summary-grid"></div>
+    <div id="lab2Warnings" class="lab2-warnings hidden"></div>
+    <details id="lab2Audit" class="lab2-audit"><summary>Criterio de armado <span>objetivos, maná y decisiones</span></summary><div id="lab2AuditBody" class="lab2-audit-body"></div></details>
+    <section class="lab2-deck-section"><div class="lab2-section-title"><div><span>DECK LIST</span><h3>Deck list · roles y categorías</h3></div><small>La categoría indica por qué la carta ocupa ese slot principal; una carta puede cubrir varios roles.</small></div><div class="lab2-table-wrap"><table class="lab2-deck-table"><thead><tr><th>CARTA</th><th>TIPO</th><th>CATEGORÍA</th><th>CMC</th><th>DISPONIBILIDAD</th></tr></thead><tbody id="lab2DeckTable"></tbody></table></div></section>
+    <section class="lab2-health-title"><span>DECK HEALTH</span><h3>Auditoría del mazo generado</h3><p>Se vuelve a evaluar el resultado con el mismo Deck Health y Deck Metrics experimentales del LAB.</p></section>
+    <div class="lab2-health-workspace"><div id="lab2Health" class="lab-results"></div><aside id="lab2DeckInspector" class="deck-inspector lab2-inspector hidden"><button type="button" class="deck-inspector-toggle" title="Colapsar Deck List" aria-label="Colapsar Deck List"><span class="deck-toggle-triangle collapse">▶</span></button><div class="deck-inspector-head"><div class="deck-inspector-titlebar"><span>DECK LIST</span></div><div class="deck-inspector-context"><strong id="lab2DeckInspectorTitle">Mazo generado</strong><small id="lab2DeckInspectorCommander">Commander · —</small></div><div class="deck-inspector-tools"><small id="lab2DeckInspectorCount" class="deck-size-pill">Size · —</small><label class="deck-sort-label"><select id="lab2DeckSort" aria-label="Ordenar deck generado"><option value="type:asc" selected>Tipo ↑</option><option value="type:desc">Tipo ↓</option><option value="category:asc">Categoría ↑</option><option value="category:desc">Categoría ↓</option><option value="cmc:asc">CMC ↑</option><option value="cmc:desc">CMC ↓</option><option value="name:asc">Nombre ↑</option><option value="name:desc">Nombre ↓</option></select></label></div></div><div id="lab2DeckFilter" class="deck-inspector-filter hidden"></div><div id="lab2DeckList" class="deck-card-list"></div></aside></div>
+  </div>
+</section>
+
+<section id="lab3Flow" class="flow-panel lab2-panel lab3-panel hidden">
+  <div class="lab2-banner lab3-banner"><b>⚗3 MANASHELF LAB 3</b><span>SEMANTIC BUILDER · CONTRATOS + CONTEXTO DE DECK · LAB 2 PERMANECE INTACTO</span></div>
+  <div class="flow-head"><span>SEMANTIC BUILD FROM COLLECTION</span><p>Construye desde tu colección usando la Semantic DB, contratos de roles/arquetipos y dependencias del deck. EDHREC sólo ordena candidatos semánticamente compatibles.</p></div>
+  <div class="lab2-step"><div class="lab2-step-head"><b>01</b><div><strong>Commander</strong><small>Debe existir en el índice semántico y ser Commander-legal.</small></div></div><div class="commander-search lab2-commander-search"><div class="control lab2-control"><span>♛</span><input id="lab3CommanderSearch" placeholder="Buscar criatura legendaria…" autocomplete="off"></div><div id="lab3CommanderDropdown" class="dropdown hidden"></div></div><div id="lab3CommanderChosen" class="chosen lab2-commander-chosen hidden"><div id="lab3CommanderCard" class="chosen-card commander-click"></div></div></div>
+  <div id="lab3ThemeStep" class="lab2-step hidden"><div class="lab2-step-head"><b>02</b><div><strong>Theme</strong><small>El contrato semántico decide compatibilidad; EDHREC puede ordenar, no fabricar afinidad.</small></div></div><div id="lab3ThemeGrid" class="lab2-theme-grid"></div></div>
+  <div id="lab3Settings" class="lab2-step hidden"><div class="lab2-step-head"><b>03</b><div><strong>Ajustes</strong><small>Prioridades del builder contextual. No usa Classification 7 para decidir el deck.</small></div></div><div class="lab2-settings-grid">
+    <label class="lab2-setting lab2-range-setting"><span><strong>Foco en el theme</strong><small>Prioridad de densidad temática semántica.</small></span><div><input id="lab3ThemeFocus" type="range" min="35" max="100" value="72"><output id="lab3ThemeFocusValue">72%</output></div></label>
+    <label class="lab2-setting"><span><strong>Ramp</strong><small>Aceleración estructural, no simples mana abilities.</small></span><select id="lab3Ramp"><option value="standard">Estándar</option><option value="more">Más ramp</option><option value="heavy">Mucho ramp</option></select></label>
+    <label class="lab2-setting"><span><strong>Interacción</strong><small>Removal, counters y graveyard hate con dirección semántica.</small></span><select id="lab3Interaction"><option value="standard">Estándar</option><option value="more">Más respuestas</option></select></label>
+    <label class="lab2-setting"><span><strong>Curva</strong><small>Preferencia por costes bajos sin ignorar el contexto.</small></span><select id="lab3Curve"><option value="normal">Normal</option><option value="lower">Más baja</option><option value="fastest">Muy baja</option></select></label>
+    <label class="lab2-setting"><span><strong>Sinergia vs eficiencia</strong><small>Balance entre contratos/contexto y señales externas.</small></span><select id="lab3Synergy"><option value="synergy">Sinergia primero</option><option value="balanced" selected>Balanceado</option><option value="efficiency">Eficiencia primero</option></select></label>
+    <label class="lab2-setting"><span><strong>Dependencia del Commander</strong><small>Penaliza cartas cuyo plan necesita al Commander disponible.</small></span><select id="lab3Dependence"><option value="conservative">Baja dependencia</option><option value="normal" selected>Balanceada</option><option value="all-in">Alta dependencia</option></select></label>
+    <label class="lab2-setting"><span><strong>Plan de combo</strong><small>Usa Commander Spellbook. Si elige un paquete, LAB 3 bloquea todas sus piezas exactas o ninguna.</small></span><select id="lab3ComboPolicy"><option value="off" selected>No buscar combos</option><option value="synergistic">Sólo si encaja</option><option value="infinite">Priorizar combo infinito</option></select></label>
+    <label class="lab2-setting"><span><strong>Base de maná</strong><small>Básicas ilimitadas; no básicas desde tu colección.</small></span><select id="lab3LandStyle"><option value="basics">Básicas primero</option><option value="safe">Segura · más tierras</option><option value="balanced" selected>Balanceada</option><option value="lean">Ajustada · menos tierras</option></select></label>
+    <label class="lab2-setting lab2-switch-setting"><span><strong>Proteger mazos existentes</strong><small>No toma copias comprometidas cuando el uso cruzado está sincronizado.</small></span><input id="lab3ProtectDecks" type="checkbox" checked><i aria-hidden="true"></i></label>
+  </div><div class="lab2-build-actions"><button id="lab3Generate" class="primary big" disabled>Generar con LAB 3 →</button><span id="lab3BuildHint">Elegí un theme para continuar.</span></div></div>
+  <section class="lab3-stress-panel" aria-labelledby="lab3StressTitle"><div><span>LAB 3 · STRESS HARNESS v3</span><h3 id="lab3StressTitle">Corpus automático · 200 builds</h3><p>Selecciona Commanders y themes de forma estratificada sobre el pool global Commander-legal del runtime semántico, registra semántica directa, inferida o fallback efectivo, ejecuta LAB 3 y agrupa anomalías por familia. El stress es deliberadamente independiente de tu colección y no modifica LAB 2 ni tus mazos.</p></div><div class="lab3-stress-actions"><button id="lab3StressStart" type="button" class="ghost">Ejecutar 200 builds</button><button id="lab3StressCancel" type="button" class="ghost hidden">Detener</button><button id="lab3StressExport" type="button" class="primary hidden">Exportar corpus ZIP</button></div><div class="lab3-stress-progress"><div><strong id="lab3StressStatus">Listo para ejecutar.</strong><small id="lab3StressSummary">Seed fija: manashelf-lab3-stress-3 · pool global · reproducible</small></div><progress id="lab3StressProgress" max="200" value="0"></progress></div><div id="lab3StressClusters" class="lab3-stress-clusters hidden"></div></section>
+  <div id="lab3Loading" class="lab-loading lab2-loading hidden"><span></span><p id="lab3LoadingText">Preparando Semantic DB…</p></div>
+  <div id="lab3ResultWrap" class="hidden"><div class="lab2-result-head"><div><span>MAZO GENERADO · LAB 3</span><h2 id="lab3ResultTitle"></h2><p id="lab3ResultMeta"></p></div><div class="lab2-result-actions"><button id="lab3Export" class="ghost">Exportar para Archidekt ⇩</button><button id="lab3CopyArchidekt" class="ghost">Copiar para Archidekt</button><button id="lab3ExportLog" class="ghost">Exportar log semántico</button><button id="lab3Rebuild" class="ghost">Regenerar</button></div></div>
+    <div id="lab3Summary" class="lab2-summary-grid"></div><div id="lab3Warnings" class="lab2-warnings hidden"></div>
+    <details class="lab2-audit" open><summary>Contexto semántico <span>dependencias, coverage y bottlenecks</span></summary><div id="lab3Context" class="lab2-audit-body"></div></details>
+    <section class="lab2-deck-section"><div class="lab2-section-title"><div><span>DECK LIST</span><h3>Selección contextual LAB 3</h3></div><small>El status semántico expone cuándo una carta todavía depende de cobertura parcial.</small></div><div class="lab2-table-wrap"><table class="lab2-deck-table"><thead><tr><th>CARTA</th><th>TIPO</th><th>CATEGORÍA</th><th>THEME</th><th>SEMÁNTICA</th></tr></thead><tbody id="lab3DeckTable"></tbody></table></div></section>
+    <section class="lab2-health-title"><span>DECK HEALTH · COMPARACIÓN</span><h3>Auditoría del mazo generado</h3><p>Evalúa el resultado de LAB 3 con la misma interfaz de Deck Health y Deck Metrics de LAB 2 para poder compararlos. Esta auditoría ocurre después del build y no interviene en la selección semántica.</p></section>
+    <div class="lab2-health-workspace"><div id="lab3Health" class="lab-results"></div><aside id="lab3DeckInspector" class="deck-inspector lab2-inspector hidden"><button type="button" class="deck-inspector-toggle" title="Colapsar Deck List" aria-label="Colapsar Deck List"><span class="deck-toggle-triangle collapse">▶</span></button><div class="deck-inspector-head"><div class="deck-inspector-titlebar"><span>DECK LIST</span></div><div class="deck-inspector-context"><strong id="lab3DeckInspectorTitle">Mazo generado</strong><small id="lab3DeckInspectorCommander">Commander · —</small></div><div class="deck-inspector-tools"><small id="lab3DeckInspectorCount" class="deck-size-pill">Size · —</small><label class="deck-sort-label"><select id="lab3DeckSort" aria-label="Ordenar deck generado"><option value="type:asc" selected>Tipo ↑</option><option value="type:desc">Tipo ↓</option><option value="category:asc">Categoría ↑</option><option value="category:desc">Categoría ↓</option><option value="cmc:asc">CMC ↑</option><option value="cmc:desc">CMC ↓</option><option value="name:asc">Nombre ↑</option><option value="name:desc">Nombre ↓</option></select></label></div></div><div id="lab3DeckFilter" class="deck-inspector-filter hidden"></div><div id="lab3DeckList" class="deck-card-list"></div></aside></div>
+  </div>
+</section>
+
 <section id="results" class="results hidden">
   <div class="results-top"><div><div class="kicker" id="resultModeLabel">RESULTADOS</div><h2 id="title"></h2><p id="meta"></p></div>
     <div class="result-actions"><button id="completeBtn" class="ghost">Completar a 100</button><button id="exportBtn" class="ghost">Exportar resultados</button></div>
@@ -286,6 +362,6 @@
 <div id="modal" class="modal hidden"><div class="modal-card"><button id="modalClose" class="modal-x">×</button><div id="modalBody"></div></div></div>
 <div id="drawer" class="drawer hidden"><div class="drawer-head"><strong id="drawerTitle">Shortlist</strong><button id="drawerClose">×</button></div><div id="drawerBody"></div></div>
 
-<footer><span>ManaShelf · local-first</span><span>v2.5.27-beta</span></footer>
+<footer><span>ManaShelf · local-first</span><span>v2.5.48-beta</span></footer>
 <script type="module" src="/app.js"></script>
 </body></html>

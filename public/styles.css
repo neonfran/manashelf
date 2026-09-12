@@ -168,7 +168,7 @@ body.inspector-collapsed.improve-with-inspector main{padding-right:44px}
 .health-ref-row{display:flex;flex-wrap:wrap;gap:4px;margin:7px 0 9px}.health-ref-row button{font-size:10px;padding:4px 6px;border-radius:7px;border:1px solid rgba(245,158,11,.4);background:transparent;color:#f6dda7;cursor:pointer;letter-spacing:.03em;transition:background .15s,color .15s,box-shadow .15s}.health-ref-row button:hover{background:#f59e0b;color:#1a0f00;box-shadow:0 0 12px rgba(245,158,11,.4)}.health-ref-row button:disabled{opacity:.42;cursor:default;box-shadow:none}
 .usage-overlay{position:absolute;right:6px;bottom:6px;font-size:10px;padding:3px 5px;border-radius:6px;background:rgba(7,6,16,.88);border:1px solid rgba(69,230,255,.25);color:#d9f9ff;z-index:3}.usage-overlay em{display:none;position:absolute;right:0;bottom:calc(100% + 6px);width:210px;background:#0c0915;color:#eee7f8;border:1px solid var(--line);padding:7px;border-radius:7px;font-style:normal;line-height:1.35;box-shadow:0 10px 30px rgba(0,0,0,.4)}.usage-overlay:hover em,.usage-overlay:focus em{display:block}
 .stock-badge{left:6px;right:auto;bottom:6px;max-width:52%;}.in-deck-badge{top:6px;bottom:auto}
-.build-owned-sections{margin-top:16px}.build-owned-sections>h4{font-size:13px;margin:0 0 8px}.build-section{border:1px solid var(--line);border-radius:8px;margin:6px 0;background:rgba(255,255,255,.015)}.build-section summary{display:flex;justify-content:space-between;gap:10px;padding:8px 10px;cursor:pointer;font-size:12px}.build-section summary b{color:var(--cyan);font-size:11px}.build-section>div{padding:0 10px 7px}.build-owned-card{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-top:1px solid rgba(255,255,255,.04);font-size:11px}.build-owned-card small{color:var(--muted);text-align:right}
+.build-owned-sections{margin-top:16px}.build-owned-sections>h4{font-size:13px;margin:0 0 8px}.build-section{border:1px solid var(--line);border-radius:8px;margin:6px 0;background:rgba(255,255,255,.015)}.build-section summary{display:flex;justify-content:space-between;gap:10px;padding:8px 10px;cursor:pointer;font-size:12px}.build-section summary b{color:var(--cyan);font-size:11px}.build-section>div{padding:0 10px 7px}
 @media(max-width:980px){#improveFlow{padding-right:18px}.deck-inspector{position:relative;right:auto;top:auto;width:auto;max-height:380px;margin-top:12px}.lab-workspace{grid-template-columns:1fr}.lab-inspector{position:relative;top:auto;max-height:420px}}
 
 .in-deck-inline{position:static!important;display:inline-flex!important;margin-left:7px;vertical-align:middle;font-size:9px!important}
@@ -207,14 +207,10 @@ body.improve-with-inspector main{width:min(1760px,96vw);padding-right:340px;tran
 .suggest-img{position:relative;width:58px;height:80px}
 .suggest-img>img:first-child{width:58px;height:80px;object-fit:cover;border-radius:7px}
 
-.build-owned-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:7px;padding:8px 10px 10px!important}
-.build-owned-card{display:grid;grid-template-columns:44px minmax(0,1fr);align-items:center;gap:8px;padding:7px;border:1px solid rgba(255,255,255,.045);border-radius:7px;background:rgba(0,0,0,.12)}
-.build-owned-card>div:last-child{min-width:0}
-.build-owned-card strong,.build-owned-card small{display:block;text-align:left}
-.build-owned-card strong{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.build-owned-card small{font-size:10px;margin-top:2px}
-.build-card-img{position:relative;width:44px;height:61px}
-.build-card-img>img:first-child{width:44px;height:61px;object-fit:cover;border-radius:5px}
+/* Buildability recommendations intentionally reuse the normal .grid/.card/.pic/.card-body
+   system from Explore Commander; only section spacing is specific to this surface. */
+.build-owned-grid.grid{padding:9px 10px 11px!important}
+.build-owned-card.card{min-width:0}
 
 /* v2.4.5 — hover-preview unificado: una sola regla para toda la app (antes había 4
    implementaciones casi idénticas con posiciones distintas: deck list, recomendaciones,
@@ -510,11 +506,11 @@ button.dashboard-stat:hover{border-color:rgba(255,176,0,.55);transform:translate
 .visual-dashboard .mana-curve,.type-chart{margin:0;padding:11px;border:1px solid rgba(155,92,255,.16);border-radius:10px;background:rgba(6,5,11,.38)}
 .visual-dashboard .mana-curve-bars{height:76px}
 .visual-dashboard .curve-col>b{width:min(28px,62%)}
-.type-chart-body{display:grid;grid-template-columns:108px 1fr;gap:12px;align-items:center;min-height:92px}
+.type-chart-body{display:grid;grid-template-columns:108px minmax(0,1fr);gap:12px;align-items:center;min-width:0;min-height:92px}
 .type-donut{width:92px;height:92px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;margin:auto;border:16px solid rgba(69,230,255,.55);box-shadow:inset 0 0 0 5px rgba(255,79,216,.16),0 0 0 1px rgba(155,92,255,.12)}
 .type-donut span{font-size:19px;font-weight:800}.type-donut small{font-size:11px;color:var(--muted)}
-.type-legend{display:grid;grid-template-columns:1fr 1fr;gap:3px 8px}
-.type-legend button{display:grid;grid-template-columns:8px 1fr auto;align-items:center;gap:5px;border:0;background:transparent;color:var(--muted);padding:3px 2px;text-align:left;font-size:11px;cursor:pointer}
+.type-legend{display:grid;grid-template-columns:minmax(0,1fr);gap:3px;min-width:0;width:100%;align-content:center}
+.type-legend button{display:grid;grid-template-columns:8px minmax(0,1fr) auto;align-items:center;gap:5px;min-width:0;width:100%;box-sizing:border-box;border:0;background:transparent;color:var(--muted);padding:3px 2px;text-align:left;font-size:11px;cursor:pointer}.type-legend button span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .type-legend button:hover{color:#fff}.type-legend b{color:#f6efff;font-variant-numeric:tabular-nums}
 .type-dot{width:6px;height:6px;border-radius:50%;background:var(--cyan)}.type-1{background:var(--magenta)}.type-2{background:#ffb000}.type-3{background:#8e7dff}.type-4{background:#70e6a5}.type-5{background:#ff7c9d}.type-6{background:#b6a6c8}.type-7{background:#f3efff}
 
@@ -574,7 +570,7 @@ button.dashboard-stat:hover{border-color:rgba(255,176,0,.55);transform:translate
 .legend-creature{background:#d94cff}.legend-other{background:#3bdfff}
 
 /* True proportional donut. Segments come from a conic-gradient generated from actual type counts. */
-.type-chart-body{grid-template-columns:126px minmax(0,1fr);min-height:126px}
+.type-chart{min-width:0;overflow:hidden}.type-chart-body{grid-template-columns:108px minmax(0,1fr);min-width:0;min-height:126px}
 .type-donut{
   position:relative;width:112px;height:112px;border:0!important;padding:0;border-radius:50%;cursor:pointer;
   box-shadow:0 0 26px rgba(55,229,255,.12),0 0 38px rgba(255,55,210,.08)!important
@@ -688,7 +684,7 @@ button.structural-rule:disabled{cursor:default;opacity:.68}
 }
 @media(max-width:720px){
   .ribbon-tabs{width:100%}
-  .type-chart-body{grid-template-columns:110px 1fr}
+  .type-chart-body{grid-template-columns:100px minmax(0,1fr)}
 }
 
 
@@ -2370,7 +2366,7 @@ body.inspector-collapsed.improve-with-inspector main{
 }
 
 /* ============================================================
-   v2.5.27-beta — collision-safe analysis navigation + neon theme transition
+   v2.5.29-beta — collision-safe analysis navigation + neon theme transition
    ============================================================ */
 
 /* The sticky ribbons reserve exactly the horizontal area occupied by their matching
@@ -2496,3 +2492,132 @@ html.theme-transitioning .theme-card{
   html.theme-transitioning .health-card,
   html.theme-transitioning .theme-card{transition:none!important}
 }
+
+/* v2.5.29-beta — LAB 2 / Build From Collection. Kept isolated so the experiment can be
+   removed without changing Improve or the original LAB. */
+.mode-tabs{grid-template-columns:repeat(5,minmax(0,1fr))!important}
+.lab2-mode b{font-size:11px!important;letter-spacing:-.03em}
+.lab2-mode.active{border-color:rgba(69,230,255,.58)!important;background:linear-gradient(135deg,rgba(69,230,255,.09),rgba(155,92,255,.08))!important;box-shadow:0 0 18px rgba(69,230,255,.16)!important}
+.lab2-panel{border-color:rgba(69,230,255,.26)!important;background:linear-gradient(145deg,rgba(69,230,255,.035),rgba(155,92,255,.035),rgba(10,8,20,.96))!important;padding-top:14px!important}
+.lab2-banner{display:flex;justify-content:space-between;gap:14px;align-items:center;margin-bottom:11px;padding:9px 11px;border:1px solid rgba(69,230,255,.28);border-radius:9px;background:linear-gradient(90deg,rgba(69,230,255,.07),rgba(155,92,255,.06));font-size:11px;letter-spacing:.075em;color:var(--cyan)}
+.lab2-banner span{color:var(--muted2);font-weight:700}
+.lab2-panel>.flow-head{display:grid!important;grid-template-columns:minmax(190px,250px) 1fr;gap:14px;align-items:center;padding:10px 12px;margin-bottom:12px!important;border:1px solid rgba(69,230,255,.12);border-radius:10px;background:rgba(69,230,255,.025)}
+.lab2-panel>.flow-head>span{color:var(--cyan)!important}.lab2-panel>.flow-head p{line-height:1.45}
+.lab2-step{margin-top:10px;padding:14px;border:1px solid var(--line);border-radius:12px;background:rgba(7,6,14,.34)}
+.lab2-step-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}.lab2-step-head>b{display:grid;place-items:center;width:30px;height:30px;border:1px solid rgba(69,230,255,.25);border-radius:8px;color:var(--cyan);font-size:11px;background:rgba(69,230,255,.05)}.lab2-step-head>div{display:flex;flex-direction:column;gap:2px}.lab2-step-head strong{font-size:13px}.lab2-step-head small{font-size:11px;color:var(--muted)}
+.lab2-control{border-color:rgba(69,230,255,.24)!important}.lab2-commander-chosen{justify-content:flex-start!important}.lab2-commander-chosen .chosen-card{min-height:62px}.lab2-commander-chosen .chosen-card img{width:48px;height:67px;object-fit:cover}
+.lab2-inline-loading{display:flex;align-items:center;gap:9px;color:var(--muted);font-size:12px;padding:8px}.lab2-inline-loading i{width:13px;height:13px;border-radius:50%;border:2px solid rgba(69,230,255,.18);border-top-color:var(--cyan);animation:spin .8s linear infinite}
+.lab2-theme-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}.lab2-theme-choice{display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;padding:10px 11px;min-height:58px;border:1px solid var(--line);border-radius:9px;background:rgba(255,255,255,.015);color:var(--text);cursor:pointer;transition:border-color .14s,background .14s,box-shadow .14s,transform .14s}.lab2-theme-choice strong{font-size:12px}.lab2-theme-choice small{font-size:10px;color:var(--muted)}.lab2-theme-choice:hover{border-color:rgba(69,230,255,.35);background:rgba(69,230,255,.045)}.lab2-theme-choice.active{border-color:rgba(69,230,255,.62);background:linear-gradient(135deg,rgba(69,230,255,.10),rgba(155,92,255,.09));box-shadow:0 0 0 1px rgba(69,230,255,.08),0 8px 22px rgba(0,0,0,.14)}
+.lab2-settings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.lab2-setting{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 11px;border:1px solid var(--line);border-radius:9px;background:rgba(255,255,255,.012);min-height:68px}.lab2-setting>span{display:flex;flex-direction:column;gap:3px;min-width:0}.lab2-setting strong{font-size:12px}.lab2-setting small{color:var(--muted);font-size:10px;line-height:1.35}.lab2-setting select{min-width:154px;max-width:190px;border:1px solid rgba(155,92,255,.25);border-radius:7px;background:#171229;color:var(--text);padding:8px 28px 8px 9px}.lab2-range-setting>div{display:flex;align-items:center;gap:8px;min-width:200px}.lab2-range-setting input{width:150px;accent-color:var(--cyan)}.lab2-range-setting output{min-width:42px;text-align:right;color:var(--cyan);font-size:12px;font-weight:800}
+.lab2-switch-setting{position:relative;cursor:pointer}.lab2-switch-setting input{position:absolute;opacity:0;pointer-events:none}.lab2-switch-setting i{position:relative;width:42px;height:23px;flex:0 0 42px;border-radius:999px;border:1px solid var(--line);background:#171229;transition:.18s}.lab2-switch-setting i::after{content:"";position:absolute;left:3px;top:3px;width:15px;height:15px;border-radius:50%;background:#82788f;transition:.18s}.lab2-switch-setting input:checked+i{border-color:rgba(69,230,255,.45);background:rgba(69,230,255,.14);box-shadow:0 0 12px rgba(69,230,255,.10)}.lab2-switch-setting input:checked+i::after{left:22px;background:var(--cyan);box-shadow:0 0 9px rgba(69,230,255,.45)}
+.lab2-build-actions{display:flex;align-items:center;gap:12px;margin-top:12px}.lab2-build-actions span{font-size:11px;color:var(--muted)}
+.lab2-loading{margin:14px 0!important;padding:12px 14px;border:1px solid rgba(69,230,255,.16);border-radius:10px;background:rgba(69,230,255,.025);color:var(--cyan)!important}.lab2-loading span{border-color:rgba(69,230,255,.18)!important;border-top-color:var(--cyan)!important}.lab2-loading p{margin:0;color:var(--muted2)}
+.lab2-result-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin:20px 0 10px}.lab2-result-head>div:first-child>span,.lab2-section-title span,.lab2-health-title>span{font-size:10px;font-weight:800;letter-spacing:.13em;color:var(--cyan)}.lab2-result-head h2{margin:3px 0;font:600 25px Fraunces}.lab2-result-head p{margin:0;color:var(--muted);font-size:11px}.lab2-result-actions{display:flex;gap:7px;flex-wrap:wrap}
+.lab2-summary-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:10px 0 12px}.lab2-summary-card{padding:11px;border:1px solid var(--line);border-radius:10px;background:linear-gradient(145deg,rgba(69,230,255,.025),rgba(155,92,255,.025))}.lab2-summary-card span{display:block;font-size:9px;letter-spacing:.11em;color:var(--muted);font-weight:800}.lab2-summary-card strong{display:block;margin-top:3px;font:600 22px Fraunces}.lab2-summary-card small{display:block;margin-top:2px;font-size:10px;color:var(--muted)}
+.lab2-warnings{margin:10px 0 12px;border:1px solid rgba(245,158,11,.22);border-radius:10px;overflow:hidden;background:rgba(245,158,11,.025)}.lab2-warning-head{display:flex;justify-content:space-between;padding:9px 11px;border-bottom:1px solid rgba(245,158,11,.14);font-size:11px;color:#fbbf24}.lab2-warning-head span{display:grid;place-items:center;min-width:22px;height:22px;border-radius:999px;background:rgba(245,158,11,.12)}.lab2-warning-row{display:grid;grid-template-columns:minmax(130px,190px) 1fr;gap:10px;padding:8px 11px;border-bottom:1px solid var(--line)}.lab2-warning-row:last-child{border-bottom:0}.lab2-warning-row b{font-size:11px}.lab2-warning-row p{margin:0;font-size:11px;line-height:1.45;color:var(--muted)}.lab2-warning-row.high b{color:#fb7185}.lab2-warning-row.medium b{color:#fbbf24}.lab2-warning-row.info b{color:var(--cyan)}
+.lab2-deck-section{margin-top:12px;border:1px solid var(--line);border-radius:11px;overflow:hidden;background:rgba(7,6,14,.28)}.lab2-section-title{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;padding:12px;border-bottom:1px solid var(--line)}.lab2-section-title h3,.lab2-health-title h3{margin:3px 0 0;font-size:15px}.lab2-section-title small{max-width:520px;text-align:right;color:var(--muted);font-size:10px;line-height:1.4}.lab2-table-wrap{max-height:520px;overflow:auto}.lab2-deck-table{width:100%;border-collapse:collapse;font-size:11px}.lab2-deck-table th{position:sticky;top:0;z-index:2;text-align:left;padding:8px 10px;background:#100c1e;border-bottom:1px solid var(--line);font-size:9px;letter-spacing:.09em;color:var(--muted)}.lab2-deck-table td{padding:7px 10px;border-bottom:1px solid rgba(255,255,255,.045);vertical-align:middle}.lab2-deck-table tr:hover td{background:rgba(69,230,255,.025)}.lab2-deck-table td:first-child{display:flex;align-items:center;gap:7px}.lab2-table-qty{min-width:22px;text-align:right;color:var(--muted)}.lab2-card-name{border:0;background:none;color:var(--text);padding:0;text-align:left;cursor:default;font-weight:650}.lab2-card-name[data-deck-card-preview]{cursor:zoom-in}.lab2-category-pill{display:inline-flex;padding:2px 6px;border-radius:999px;border:1px solid rgba(155,92,255,.18);color:#bda7e4;background:rgba(155,92,255,.055);font-size:9px;white-space:nowrap}
+.lab2-health-title{margin:18px 0 8px;padding:0 2px}.lab2-health-title p{margin:3px 0 0;color:var(--muted);font-size:11px}.lab2-health-workspace{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:12px;align-items:start}.lab2-health-workspace>#lab2Health,.lab2-health-workspace>#lab3Health{min-width:0}.lab2-health-workspace #lab2DeckInspector.deck-inspector,.lab2-health-workspace #lab3DeckInspector.deck-inspector{position:sticky!important;top:78px!important;right:auto!important;left:auto!important;width:340px!important;max-height:calc(100vh - 96px)!important;z-index:6!important;margin:0!important;transform:none!important}.lab2-health-workspace #lab2DeckInspector.deck-inspector.collapsed,.lab2-health-workspace #lab3DeckInspector.deck-inspector.collapsed{width:104px!important;min-height:42px!important}.lab2-health-workspace #lab2DeckInspector .deck-inspector-toggle,.lab2-health-workspace #lab3DeckInspector .deck-inspector-toggle{position:absolute!important}.lab2-deck-list-row{grid-template-columns:22px minmax(0,1fr) 58px 84px 48px!important}.deck-list-category{font-size:8px!important;color:#ad96c5!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.lab2-inspector .deck-list-meta{font-size:8px!important}
+
+:root[data-theme="light"] .lab2-panel{background:linear-gradient(145deg,rgba(255,255,255,.98),rgba(247,243,255,.98))!important;border-color:rgba(0,121,140,.18)!important}:root[data-theme="light"] .lab2-banner,:root[data-theme="light"] .lab2-panel>.flow-head,:root[data-theme="light"] .lab2-step,:root[data-theme="light"] .lab2-summary-card,:root[data-theme="light"] .lab2-deck-section{background:#fffaff!important;border-color:rgba(100,49,212,.13)!important}:root[data-theme="light"] .lab2-banner span{color:#5f526a!important}:root[data-theme="light"] .lab2-theme-choice,:root[data-theme="light"] .lab2-setting{background:#fcf8ff!important;border-color:rgba(100,49,212,.13)!important;color:#21152e!important}:root[data-theme="light"] .lab2-theme-choice.active{background:linear-gradient(135deg,rgba(0,121,140,.08),rgba(100,49,212,.08))!important;border-color:rgba(0,121,140,.42)!important}:root[data-theme="light"] .lab2-setting select{background:#fffaff!important;color:#21152e!important;border-color:rgba(100,49,212,.20)!important}:root[data-theme="light"] .lab2-switch-setting i{background:#e8dff0!important}:root[data-theme="light"] .lab2-deck-table th{background:#f5eefb!important;color:#5f526a!important}:root[data-theme="light"] .lab2-deck-table td{border-bottom-color:rgba(100,49,212,.07)!important}:root[data-theme="light"] .lab2-card-name{color:#21152e!important}:root[data-theme="light"] .lab2-category-pill{color:#6d2fb1!important;background:rgba(100,49,212,.05)!important}:root[data-theme="light"] .lab2-warning-row p{color:#5f526a!important}
+
+@media(max-width:1120px){.mode-tabs{grid-template-columns:repeat(3,minmax(0,1fr))!important}.lab2-summary-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.lab2-health-workspace{grid-template-columns:1fr}.lab2-health-workspace #lab2DeckInspector.deck-inspector,.lab2-health-workspace #lab3DeckInspector.deck-inspector{position:relative!important;top:auto!important;width:100%!important;max-height:440px!important}.lab2-health-workspace #lab2DeckInspector.deck-inspector.collapsed,.lab2-health-workspace #lab3DeckInspector.deck-inspector.collapsed{width:104px!important}.lab2-settings-grid{grid-template-columns:1fr}}
+@media(max-width:700px){.mode-tabs{grid-template-columns:1fr!important}.lab2-banner,.lab2-result-head,.lab2-section-title{align-items:flex-start;flex-direction:column}.lab2-panel>.flow-head{grid-template-columns:1fr!important}.lab2-summary-grid{grid-template-columns:1fr 1fr}.lab2-setting{align-items:flex-start;flex-direction:column}.lab2-setting select{width:100%;max-width:none}.lab2-range-setting>div{width:100%;min-width:0}.lab2-range-setting input{flex:1}.lab2-warning-row{grid-template-columns:1fr}.lab2-table-wrap{overflow-x:auto}.lab2-deck-table{min-width:720px}}
+.lab2-audit{margin:10px 0 12px;border:1px solid var(--line);border-radius:10px;background:rgba(69,230,255,.018);overflow:hidden}.lab2-audit>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;cursor:pointer;font-size:11px;font-weight:800;letter-spacing:.04em}.lab2-audit>summary span{font-size:9px;font-weight:600;color:var(--muted);letter-spacing:.06em}.lab2-audit-body{padding:0 12px 12px;border-top:1px solid var(--line)}.lab2-audit-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding-top:11px}.lab2-audit-grid section{padding:10px;border:1px solid var(--line);border-radius:9px;background:rgba(0,0,0,.08)}.lab2-audit-grid h4{margin:0 0 8px;font-size:10px;letter-spacing:.08em;color:var(--cyan)}.lab2-audit-grid p{margin:0 0 9px;font-size:10px;line-height:1.45;color:var(--muted)}.lab2-target-list{display:grid;grid-template-columns:1fr 1fr;gap:5px 12px}.lab2-target-list>div{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px dashed rgba(255,255,255,.06);font-size:10px}.lab2-target-list b.ok{color:#55f0a5}.lab2-target-list b.under{color:#fbbf24}.lab2-mana-sources{display:flex;gap:6px;flex-wrap:wrap}.lab2-mana-sources>span{display:grid;grid-template-columns:auto auto;gap:0 6px;align-items:center;padding:5px 7px;border:1px solid var(--line);border-radius:7px}.lab2-mana-sources b{font-size:9px;color:var(--cyan)}.lab2-mana-sources strong{font-size:11px}.lab2-mana-sources small{grid-column:1/-1;font-size:8px;color:var(--muted)}.lab2-audit-notes{margin-top:9px}.lab2-audit-notes p{margin:3px 0;font-size:9px;line-height:1.4;color:var(--muted)}:root[data-theme="light"] .lab2-audit,:root[data-theme="light"] .lab2-audit-grid section{background:#fffaff!important;border-color:rgba(100,49,212,.13)!important}:root[data-theme="light"] .lab2-target-list>div{border-bottom-color:rgba(100,49,212,.08)!important}@media(max-width:700px){.lab2-audit-grid{grid-template-columns:1fr}.lab2-target-list{grid-template-columns:1fr}}
+
+/* LAB 2 builder v3 — mana audit + compact export controls */
+.lab2-result-actions{align-items:center;justify-content:flex-end;max-width:560px}
+.lab2-result-actions .ghost{white-space:nowrap}
+.lab2-subhead{margin-top:12px!important;padding-top:10px;border-top:1px solid var(--line)}
+.lab2-mana-meta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:8px 0 10px}
+.lab2-mana-meta>span{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:48px;padding:6px;border:1px solid var(--line);border-radius:8px;background:rgba(69,230,255,.025);text-align:center}
+.lab2-mana-meta b{font-size:13px;line-height:1;color:var(--text)}
+.lab2-mana-meta small{margin-top:4px;font-size:8px;color:var(--muted);line-height:1.15}
+:root[data-theme="light"] .lab2-mana-meta>span{background:#fffaff!important;border-color:rgba(100,49,212,.13)!important}
+@media(max-width:820px){.lab2-result-head{flex-direction:column}.lab2-result-actions{justify-content:flex-start;max-width:none}.lab2-mana-meta{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* ============================================================
+   v2.5.30 beta · LAB 1 theme meter readability
+   Empty segments stay visible in both themes. The child <b> is the
+   only colored fill, so a 0% segment still has a deliberate rail.
+   ============================================================ */
+.theme-chart .theme-segments .segmented-fill{
+  background:#2b203b!important;
+  border:1px solid rgba(170,136,215,.30)!important;
+  box-sizing:border-box!important;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.13)!important;
+}
+.theme-chart .theme-segments .segmented-fill>b{
+  display:block!important;
+  height:100%!important;
+  max-width:100%!important;
+  margin:0!important;
+  border-radius:1px!important;
+}
+:root[data-theme="light"] .theme-chart .theme-segments .segmented-fill{
+  background:#e1d6ec!important;
+  border-color:rgba(100,49,212,.24)!important;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.55)!important;
+}
+
+
+/* v2.5.31-beta — navigation hierarchy: three primary modes + two compact Labs. */
+.mode-tabs{grid-template-columns:repeat(3,minmax(0,1fr)) repeat(2,minmax(132px,.68fr))!important;gap:8px!important;align-items:stretch!important}
+.mode{display:grid!important;grid-template-columns:28px minmax(0,1fr);align-items:center!important;justify-content:stretch!important;min-height:62px!important;padding:10px 11px!important;gap:8px!important}
+.mode>b{width:28px;text-align:center;line-height:1;align-self:center}
+.mode>span{min-width:0;line-height:1.15}
+.mode>span small{line-height:1.2;white-space:normal}
+.lab-mode,.lab2-mode{grid-template-columns:24px minmax(0,1fr)!important;padding:9px 10px!important}
+.lab-mode>b,.lab2-mode>b{width:24px!important;font-size:11px!important}
+.lab-mode>span,.lab2-mode>span{font-size:13px!important}
+.lab-mode>span small,.lab2-mode>span small{font-size:10px!important}
+@media(max-width:1120px){.mode-tabs{grid-template-columns:repeat(3,minmax(0,1fr))!important}.lab-mode,.lab2-mode{grid-template-columns:24px minmax(0,1fr)!important}}
+@media(max-width:700px){.mode-tabs{grid-template-columns:1fr!important}.mode,.lab-mode,.lab2-mode{grid-template-columns:28px minmax(0,1fr)!important;min-height:58px!important}}
+
+/* Next staged release — keep all mode subtitles on one line and restore Lab subtitles. */
+.mode>span small{display:block!important;white-space:nowrap!important;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.lab-mode small,.lab2-mode small{display:block!important}
+.lab-mode>span small,.lab2-mode>span small{font-size:10px!important;letter-spacing:-.01em}
+.lab2-gate{max-width:520px}
+.lab2-gate h2{margin:4px 0 8px;font:600 27px Fraunces,serif}
+.lab2-gate p{color:var(--muted2);line-height:1.5}
+.lab2-gate .control{margin:14px 0 8px}
+.lab2-gate .primary{margin-top:8px}
+.lab2-gate-error{min-height:18px;margin:6px 0 0!important;color:#ff789d!important;font-size:12px}
+
+/* v2.5.39 — keyboard-first autocomplete + truthful terminal activity */
+.drop.keyboard-active,.deck-option.keyboard-active{outline:1px solid var(--cyan);background:rgba(69,230,255,.09)!important;box-shadow:inset 0 0 0 1px rgba(69,230,255,.12)}
+.terminal-status.busy{border-color:rgba(255,79,216,.45);box-shadow:0 0 18px rgba(255,79,216,.12)}
+.terminal-status.busy .terminal-prompt,.terminal-status.busy .terminal-cursor{color:var(--magenta)}
+
+/* LAB 3 experimental semantic builder — additive, LAB 2 styling remains untouched. */
+.mode-tabs{grid-template-columns:repeat(3,minmax(0,1fr)) repeat(3,minmax(118px,.64fr))!important}
+.lab3-mode{grid-template-columns:24px minmax(0,1fr)!important;padding:9px 10px!important}
+.lab3-mode>b{width:24px!important;font-size:11px!important}.lab3-mode>span{font-size:13px!important}.lab3-mode>span small{display:block!important;font-size:10px!important;letter-spacing:-.01em}
+.lab3-mode.active{border-color:rgba(255,79,216,.58)!important;background:linear-gradient(135deg,rgba(255,79,216,.09),rgba(69,230,255,.08))!important;box-shadow:0 0 18px rgba(255,79,216,.14)!important}
+.lab3-panel{border-color:rgba(255,79,216,.24)!important;background:linear-gradient(145deg,rgba(255,79,216,.025),rgba(69,230,255,.03),rgba(10,8,20,.96))!important}
+.lab3-banner{border-color:rgba(255,79,216,.28)!important;background:linear-gradient(90deg,rgba(255,79,216,.07),rgba(69,230,255,.055))!important;color:var(--magenta)!important}
+.lab3-panel>.flow-head>span{color:var(--magenta)!important}
+.lab3-panel .lab2-step-head>b,.lab3-panel .lab2-result-head>div:first-child>span,.lab3-panel .lab2-section-title span{color:var(--magenta)!important}
+@media(max-width:1120px){.mode-tabs{grid-template-columns:repeat(3,minmax(0,1fr))!important}.lab3-mode{grid-template-columns:24px minmax(0,1fr)!important}}
+@media(max-width:700px){.mode-tabs{grid-template-columns:1fr!important}.lab3-mode{grid-template-columns:28px minmax(0,1fr)!important;min-height:58px!important}}
+
+/* LAB 3 stress harness — diagnostic-only, compact and intentionally separate from build controls. */
+.lab3-stress-panel{margin:18px 0 6px;padding:18px;border:1px solid var(--line,rgba(127,127,127,.24));border-radius:14px;background:var(--panel,rgba(127,127,127,.055));display:grid;gap:14px}.lab3-stress-panel>div:first-child>span{font-size:11px;font-weight:800;letter-spacing:.12em;opacity:.7}.lab3-stress-panel h3{margin:4px 0 6px}.lab3-stress-panel p{margin:0;max-width:900px;opacity:.78}.lab3-stress-actions{display:flex;gap:10px;flex-wrap:wrap}.lab3-stress-progress{display:grid;grid-template-columns:minmax(0,1fr) minmax(180px,320px);gap:14px;align-items:center}.lab3-stress-progress div{display:grid;gap:3px}.lab3-stress-progress small{opacity:.68}.lab3-stress-progress progress{width:100%;height:10px;accent-color:var(--accent,#8f5cff)}.lab3-stress-clusters{display:flex;gap:8px;flex-wrap:wrap}.lab3-stress-clusters span{border:1px solid var(--line,rgba(127,127,127,.24));border-radius:999px;padding:5px 9px;font-size:12px}.lab3-stress-clusters span[data-severity="critical"],.lab3-stress-clusters span[data-severity="high"]{font-weight:700}@media(max-width:720px){.lab3-stress-progress{grid-template-columns:1fr}}
+
+
+/* v2.5.46 · Protect Existing visual state */
+.lab2-switch-setting{transition:border-color .16s ease,background .16s ease,box-shadow .16s ease!important}
+.lab2-switch-setting:has(input:checked){border-color:rgba(73,214,129,.42)!important;background:linear-gradient(135deg,rgba(73,214,129,.095),rgba(69,230,255,.035))!important;box-shadow:inset 0 0 0 1px rgba(73,214,129,.045)!important}
+.lab2-switch-setting:has(input:not(:checked)){border-color:rgba(246,192,77,.42)!important;background:linear-gradient(135deg,rgba(246,192,77,.095),rgba(255,150,65,.035))!important;box-shadow:inset 0 0 0 1px rgba(246,192,77,.045)!important}
+.lab2-switch-setting:has(input:checked) i{background:rgba(73,214,129,.34)!important;border-color:rgba(73,214,129,.58)!important}
+.lab2-switch-setting:has(input:not(:checked)) i{background:rgba(246,192,77,.28)!important;border-color:rgba(246,192,77,.56)!important}
+:root[data-theme="light"] .lab2-switch-setting:has(input:checked){background:linear-gradient(135deg,rgba(47,164,95,.10),rgba(0,121,140,.035))!important;border-color:rgba(47,164,95,.34)!important}
+:root[data-theme="light"] .lab2-switch-setting:has(input:not(:checked)){background:linear-gradient(135deg,rgba(210,151,26,.11),rgba(214,114,30,.035))!important;border-color:rgba(190,132,18,.34)!important}
+
+/* v2.5.48 — LAB access state is visible without changing the protected LAB engines. */
+.mode.lab2-mode,.mode.lab3-mode{position:relative;padding-right:38px!important}
+.lab-lock{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-style:normal;font-size:15px;line-height:1;filter:saturate(.85);opacity:.92;pointer-events:none}
+.mode.lab-locked .lab-lock{opacity:.82}
+.mode.lab-unlocked .lab-lock{opacity:1}
+.mode.lab-locked{border-style:dashed!important}
+:root[data-theme="light"] .mode.lab-locked .lab-lock,:root[data-theme="light"] .mode.lab-unlocked .lab-lock{filter:none}

@@ -7,8 +7,8 @@ accountBar:$("#accountBar"),accountName:$("#accountName"),accountStats:$("#accou
 syncMini:$("#syncMini"),syncMiniTitle:$("#syncMiniTitle"),syncMiniText:$("#syncMiniText"),syncMiniProgress:$("#syncMiniProgress"),syncCount:$("#syncCount"),syncTime:$("#syncTime"),
 syncActions:$("#syncActions"),showSyncErrors:$("#showSyncErrors"),retrySync:$("#retrySync"),syncErrorPanel:$("#syncErrorPanel"),syncErrorList:$("#syncErrorList"),closeSyncErrors:$("#closeSyncErrors"),
 dashboard:$("#dashboard"),dashText:$("#dashText"),
-modeExplore:$("#modeExplore"),modeImprove:$("#modeImprove"),modeRank:$("#modeRank"),modeLab:$("#modeLab"),
-exploreFlow:$("#exploreFlow"),improveFlow:$("#improveFlow"),rankFlow:$("#rankFlow"),labFlow:$("#labFlow"),
+modeExplore:$("#modeExplore"),modeImprove:$("#modeImprove"),modeRank:$("#modeRank"),modeLab:$("#modeLab"),modeLab2:$("#modeLab2"),modeLab3:$("#modeLab3"),modeLab2Lock:$("#modeLab2Lock"),modeLab3Lock:$("#modeLab3Lock"),
+exploreFlow:$("#exploreFlow"),improveFlow:$("#improveFlow"),rankFlow:$("#rankFlow"),labFlow:$("#labFlow"),lab2Flow:$("#lab2Flow"),lab3Flow:$("#lab3Flow"),
 q:$("#commanderSearch"),dd:$("#dropdown"),chosen:$("#chosen"),chosenCard:$("#chosenCard"),analyzeExplore:$("#analyzeExplore"),
 deckSearch:$("#deckSearch"),deckPicker:$("#deckPicker"),deckLoading:$("#deckLoading"),deckSummary:$("#deckSummary"),deckError:$("#deckError"),
 deckName:$("#deckName"),deckCommander:$("#deckCommander"),mainCount:$("#mainCount"),sizeAudit:$("#sizeAudit"),deckCommanderArt:$("#deckCommanderArt"),openDeckLink:$("#openDeckLink"),analyzeImprove:$("#analyzeImprove"),exportDeckBtn:$("#exportDeckBtn"),improveTabs:$("#improveTabs"),improveHealthLoading:$("#improveHealthLoading"),improveHealthResults:$("#improveHealthResults"),
@@ -16,6 +16,8 @@ improveDeckInspector:$("#improveDeckInspector"),improveDeckInspectorTitle:$("#im
 rankBtn:$("#rankBtn"),rankResults:$("#rankResults"),rankCommanderSearch:$("#rankCommanderSearch"),rankCommanderDropdown:$("#rankCommanderDropdown"),rankCommanderChosen:$("#rankCommanderChosen"),rankCommanderCard:$("#rankCommanderCard"),rankOneBtn:$("#rankOneBtn"),rankOneResult:$("#rankOneResult"),discoverSearch:$("#discoverSearch"),discoverTagSearch:$("#discoverTagSearch"),discoverTagsToggle:$("#discoverTagsToggle"),discoverSelectedTags:$("#discoverSelectedTags"),discoverFilters:$("#discoverFilters"),discoverStatus:$("#discoverStatus"),discoverGalleryCount:$("#discoverGalleryCount"),discoverLoadProgress:$("#discoverLoadProgress"),discoverLoadProgressBar:$("#discoverLoadProgressBar"),discoverGrid:$("#discoverGrid"),discoverCollapse:$("#discoverCollapse"),compareCommanderSearch:$("#compareCommanderSearch"),compareCommanderDropdown:$("#compareCommanderDropdown"),compareChips:$("#compareChips"),compareBtn:$("#compareBtn"),floatingCompareWrap:$("#floatingCompareWrap"),compareProgressCaption:$("#compareProgressCaption"),hideInDeckToggle:$("#hideInDeckToggle"),
 labTabs:$("#labTabs"),labDeckSearch:$("#labDeckSearch"),labDeckPicker:$("#labDeckPicker"),labDeckChosen:$("#labDeckChosen"),labDeckCommanderArt:$("#labDeckCommanderArt"),labDeckName:$("#labDeckName"),labDeckCommander:$("#labDeckCommander"),labMainCount:$("#labMainCount"),labSizeAudit:$("#labSizeAudit"),labOpenDeckLink:$("#labOpenDeckLink"),labAnalyze:$("#labAnalyze"),labExportDeckBtn:$("#labExportDeckBtn"),labLoading:$("#labLoading"),labResults:$("#labResults"),
 labDeckInspector:$("#labDeckInspector"),labDeckInspectorTitle:$("#labDeckInspectorTitle"),labDeckInspectorCommander:$("#labDeckInspectorCommander"),labDeckInspectorCount:$("#labDeckInspectorCount"),labDeckSort:$("#labDeckSort"),labDeckFilter:$("#labDeckFilter"),labDeckList:$("#labDeckList"),
+lab2CommanderSearch:$("#lab2CommanderSearch"),lab2CommanderDropdown:$("#lab2CommanderDropdown"),lab2CommanderChosen:$("#lab2CommanderChosen"),lab2CommanderCard:$("#lab2CommanderCard"),lab2ThemeStep:$("#lab2ThemeStep"),lab2ThemeGrid:$("#lab2ThemeGrid"),lab2Settings:$("#lab2Settings"),lab2ThemeFocus:$("#lab2ThemeFocus"),lab2ThemeFocusValue:$("#lab2ThemeFocusValue"),lab2Ramp:$("#lab2Ramp"),lab2Interaction:$("#lab2Interaction"),lab2Curve:$("#lab2Curve"),lab2Synergy:$("#lab2Synergy"),lab2Dependence:$("#lab2Dependence"),lab2ComboPolicy:$("#lab2ComboPolicy"),lab2LandStyle:$("#lab2LandStyle"),lab2ProtectDecks:$("#lab2ProtectDecks"),lab2Generate:$("#lab2Generate"),lab2BuildHint:$("#lab2BuildHint"),lab2Loading:$("#lab2Loading"),lab2LoadingText:$("#lab2LoadingText"),lab2ResultWrap:$("#lab2ResultWrap"),lab2ResultTitle:$("#lab2ResultTitle"),lab2ResultMeta:$("#lab2ResultMeta"),lab2Summary:$("#lab2Summary"),lab2Warnings:$("#lab2Warnings"),lab2Audit:$("#lab2Audit"),lab2AuditBody:$("#lab2AuditBody"),lab2DeckTable:$("#lab2DeckTable"),lab2Health:$("#lab2Health"),lab2Export:$("#lab2Export"),lab2CopyArchidekt:$("#lab2CopyArchidekt"),lab2ExportLog:$("#lab2ExportLog"),lab2Rebuild:$("#lab2Rebuild"),lab2DeckInspector:$("#lab2DeckInspector"),lab2DeckInspectorTitle:$("#lab2DeckInspectorTitle"),lab2DeckInspectorCommander:$("#lab2DeckInspectorCommander"),lab2DeckInspectorCount:$("#lab2DeckInspectorCount"),lab2DeckSort:$("#lab2DeckSort"),lab2DeckFilter:$("#lab2DeckFilter"),lab2DeckList:$("#lab2DeckList"),
+lab3CommanderSearch:$("#lab3CommanderSearch"),lab3CommanderDropdown:$("#lab3CommanderDropdown"),lab3CommanderChosen:$("#lab3CommanderChosen"),lab3CommanderCard:$("#lab3CommanderCard"),lab3ThemeStep:$("#lab3ThemeStep"),lab3ThemeGrid:$("#lab3ThemeGrid"),lab3Settings:$("#lab3Settings"),lab3ThemeFocus:$("#lab3ThemeFocus"),lab3ThemeFocusValue:$("#lab3ThemeFocusValue"),lab3Ramp:$("#lab3Ramp"),lab3Interaction:$("#lab3Interaction"),lab3Curve:$("#lab3Curve"),lab3Synergy:$("#lab3Synergy"),lab3Dependence:$("#lab3Dependence"),lab3ComboPolicy:$("#lab3ComboPolicy"),lab3LandStyle:$("#lab3LandStyle"),lab3ProtectDecks:$("#lab3ProtectDecks"),lab3Generate:$("#lab3Generate"),lab3BuildHint:$("#lab3BuildHint"),lab3StressStart:$("#lab3StressStart"),lab3StressCancel:$("#lab3StressCancel"),lab3StressExport:$("#lab3StressExport"),lab3StressStatus:$("#lab3StressStatus"),lab3StressSummary:$("#lab3StressSummary"),lab3StressProgress:$("#lab3StressProgress"),lab3StressClusters:$("#lab3StressClusters"),lab3Loading:$("#lab3Loading"),lab3LoadingText:$("#lab3LoadingText"),lab3ResultWrap:$("#lab3ResultWrap"),lab3ResultTitle:$("#lab3ResultTitle"),lab3ResultMeta:$("#lab3ResultMeta"),lab3Summary:$("#lab3Summary"),lab3Warnings:$("#lab3Warnings"),lab3Context:$("#lab3Context"),lab3DeckTable:$("#lab3DeckTable"),lab3Health:$("#lab3Health"),lab3Export:$("#lab3Export"),lab3CopyArchidekt:$("#lab3CopyArchidekt"),lab3ExportLog:$("#lab3ExportLog"),lab3Rebuild:$("#lab3Rebuild"),lab3DeckInspector:$("#lab3DeckInspector"),lab3DeckInspectorTitle:$("#lab3DeckInspectorTitle"),lab3DeckInspectorCommander:$("#lab3DeckInspectorCommander"),lab3DeckInspectorCount:$("#lab3DeckInspectorCount"),lab3DeckSort:$("#lab3DeckSort"),lab3DeckFilter:$("#lab3DeckFilter"),lab3DeckList:$("#lab3DeckList"),
 loading:$("#loading"),loadingTitle:$("#loadingTitle"),loadingText:$("#loadingText"),loadingElapsed:$("#loadingElapsed"),results:$("#results"),resultModeLabel:$("#resultModeLabel"),title:$("#title"),meta:$("#meta"),
 sumTotal:$("#sumTotal"),sumOwned:$("#sumOwned"),sumAvailable:$("#sumAvailable"),sumOccupied:$("#sumOccupied"),sumUsed:$("#sumUsed"),sumMissing:$("#sumMissing"),
 filterAll:$("#filterAll"),filterOwned:$("#filterOwned"),filterAvailable:$("#filterAvailable"),
@@ -24,7 +26,9 @@ completeBtn:$("#completeBtn"),exportBtn:$("#exportBtn"),shortlistBtn:$("#shortli
 modal:$("#modal"),modalBody:$("#modalBody"),modalClose:$("#modalClose"),drawer:$("#drawer"),drawerTitle:$("#drawerTitle"),drawerBody:$("#drawerBody"),drawerClose:$("#drawerClose"),error:$("#error")
 };
 let sessionId=null,accessMode="public",mode="explore",commander=null,deckDetail=null,data=null,active=null,view="cards",timer=null,syncTimer=null,lastSyncStatus=null,syncFinalizedAt=null,syncPollFailures=0,decks=[],selectedDeckId=null;
-let rankCommander=null,labDeck=null,labDeckDetail=null,collectionFilter="all",labHealth=null,deckInspectorFilter={improve:null,lab:null};
+let rankCommander=null,labDeck=null,labDeckDetail=null,collectionFilter="all",labHealth=null,deckInspectorFilter={improve:null,lab:null,lab2:null,lab3:null};
+let lab2Commander=null,lab2Profile=null,lab2Theme=null,lab2BuildResult=null,lab2DeckDetail=null,lab2AccessGranted=false;
+let lab3Commander=null,lab3Profile=null,lab3Theme=null,lab3BuildResult=null,lab3DeckDetail=null;
 let ownedCommanders=[],allOwnedCommanders=[],compareCommanders=[],discoverTags=[],tagCatalog=[],discoverCollapsed=false,discoverTagsExpanded=false,discoverTagQuery="",hideInDeck=true;
 const modeState={
   explore:{data:null,commander:null,activeId:null,filter:"all",role:"",sort:"synergy",view:"cards"},
@@ -64,7 +68,7 @@ const UI_EN={
   "Caché":"Cache","Actualizar / Borrar":"Refresh / Delete","Cambiar colección":"Switch collection","Cerrar sesión":"Sign out",
   "Mazos":"Decks","gestionados":"managed","Cartas únicas":"Unique cards","nombres de carta":"card names","Copias":"Copies","copias en total":"total copies","Registros Archidekt":"Archidekt records","filas informadas":"reported rows",
   "Sincronizando mazos":"Syncing decks","Preparando…":"Preparing…","Preparando cache…":"Preparing cache…","Uso en mazos listo":"Deck usage ready","Sincronización parcial":"Partial sync","Carga incompleta":"Incomplete load","Mazos cargados":"Decks loaded","Recuperando mazos":"Recovering decks","Ver errores":"View errors","Reintentar":"Retry","Recargar mazos":"Reload decks","↻ Recargar mazos":"↻ Reload decks","Recargando mazos":"Reloading decks","Comprobando carga de mazos…":"Checking deck load…","Ahora:":"Now:",
-  "Explorar Commander":"Explore Commander","Cualquier leyenda":"Any legendary creature","Mejorar mi mazo":"Improve my deck","Deck existente":"Existing deck","¿Qué Commander puedo armar?":"What Commander can I build?","Uno específico o toda tu colección":"One specific commander or your whole collection","Experimental":"Experimental",
+  "Explorar Commander":"Explore Commander","Cualquier leyenda":"Any legendary creature","Mejorar mi mazo":"Improve my deck","Deck existente":"Existing deck","¿Qué Commander puedo armar?":"What Commander can I build?","Uno específico o toda tu colección":"One specific commander or your whole collection","Desde tu colección":"From your collection","Deck check on steroids":"Deck check on steroids","Deck builder on steroids":"Deck builder on steroids","Deck check++":"Deck check++","Deck builder++":"Deck builder++","Experimental":"Experimental",
   "EXPLORAR COMMANDER":"EXPLORE COMMANDER","Buscá una criatura legendaria y cruzá EDHREC con tu colección.":"Search for a legendary creature and cross-reference EDHREC with your collection.","Analizar colección →":"Analyze collection →",
   "MEJORAR MI MAZO":"IMPROVE MY DECK","DECK SELECCIONADO":"SELECTED DECK","Analizar mazo →":"Analyze deck →","Exportar decklist ⇩":"Export decklist ⇩","Abrir en Archidekt ↗":"Open in Archidekt ↗","Identificando Commander…":"Identifying Commander…","Leyendo detalle exacto del mazo…":"Reading exact deck details…","Compará cada propuesta IN/OUT por función, curva y redundancia antes de aplicarla al mazo.":"Compare each IN/OUT proposal by function, curve and redundancy before applying it to the deck.","Revisá cada cambio según tu plan de juego, presupuesto y metajuego antes de aplicarlo.":"Review each change against your game plan, budget and metagame before applying it.",
   "Chequeo del mazo":"Deck Check","SALUD DEL MAZO + SALUD DE TEMÁTICAS":"DECK HEALTH + THEME HEALTH","SOLO LAB":"LAB ONLY","Solo LAB":"LAB only","SALUD DEL MAZO · EXPERIMENTAL":"DECK HEALTH · EXPERIMENTAL","EDHREComendaciones":"EDHREC Recommendations","Ordenar":"Sort","Ordenar…":"Sort…","Tipo":"Type","Categoría":"Category","Nombre":"Name","Tipo ↑":"Type ↑","Tipo ↓":"Type ↓","Categoría ↑":"Category ↑","Categoría ↓":"Category ↓","Nombre ↑":"Name ↑","Nombre ↓":"Name ↓",
@@ -110,9 +114,33 @@ Object.assign(UI_EN,{
   "de tu colección para explorar":"from your collection to explore","Mostrar menos":"Show less","Podés seleccionar hasta 10 Commanders.":"You can select up to 10 Commanders.","Preparando Commanders de tu colección…":"Preparing Commanders from your collection…","Reintentando con carga directa…":"Retrying with direct loading…","No pude cargar Commanders.":"I couldn't load Commanders.","Cruzando con tu colección…":"Cross-referencing with your collection…",
   "La contraseña se envía al bridge de autenticación configurado para obtener una sesión de Archidekt; ManaShelf no la guarda en su caché local.":"The password is sent to the configured authentication bridge to obtain an Archidekt session; ManaShelf does not store it in its local cache.","Borrar texto":"Clear text","Tocá la carta para ampliarla":"Click the card to enlarge","Commander por identificar":"Commander not identified yet","Commander aún no identificado":"Commander not identified yet","Cargando Commander…":"Loading Commander…"
 });
+
+Object.assign(UI_EN,{
+  "Plan de combo":"Combo plan","No buscar combos":"Do not search for combos","Sólo si encaja":"Only if it fits","Priorizar combo infinito":"Prioritize infinite combo","Usa Commander Spellbook. Si elige un paquete, LAB 3 bloquea todas sus piezas exactas o ninguna.":"Uses Commander Spellbook. If LAB 3 chooses a package, it locks every exact piece or none.",
+  "LAB 1":"LAB 1","Deck Health + Themes":"Deck Health + Themes","Deck Builder · Colección":"Deck Builder · Collection","LAB 2":"LAB 2","Deck Builder":"Deck Builder","⚗2 MANASHELF LAB 2":"⚗2 MANASHELF LAB 2","GENERADOR EXPERIMENTAL · CONSTRUYE DESDE TU COLECCIÓN · NO MODIFICA ARCHIDEKT":"EXPERIMENTAL BUILDER · BUILDS FROM YOUR COLLECTION · DOES NOT MODIFY ARCHIDEKT",
+  "BUILD FROM COLLECTION":"BUILD FROM COLLECTION","Elegí un Commander, una mecánica y dejá que ManaShelf arme el mejor mazo coherente posible con las cartas disponibles.":"Choose a Commander and a mechanic, then let ManaShelf build the strongest coherent deck it can from the cards available.",
+  "Buscá una criatura legendaria Commander-legal.":"Search for a Commander-legal legendary creature.","La construcción prioriza esta mecánica sin sacrificar estructura, curva ni maná.":"The build prioritizes this mechanic without sacrificing structure, curve, or mana.","Ajustes":"Settings","Definen prioridades del armado. El motor sigue respetando legalidad, estructura y validación de maná.":"These settings define build priorities. The engine still respects legality, structure, and mana validation.",
+  "Foco en el theme":"Theme focus","Cuánto espacio priorizar para cartas que realmente expresan el theme elegido.":"How much space to prioritize for cards that genuinely express the selected theme.","Ramp":"Ramp","Cuánta aceleración de maná buscar, además del ajuste automático por curva y coste del Commander.":"How much mana acceleration to seek, in addition to automatic adjustments for curve and Commander cost.","Cuánto espacio dedicar a removal, counters, wipes y otras respuestas.":"How much space to devote to removal, counters, wipes, and other answers.","Curva":"Curve","Cuánto favorecer costes bajos y penalizar cartas caras al ordenar candidatos.":"How strongly to favor lower costs and penalize expensive cards when ranking candidates.",
+  "Sinergia vs eficiencia":"Synergy vs efficiency","Balancea piezas que trabajan con el plan contra cartas fuertes y eficientes por sí solas.":"Balances pieces that advance the plan against cards that are individually strong and efficient.","Dependencia del Commander":"Commander dependency","Cuánto aceptar cartas cuyo rendimiento baja si el Commander no está disponible.":"How much to accept cards whose performance drops when the Commander is unavailable.","Plan de combo":"Combo plan","Es independiente del theme. Usa Commander Spellbook y, si elige un combo, incluye todas sus piezas exactas o ninguna.":"Independent of the theme. Uses Commander Spellbook and, when a combo is selected, includes every exact piece or none of them.","Sin buscar combos":"Do not seek combos","Combos sinérgicos":"Synergistic combos","Priorizar combo infinito":"Prioritize infinite combo","No buscar combos":"Do not seek combos","Sólo si encaja":"Only if it fits","Priorizar infinito":"Prioritize infinite","Base de maná":"Mana base","Define cuánto priorizar básicas o fixing. Siempre se validan colores producidos, pips, curva y ramp; “Básicas primero” sólo conserva no básicas realmente importantes.":"Controls how strongly to prioritize basics versus fixing. Produced colors, pips, curve, and ramp are always validated; ‘Basics first’ keeps only genuinely important nonbasics.","Proteger mazos existentes":"Protect existing decks","No usa copias que ya están comprometidas en otros mazos cuando la sincronización puede verificarlo.":"Avoids copies already committed to other decks when synchronization can verify their use.",
+  "Estándar":"Standard","Más":"More","Alto":"High","Más interacción":"More interaction","Más ramp":"More ramp","Mucho ramp":"Heavy ramp","Más respuestas":"More answers","Normal":"Normal","Más baja":"Lower","Lo más rápida coherente":"Fastest coherent","Muy baja":"Very low","Sinergia primero":"Synergy first","Balanceado":"Balanced","Eficiencia primero":"Efficiency first","Conservador":"Conservative","All-in":"All-in","Baja dependencia":"Low dependency","Alta dependencia":"High dependency","Básicas primero":"Basics first","Segura":"Safe","Segura · más tierras":"Safe · more lands","Balanceada":"Balanced","Lean":"Lean","Ajustada · menos tierras":"Lean · fewer lands",
+  "Generar mazo →":"Build deck →","Elegí un theme para continuar.":"Choose a theme to continue.","Preparando pool legal de tu colección…":"Preparing the legal pool from your collection…","MAZO GENERADO · LAB 2":"GENERATED DECK · LAB 2","Regenerar":"Rebuild","Deck list · roles y categorías":"Deck list · roles and categories","La categoría indica por qué la carta ocupa ese slot principal; una carta puede cubrir varios roles.":"The category explains why the card occupies its primary slot; one card may cover multiple roles.","DISPONIBILIDAD":"AVAILABILITY",
+  "Auditoría del mazo generado":"Generated deck audit","Se vuelve a evaluar el resultado con el mismo Deck Health y Deck Metrics experimentales del LAB.":"The result is evaluated again with the same experimental Deck Health and Deck Metrics used in LAB.","Fallback balanceado":"Balanced fallback","Inferido del Commander":"Inferred from Commander","Lista completa":"Complete list","Colección insuficiente":"Insufficient collection","TIERRAS":"LANDS","ESTRUCTURA":"STRUCTURE","COPIAS":"COPIES","ramp / interacción":"ramp / interaction","ramp fiable / interacción":"reliable ramp / interaction","Compromisos detectados":"Trade-offs detected","Notas del armado":"Build notes","Nota":"Note",
+  "Commander poseído":"Commander owned","Commander no poseído":"Commander not owned","En colección":"In collection","Criterio de armado":"Build criteria","objetivos, maná y decisiones":"targets, mana, and decisions","Objetivos dinámicos":"Dynamic targets","Recursos":"Resources","Protección / recursión":"Protection / recursion","Base de maná":"Mana base","Sin demanda de color detectada.":"No color demand detected.","Filtrando cartas legales por identidad de color…":"Filtering legal cards by color identity…","Cargando Oracle text y roles desde Scryfall…":"Loading Oracle text and roles from Scryfall…","Buscando combos completos en Commander Spellbook…":"Searching Commander Spellbook for complete combos…","Midiendo afinidad con el Commander y el theme…":"Measuring affinity with the Commander and theme…","Cubriendo ramp, recursos, interacción y resiliencia…":"Covering ramp, resources, interaction, and resilience…","Calculando curva y base de maná…":"Calculating curve and mana base…","Auditando el resultado con Deck Health…":"Auditing the result with Deck Health…","Exportar para Archidekt ⇩":"Export for Archidekt ⇩","Copiar para Archidekt":"Copy for Archidekt","Exportar log diagnóstico":"Export diagnostic log","Copiado ✓":"Copied ✓","Básica ilimitada":"Unlimited basic","Generá un mazo primero.":"Build a deck first.","No hay un log de armado disponible.":"No build log is available.","No pude copiar el decklist al portapapeles.":"I couldn't copy the decklist to the clipboard.","Balance por tipo":"Type balance","Combo seleccionado":"Selected combo","Combo infinito":"Infinite combo","Combo completo":"Complete combo","Resultado":"Result","Maná requerido":"Mana required","básicas":"basics","no básicas":"nonbasics","fetches":"fetches","3 tierras en T3":"3 lands by T3"
+});
+
+Object.assign(UI_EN,{
+  "LAB 3":"LAB 3","Semantic builder":"Semantic builder","⚗3 MANASHELF LAB 3":"⚗3 MANASHELF LAB 3","SEMANTIC BUILDER · CONTRATOS + CONTEXTO DE DECK · LAB 2 PERMANECE INTACTO":"SEMANTIC BUILDER · CONTRACTS + DECK CONTEXT · LAB 2 REMAINS UNCHANGED",
+  "Debe existir en el índice semántico y ser Commander-legal.":"Must exist in the semantic index and be Commander-legal.","El contrato semántico decide compatibilidad; EDHREC puede ordenar, no fabricar afinidad.":"The semantic contract decides compatibility; EDHREC may rank candidates, not manufacture affinity.","Prioridades del builder contextual. No usa Classification 7 para decidir el deck.":"Contextual builder priorities. It does not use Classification 7 to choose the deck.",
+  "Prioridad de densidad temática semántica.":"Priority for semantic theme density.","Aceleración estructural, no simples mana abilities.":"Structural acceleration, not ordinary mana abilities.","Removal, counters y graveyard hate con dirección semántica.":"Removal, counters, and graveyard hate with semantic directionality.","Preferencia por costes bajos sin ignorar el contexto.":"Preference for lower costs without ignoring context.","Balance entre contratos/contexto y señales externas.":"Balance between contracts/context and external signals.","Penaliza cartas cuyo plan necesita al Commander disponible.":"Penalizes cards whose plan requires the Commander to be available.","Básicas ilimitadas; no básicas desde tu colección.":"Unlimited basics; nonbasics come from your collection.","No toma copias comprometidas cuando el uso cruzado está sincronizado.":"Avoids committed copies when cross-deck usage is synchronized.",
+  "Generar con LAB 3 →":"Build with LAB 3 →","Preparando Semantic DB…":"Preparing Semantic DB…","MAZO GENERADO · LAB 3":"GENERATED DECK · LAB 3","Exportar log semántico":"Export semantic log","Contexto semántico":"Semantic context","dependencias, coverage y bottlenecks":"dependencies, coverage, and bottlenecks","Selección contextual LAB 3":"LAB 3 contextual selection","El status semántico expone cuándo una carta todavía depende de cobertura parcial.":"Semantic status shows when a card still depends on partial coverage.","DECK HEALTH · COMPARACIÓN":"DECK HEALTH · COMPARISON","Evalúa el resultado de LAB 3 con la misma interfaz de Deck Health y Deck Metrics de LAB 2 para poder compararlos. Esta auditoría ocurre después del build y no interviene en la selección semántica.":"Evaluates the LAB 3 result with the same Deck Health and Deck Metrics interface as LAB 2 for direct comparison. This audit runs after the build and does not influence semantic selection.","Facetas del theme":"Theme facets","Fuentes restringidas":"Restricted sources","Sin fuentes restringidas seleccionadas.":"No restricted sources selected.",
+  "Inferido por Semantic DB":"Inferred by Semantic DB","Fallback estructural":"Structural fallback","Contrato semántico":"Semantic contract","Fallback EDHREC":"EDHREC fallback","Theme EDHREC sin contrato especializado; LAB 3 usa la página temática como evidencia externa y mantiene legalidad, roles, dependencias y maná semánticos.":"EDHREC theme without a specialized contract; LAB 3 uses the theme page as external evidence while keeping semantic legality, roles, dependencies, and mana checks.","No encontré themes para este Commander.":"No themes found for this Commander.","Consultando Semantic DB + themes…":"Querying Semantic DB + themes…","Validando Commander en Semantic DB…":"Validating Commander in Semantic DB…","Lista incompleta":"Incomplete list","contratos semánticos":"semantic contracts","SEMÁNTICA":"SEMANTICS","MANÁ":"MANA","DEPENDENCIAS":"DEPENDENCIES","PACKAGES":"PACKAGES","Coverage estructural":"Structural coverage","Fuentes de maná":"Mana sources","Contexto de packages":"Package context","Sin roles detectados.":"No roles detected.","No hay bottlenecks fuertes detectados.":"No strong bottlenecks detected.","fuentes de color cubiertas":"color sources covered","Redundancia":"Redundancy","Dependencia del Commander":"Commander dependency","Producer → consumer links":"Producer → consumer links","Dependency coverage":"Dependency coverage",
+  "LAB 3 · ACCESO EXPERIMENTAL":"LAB 3 · EXPERIMENTAL ACCESS","Semantic Builder Lab":"Semantic Builder Lab","LAB 3 usa la misma clave experimental de LAB 2.":"LAB 3 uses the same experimental password as LAB 2.","Entrar a LAB 3":"Enter LAB 3","El log de LAB 3 ya no está disponible. Regenerá el mazo.":"The LAB 3 log is no longer available. Rebuild the deck.","Ese Commander no está en el índice semántico de LAB 3.":"That Commander is not in the LAB 3 semantic index.","LAB 3 todavía no tiene cobertura semántica suficiente para ese Commander.":"LAB 3 does not yet have sufficient semantic coverage for that Commander.","Elegí un theme válido para LAB 3.":"Choose a valid LAB 3 theme.","No hay log LAB 3 disponible.":"No LAB 3 log is available.",
+  "LAB 3 · STRESS HARNESS v3":"LAB 3 · STRESS HARNESS v3","Corpus automático · 200 builds":"Automatic corpus · 200 builds","Selecciona Commanders y themes de forma estratificada sobre el pool global Commander-legal del runtime semántico, registra semántica directa, inferida o fallback efectivo, ejecuta LAB 3 y agrupa anomalías por familia. El stress es deliberadamente independiente de tu colección y no modifica LAB 2 ni tus mazos.":"Selects Commanders and themes with stratified sampling from the global Commander-legal semantic runtime pool, mixes semantic contracts and EDHREC fallback, runs LAB 3, and clusters anomalies by family. Stress is intentionally independent of your collection and does not modify LAB 2 or your decks.","Ejecutar 200 builds":"Run 200 builds","Detener":"Stop","Exportar corpus ZIP":"Export corpus ZIP","Listo para ejecutar.":"Ready to run."
+});
+
 const UI_ATTR_EN={
   "usuario de Archidekt":"Archidekt username","contraseña":"password","Buscar criatura legendaria…":"Search legendary creature…","Escribí el nombre del mazo…":"Type the deck name…","Buscar mazo para analizar…":"Search deck to analyze…",
-  "Cambiar entre tema oscuro y claro":"Switch between dark and light theme","Cambiar tema":"Change theme","Cambiar idioma":"Change language","Ocultar/mostrar la lista del mazo":"Hide/show deck list","Ordenar deck":"Sort deck","Ordenar deck del LAB":"Sort LAB deck","Información":"Information","Abrir deck list":"Open deck list","Ocultar deck list":"Hide deck list","Tocar para ampliar Commander":"Click to enlarge Commander","Vista grande del Commander":"Large Commander preview"
+  "Cambiar entre tema oscuro y claro":"Switch between dark and light theme","Cambiar tema":"Change theme","Cambiar idioma":"Change language","Ocultar/mostrar la lista del mazo":"Hide/show deck list","Ordenar deck":"Sort deck","Ordenar deck del LAB":"Sort LAB deck","Información":"Information","Abrir deck list":"Open deck list","Ocultar deck list":"Hide deck list","Tocar para ampliar Commander":"Click to enlarge Commander","Vista grande del Commander":"Large Commander preview","Ordenar deck generado":"Sort generated deck"
 };
 const uiTextOriginal=new WeakMap(),uiAttrOriginal=new WeakMap();
 let uiTranslationBusy=false,uiTranslationQueued=false,uiObserver=null;
@@ -120,6 +148,15 @@ function translateUiCore(core){
   if(!core)return core;
   if(UI_EN[core])return UI_EN[core];
   let m;
+  if((m=core.match(/^Theme seleccionado · (.+)$/)))return `Selected theme · ${m[1]}`;
+  if((m=core.match(/^(\d+) decks EDHREC$/)))return `${m[1]} EDHREC decks`;
+  if((m=core.match(/^(\d+) decks EDHREC · Fallback EDHREC$/)))return `${m[1]} EDHREC decks · EDHREC fallback`;
+  if((m=core.match(/^(\d+) decks EDHREC · Contrato semántico$/)))return `${m[1]} EDHREC decks · Semantic contract`;
+  if((m=core.match(/^objetivo (\d+)$/)))return `target ${m[1]}`;
+  if((m=core.match(/^(\d+) color(?:es)? bajo objetivo$/)))return `${m[1]} color source${Number(m[1])===1?"":"s"} below target`;
+  if((m=core.match(/^Maná ([WUBRGC])$/)))return `Mana ${m[1]}`;
+  if((m=core.match(/^([0-9.,]+) \/ ([0-9.,]+) fuentes$/)))return `${m[1]} / ${m[2]} sources`;
+  if((m=core.match(/^([WUBRGC]) · demanda (\d+) pips$/)))return `${m[1]} · demand ${m[2]} pips`;
   if((m=core.match(/^Carga incompleta · (\d+)\/(\d+)$/)))return `Incomplete load · ${m[1]}/${m[2]}`;
   if((m=core.match(/^Recuperando mazos · (\d+)\/(\d+)$/)))return `Recovering decks · ${m[1]}/${m[2]}`;
   if((m=core.match(/^Recargando mazos · (\d+)\/(\d+)$/)))return `Reloading decks · ${m[1]}/${m[2]}`;
@@ -178,6 +215,20 @@ function translateUiCore(core){
   if(core==="Temas inferidos")return "Inferred themes";
   if(core==="Tipo primario")return "Primary type";
   if(core==="Análisis local completo.")return "Local analysis complete.";
+  if((m=core.match(/^Theme seleccionado · (.+)$/)))return `Selected theme · ${m[1]}`;
+  if((m=core.match(/^(\d+) decks EDHREC$/)))return `${m[1]} EDHREC decks`;
+  if((m=core.match(/^(\d+) decks EDHREC · Fallback EDHREC$/)))return `${m[1]} EDHREC decks · EDHREC fallback`;
+  if((m=core.match(/^(\d+) decks EDHREC · Contrato semántico$/)))return `${m[1]} EDHREC decks · Semantic contract`;
+  if((m=core.match(/^EN TU COLECCIÓN · (\d+) copia(?:s)?$/)))return `IN YOUR COLLECTION · ${m[1]} cop${Number(m[1])===1?"y":"ies"}`;
+  if(core==="COMMANDER NO POSEÍDO · el 99 se arma desde tu colección")return "COMMANDER NOT OWNED · the 99 is built from your collection";
+  if((m=core.match(/^Disponible · (\d+)$/)))return `Available · ${m[1]}`;
+  if((m=core.match(/^En otros mazos · (\d+)$/)))return `In other decks · ${m[1]}`;
+  if((m=core.match(/^objetivo (\d+) · MV (.+)$/)))return `target ${m[1]} · MV ${m[2]}`;
+  if((m=core.match(/^(\d+) cartas · objetivo (\d+)$/)))return `${m[1]} cards · target ${m[2]}`;
+  if((m=core.match(/^(\d+) slots con copia disponible · (\d+) ocupados$/)))return `${m[1]} slots with an available copy · ${m[2]} occupied`;
+  if((m=core.match(/^(\d+) candidatos legales evaluados · builder v(.+) · (.+)$/)))return `${m[1]} legal candidates evaluated · builder v${m[2]} · ${m[3]}`;
+  if((m=core.match(/^Objetivo inicial (\d+) → final (\d+)\. (.+)\.$/)))return `Initial target ${m[1]} → final ${m[2]}. ${m[3]}.`;
+  if((m=core.match(/^(\d+)% demanda$/)))return `${m[1]}% demand`;
   return core;
 }
 function translateUiText(raw){
@@ -300,9 +351,13 @@ $$(".deck-inspector-toggle").forEach(b=>b.onclick=()=>{deckInspectorCollapsed=!d
 applyDeckInspectorCollapsed();
 
 // EXPERIMENTAL / easy to remove: terminal-style sticky context indicator.
-let terminalTypeTimer=null,terminalLastContext="",terminalScrollQueued=false;
+// v2.5.39: activity and selection notices have priority over scroll context so the
+// terminal reports what ManaShelf is actually doing instead of immediately overwriting it.
+let terminalTypeTimer=null,terminalLastContext="",terminalScrollQueued=false,terminalActivity=null,terminalNoticeUntil=0,terminalNoticeTimer=null;
 function terminalDeckName(){
   if(mode==="lab")return labDeckDetail?.name||labDeck?.name||"";
+  if(mode==="lab2")return lab2DeckDetail?.name||lab2Commander?.name||"";
+  if(mode==="lab3")return lab3BuildResult?.build?.deck?.[0]?.name||lab3Commander?.name||"";
   if(mode==="improve")return deckDetail?.name||"";
   if(mode==="explore")return commander?.name||"";
   return "";
@@ -312,8 +367,8 @@ function terminalSectionName(){
   const active=visibleSections.find(el=>{const r=el.getBoundingClientRect();return r.top<=105&&r.bottom>105})||visibleSections.sort((a,b)=>Math.abs(a.getBoundingClientRect().top-105)-Math.abs(b.getBoundingClientRect().top-105))[0];
   const h=active?.querySelector(".lab-section-title h3, h3");if(h?.textContent?.trim())return h.textContent.trim();
   if(mode==="improve"&&improveAnalysisReady){const tab=E.improveTabs?.querySelector("button.active");if(tab)return tab.textContent.trim()}
-  const flow={explore:E.exploreFlow,improve:E.improveFlow,rank:E.rankFlow,lab:E.labFlow}[mode];
-  return flow?.querySelector(".flow-head>span")?.textContent?.trim()||({explore:"Explorar Commander",improve:"Mejorar mi mazo",rank:"Descubrir Commanders",lab:"ManaShelf Lab"}[mode]||"");
+  const flow={explore:E.exploreFlow,improve:E.improveFlow,rank:E.rankFlow,lab:E.labFlow,lab2:E.lab2Flow}[mode];
+  return flow?.querySelector(".flow-head>span")?.textContent?.trim()||({explore:"Explorar Commander",improve:"Mejorar mi mazo",rank:"Descubrir Commanders",lab:"ManaShelf Lab",lab2:"ManaShelf Lab 2"}[mode]||"");
 }
 function terminalWrite(text,{force=false}={}){
   if(!E.terminalText)return;
@@ -322,7 +377,21 @@ function terminalWrite(text,{force=false}={}){
   terminalLastContext=clean;clearInterval(terminalTypeTimer);E.terminalText.textContent="";
   let i=0;terminalTypeTimer=setInterval(()=>{E.terminalText.textContent=clean.slice(0,++i);if(i>=clean.length){clearInterval(terminalTypeTimer);terminalTypeTimer=null}},22);
 }
+function terminalSetActivity(message){
+  const clean=String(message||"Procesando…").replace(/\s+/g," ").trim(),changed=clean!==terminalActivity;terminalActivity=clean;
+  E.terminalStatus?.classList.add("busy");terminalWrite(`procesando // ${terminalActivity}`,{force:changed});
+}
+function terminalClearActivity(){
+  terminalActivity=null;E.terminalStatus?.classList.remove("busy");terminalUpdateContext(true);
+}
+function terminalShowSelection(kind,value){
+  if(!value)return;clearTimeout(terminalNoticeTimer);terminalNoticeUntil=Date.now()+2600;
+  terminalWrite(`seleccionado // ${String(kind||"item").trim()} · ${String(value).trim()}`,{force:true});
+  terminalNoticeTimer=setTimeout(()=>{terminalNoticeUntil=0;terminalUpdateContext(true)},2650);
+}
 function terminalUpdateContext(force=false){
+  if(terminalActivity){terminalWrite(`procesando // ${terminalActivity}`,{force});return}
+  if(Date.now()<terminalNoticeUntil)return;
   const deck=terminalDeckName(),section=terminalSectionName();
   const text=deck?`${deck}  //  ${section||"deck"}`:(section||"ready");
   terminalWrite(text,{force});
@@ -362,7 +431,7 @@ function showError(e){
 function clearError(){clearTimeout(errorToastTimer);E.error.classList.add("hidden");E.error.classList.remove("toast-leaving")}
 function elapsed(ms){if(!ms)return"";const s=Math.max(0,Math.round((Date.now()-ms)/1000));return s<60?`${s}s`:`${Math.floor(s/60)}m ${s%60}s`}
 function saveLists(){localStorage.setItem("ms-shortlist",JSON.stringify(shortlist));E.shortlistCount.textContent=shortlist.length}
-function download(name,text){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type:"text/plain;charset=utf-8"}));a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function download(name,text,type="text/plain;charset=utf-8"){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 function openModal(html){E.modalBody.innerHTML=html;E.modal.classList.remove("hidden")}
 E.modalClose.onclick=()=>E.modal.classList.add("hidden");E.modal.onclick=e=>{if(e.target===E.modal)E.modal.classList.add("hidden")};
 E.drawerClose.onclick=()=>E.drawer.classList.add("hidden");
@@ -506,7 +575,7 @@ E.check.onclick=async()=>{
     const endpoint=accessMode==="private"?"/api/login":"/api/public-login";
     const body=accessMode==="private"?{username,password:E.pw.value}:{username};
     const d=await req(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
-    sessionId=d.sessionId;E.pw.value="";decks=d.decks||[];
+    sessionId=d.sessionId;lab2AccessGranted=false;syncLabLockState();E.pw.value="";decks=d.decks||[];
     E.accountName.textContent=d.username||username;
     E.accountStats.textContent=`Archidekt · ${Number(d.archidektRecords||0).toLocaleString("es-AR")} registros · ${d.totalDecks} mazos`;
     if(E.accountAvatar)E.accountAvatar.textContent=(d.username||username||"M").trim().charAt(0).toUpperCase();
@@ -528,7 +597,7 @@ E.check.onclick=async()=>{
   }catch(e){showError(e);E.status.textContent="No pude abrir la colección."}
 };
 E.reconnect.onclick=async()=>{try{if(sessionId)await req("/api/logout",{method:"POST",headers:authHeaders(),body:"{}"})}catch{}location.reload()};
-E.logout.onclick=async()=>{try{if(sessionId)await req("/api/logout",{method:"POST",headers:authHeaders(),body:"{}"})}catch{}if(syncTimer)clearInterval(syncTimer);sessionId=null;data=null;deckDetail=null;commander=null;E.results.classList.add("hidden");E.dashboard.classList.add("hidden");E.accountBar.classList.add("hidden");E.loginPanel.classList.remove("hidden");E.status.textContent="Sesión local cerrada. Archidekt.com no fue modificado."};
+E.logout.onclick=async()=>{try{if(sessionId)await req("/api/logout",{method:"POST",headers:authHeaders(),body:"{}"})}catch{}if(syncTimer)clearInterval(syncTimer);sessionId=null;lab2AccessGranted=false;syncLabLockState();data=null;deckDetail=null;commander=null;E.results.classList.add("hidden");E.dashboard.classList.add("hidden");E.accountBar.classList.add("hidden");E.loginPanel.classList.remove("hidden");E.status.textContent="Sesión local cerrada. Archidekt.com no fue modificado."};
 
 function saveModeState(name){
   if(!["explore","improve"].includes(name))return;
@@ -558,11 +627,24 @@ function restoreModeState(name){
   E.results.classList.remove("hidden");
   E.viewCards.classList.toggle("active",view==="cards");E.viewList.classList.toggle("active",view==="list");
 }
+function syncLabLockState(){
+  const unlocked=lab2AccessGranted===true;
+  for(const [btn,icon,label] of [[E.modeLab2,E.modeLab2Lock,"LAB 2"],[E.modeLab3,E.modeLab3Lock,"LAB 3"]]){
+    if(!btn)continue;
+    btn.classList.toggle("lab-locked",!unlocked);
+    btn.classList.toggle("lab-unlocked",unlocked);
+    if(icon)icon.textContent=unlocked?"🔓":"🔒";
+    const state=uiLang==="en"?(unlocked?"unlocked":"locked"):(unlocked?"desbloqueado":"bloqueado");
+    btn.setAttribute("aria-label",`${label} · ${state}`);
+    btn.title=`${label} · ${state}`;
+  }
+}
+
 function setMode(m){
   if(m===mode)return;
   saveModeState(mode);
   mode=m;
-  for(const [name,btn,flow] of [["explore",E.modeExplore,E.exploreFlow],["improve",E.modeImprove,E.improveFlow],["rank",E.modeRank,E.rankFlow],["lab",E.modeLab,E.labFlow]]){btn.classList.toggle("active",m===name);flow.classList.toggle("hidden",m!==name)}
+  for(const [name,btn,flow] of [["explore",E.modeExplore,E.exploreFlow],["improve",E.modeImprove,E.improveFlow],["rank",E.modeRank,E.rankFlow],["lab",E.modeLab,E.labFlow],["lab2",E.modeLab2,E.lab2Flow],["lab3",E.modeLab3,E.lab3Flow]]){btn?.classList.toggle("active",m===name);flow?.classList.toggle("hidden",m!==name)}
   restoreModeState(m);
   if(E.hideInDeckToggle)E.hideInDeckToggle.classList.toggle("hidden",m!=="improve");
   document.body.classList.toggle("improve-with-inspector",m==="improve"&&!E.improveDeckInspector.classList.contains("hidden"));
@@ -570,10 +652,43 @@ function setMode(m){
   setTimeout(()=>terminalUpdateContext(true),0);
 }
 
-E.modeExplore.onclick=()=>setMode("explore");E.modeImprove.onclick=()=>setMode("improve");E.modeRank.onclick=()=>{setMode("rank");loadDiscovery()};E.modeLab.onclick=()=>setMode("lab");
+async function enterLab2(){
+  if(!sessionId)return showError(new Error(uiLang==="en"?"Connect a collection first.":"Conectá una colección primero."));
+  if(lab2AccessGranted){setMode("lab2");return}
+  try{
+    const status=await req("/api/lab2/access",{headers:{"X-ManaShelf-Session":sessionId}});
+    if(status.unlocked){lab2AccessGranted=true;syncLabLockState();setMode("lab2");return}
+  }catch(e){return showError(e)}
+  openModal(`<div class="lab2-gate"><div class="kicker">LAB 2 · ${uiLang==="en"?"RESTRICTED ACCESS":"ACCESO RESTRINGIDO"}</div><h2>${uiLang==="en"?"Deck Builder Lab":"Deck Builder Lab"}</h2><p>${uiLang==="en"?"Enter the LAB 2 password to continue.":"Ingresá la contraseña de LAB 2 para continuar."}</p><div class="control"><span>⌁</span><input id="lab2AccessPassword" type="password" autocomplete="current-password" placeholder="${uiLang==="en"?"Password":"Contraseña"}"></div><p id="lab2AccessError" class="lab2-gate-error"></p><button id="lab2AccessSubmit" class="primary">${uiLang==="en"?"Enter LAB 2":"Entrar a LAB 2"}</button></div>`);
+  const input=$("#lab2AccessPassword"),submit=$("#lab2AccessSubmit"),err=$("#lab2AccessError");
+  const unlock=async()=>{
+    if(!input?.value)return input?.focus();
+    submit.disabled=true;if(err)err.textContent="";
+    try{
+      await req("/api/lab2/unlock",{method:"POST",headers:authHeaders(),body:JSON.stringify({password:input.value})});
+      lab2AccessGranted=true;syncLabLockState();E.modal.classList.add("hidden");setMode("lab2");
+    }catch(e){if(err)err.textContent=e.message||String(e);input.select()}
+    finally{submit.disabled=false}
+  };
+  if(submit)submit.onclick=unlock;
+  if(input){input.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();unlock()}};setTimeout(()=>input.focus(),0)}
+}
+
+async function enterLab3(){
+  if(!sessionId)return showError(new Error(uiLang==="en"?"Connect a collection first.":"Conectá una colección primero."));
+  if(lab2AccessGranted){setMode("lab3");return}
+  try{const status=await req("/api/lab2/access",{headers:{"X-ManaShelf-Session":sessionId}});if(status.unlocked){lab2AccessGranted=true;syncLabLockState();setMode("lab3");return}}catch(e){return showError(e)}
+  openModal(`<div class="lab2-gate"><div class="kicker">LAB 3 · ACCESO EXPERIMENTAL</div><h2>Semantic Builder Lab</h2><p>LAB 3 usa la misma clave experimental de LAB 2.</p><div class="control"><span>⌁</span><input id="lab3AccessPassword" type="password" autocomplete="current-password" placeholder="Contraseña"></div><p id="lab3AccessError" class="lab2-gate-error"></p><button id="lab3AccessSubmit" class="primary">Entrar a LAB 3</button></div>`);
+  const input=$("#lab3AccessPassword"),submit=$("#lab3AccessSubmit"),err=$("#lab3AccessError");
+  const unlock=async()=>{if(!input?.value)return input?.focus();submit.disabled=true;if(err)err.textContent="";try{await req("/api/lab2/unlock",{method:"POST",headers:authHeaders(),body:JSON.stringify({password:input.value})});lab2AccessGranted=true;syncLabLockState();E.modal.classList.add("hidden");setMode("lab3")}catch(e){if(err)err.textContent=e.message||String(e);input.select()}finally{submit.disabled=false}};
+  if(submit)submit.onclick=unlock;if(input){input.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();unlock()}};setTimeout(()=>input.focus(),0)}
+}
+
+syncLabLockState();
+E.modeExplore.onclick=()=>setMode("explore");E.modeImprove.onclick=()=>setMode("improve");E.modeRank.onclick=()=>{setMode("rank");loadDiscovery()};E.modeLab.onclick=()=>setMode("lab");if(E.modeLab2)E.modeLab2.onclick=enterLab2;if(E.modeLab3)E.modeLab3.onclick=enterLab3;
 $$("[data-go]").forEach(b=>b.onclick=()=>setMode(b.dataset.go));
 function addClearButtons(){
-  for(const input of [E.u,E.pw,E.q,E.deckSearch,E.rankCommanderSearch,E.labDeckSearch,E.discoverSearch,E.discoverTagSearch,E.compareCommanderSearch]){
+  for(const input of [E.u,E.pw,E.q,E.deckSearch,E.rankCommanderSearch,E.labDeckSearch,E.lab2CommanderSearch,E.lab3CommanderSearch,E.discoverSearch,E.discoverTagSearch,E.compareCommanderSearch]){
     if(!input||input.parentElement?.querySelector(".input-clear"))continue;
     const b=document.createElement("button");b.type="button";b.className="input-clear";b.setAttribute("aria-label","Borrar texto");b.textContent="×";
     b.onclick=()=>{input.value="";input.dispatchEvent(new Event("input",{bubbles:true}));input.focus()};
@@ -583,7 +698,7 @@ function addClearButtons(){
 addClearButtons();
 terminalUpdateContext(true);
 
-E.q.oninput=()=>{clearTimeout(timer);commander=null;E.chosen.classList.add("hidden");const q=E.q.value.trim();if(q.length<2){E.dd.classList.add("hidden");return}timer=setTimeout(async()=>{try{const d=await req(`/api/commanders?q=${encodeURIComponent(q)}`);E.dd.innerHTML="";for(const c of d.results||[]){const b=document.createElement("button");b.className="drop";b.innerHTML=`${c.image?`<img src="${esc(c.image)}">`:""}<span><strong>${esc(c.name)}</strong><small>${esc(c.typeLine)}</small></span>`;b.onclick=()=>chooseCommander(c);wireCommanderPreview(b.querySelector("img"),c,c.image||"");E.dd.appendChild(b)}E.dd.classList.remove("hidden")}catch(e){showError(e)}},220)};
+E.q.oninput=()=>{clearTimeout(timer);commander=null;E.chosen.classList.add("hidden");const q=E.q.value.trim();if(q.length<2){E.dd.classList.add("hidden");return}timer=setTimeout(async()=>{try{const d=await req(`/api/commanders?q=${encodeURIComponent(q)}`);E.dd.innerHTML="";for(const c of d.results||[]){const b=document.createElement("button");b.className="drop";b.innerHTML=`${c.image?`<img src="${esc(c.image)}">`:""}<span><strong>${esc(c.name)}</strong><small>${esc(c.typeLine)}</small></span>`;b.onclick=()=>chooseCommander(c);wireCommanderPreview(b.querySelector("img"),c,c.image||"");E.dd.appendChild(b)}E.dd.classList.remove("hidden")}catch(e){showError(e)}},220)};setupPopupKeyboard(E.q,E.dd,".drop");
 const preloadedImages=new Set();
 function preloadImage(src){
   if(!src||preloadedImages.has(src))return;
@@ -666,7 +781,19 @@ function renderCommanderArt(container,name,cardOrName=null,fallbackImage="",larg
   wireCommanderPreview(img,card||name||"",image);
   preloadImage(large);
 }
-async function chooseCommander(c){if(mode==="explore"){data=null;active=null;E.results.classList.add("hidden");modeState.explore.data=null}commander=c;E.q.value=c.name;E.dd.classList.add("hidden");E.chosenCard.innerHTML=`${c.image?`<img src="${esc(c.image)}">`:""}<div><h3>${esc(c.name)}</h3><p>${esc(c.manaCost)} · ${esc(c.typeLine)}</p><small class="owned-commander-status">Consultando colección…</small></div>`;E.chosenCard.onclick=()=>commanderModal(c);E.chosen.classList.remove("hidden");try{const own=await req(`/api/collection/lookup?name=${encodeURIComponent(c.name)}`,{headers:authHeaders()}),el=E.chosenCard.querySelector(".owned-commander-status");if(el)el.textContent=own.owned?`EN TU COLECCIÓN · Tenés ${own.quantity}`:"NO ESTÁ EN TU COLECCIÓN"}catch{}}
+async function chooseCommander(c){if(mode==="explore"){data=null;active=null;E.results.classList.add("hidden");modeState.explore.data=null}commander=c;E.q.value=c.name;E.dd.classList.add("hidden");E.chosenCard.innerHTML=`${c.image?`<img src="${esc(c.image)}">`:""}<div><h3>${esc(c.name)}</h3><p>${esc(c.manaCost)} · ${esc(c.typeLine)}</p><small class="owned-commander-status">Consultando colección…</small></div>`;E.chosenCard.onclick=()=>commanderModal(c);E.chosen.classList.remove("hidden");terminalSetActivity(`colección · ${c.name}`);try{const own=await req(`/api/collection/lookup?name=${encodeURIComponent(c.name)}`,{headers:authHeaders()}),el=E.chosenCard.querySelector(".owned-commander-status");if(el)el.textContent=own.owned?`EN TU COLECCIÓN · Tenés ${own.quantity}`:"NO ESTÁ EN TU COLECCIÓN"}catch{}finally{terminalClearActivity();terminalShowSelection("Commander",c.name)}}
+
+function setupPopupKeyboard(input,dropdown,itemSelector="button"){
+  if(!input||!dropdown||input.dataset.popupKeyboard==="1")return;input.dataset.popupKeyboard="1";let activeIndex=-1;
+  const items=()=>[...dropdown.querySelectorAll(itemSelector)].filter(el=>!el.disabled&&getComputedStyle(el).display!=="none");
+  const paint=()=>{const rows=items();rows.forEach((el,i)=>el.classList.toggle("keyboard-active",i===activeIndex));if(activeIndex>=0)rows[activeIndex]?.scrollIntoView({block:"nearest"})};
+  const reset=()=>{activeIndex=-1;paint()};input.addEventListener("input",reset);input.addEventListener("blur",()=>setTimeout(reset,140));
+  input.addEventListener("keydown",e=>{
+    const rows=items();if(!rows.length||dropdown.classList.contains("hidden"))return;
+    if(e.key==="ArrowDown"||e.key==="ArrowUp"){e.preventDefault();const dir=e.key==="ArrowDown"?1:-1;activeIndex=activeIndex<0?(dir>0?0:rows.length-1):(activeIndex+dir+rows.length)%rows.length;paint();return}
+    if(e.key==="Enter"){e.preventDefault();const chosen=rows[activeIndex>=0?activeIndex:0];chosen?.click();reset()}
+  });
+}
 
 function setupCommanderAutocomplete(input,dropdown,onSelect){
   let localTimer=null;
@@ -690,6 +817,7 @@ function setupCommanderAutocomplete(input,dropdown,onSelect){
       }catch(e){showError(e)}
     },220);
   };
+  setupPopupKeyboard(input,dropdown,".drop");
 }
 
 
@@ -728,15 +856,16 @@ function renderDeckPicker(force=false){
 E.deckSearch.oninput=()=>renderDeckPicker(true);
 E.deckSearch.onfocus=()=>renderDeckPicker(true);
 E.deckSearch.onclick=()=>renderDeckPicker(true);
+setupPopupKeyboard(E.deckSearch,E.deckPicker,".deck-option");
 document.addEventListener("pointerdown",e=>{
   const insideDeck=e.target.closest(".deck-autocomplete"),insideCommander=e.target.closest(".commander-search");
   if(!insideDeck){E.deckPicker.classList.add("hidden");E.labDeckPicker?.classList.add("hidden")}
-  if(!insideCommander){E.dd.classList.add("hidden");E.compareCommanderDropdown?.classList.add("hidden")}
+  if(!insideCommander){E.dd.classList.add("hidden");E.compareCommanderDropdown?.classList.add("hidden");E.lab2CommanderDropdown?.classList.add("hidden")}
   // If the click is inside one autocomplete, close every other partial-result popup.
   if(insideDeck){const picker=insideDeck.querySelector?.(".deck-picker");if(picker!==E.deckPicker)E.deckPicker.classList.add("hidden");if(picker!==E.labDeckPicker)E.labDeckPicker?.classList.add("hidden")}
-  if(insideCommander){const drop=insideCommander.querySelector?.(".dropdown");if(drop!==E.dd)E.dd.classList.add("hidden");if(drop!==E.compareCommanderDropdown)E.compareCommanderDropdown?.classList.add("hidden")}
+  if(insideCommander){const drop=insideCommander.querySelector?.(".dropdown");if(drop!==E.dd)E.dd.classList.add("hidden");if(drop!==E.compareCommanderDropdown)E.compareCommanderDropdown?.classList.add("hidden");if(drop!==E.lab2CommanderDropdown)E.lab2CommanderDropdown?.classList.add("hidden")}
 });
-document.addEventListener("keydown",e=>{if(e.key==="Escape"){E.dd.classList.add("hidden");E.deckPicker.classList.add("hidden");E.compareCommanderDropdown?.classList.add("hidden");E.labDeckPicker?.classList.add("hidden")}});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){E.dd.classList.add("hidden");E.deckPicker.classList.add("hidden");E.compareCommanderDropdown?.classList.add("hidden");E.labDeckPicker?.classList.add("hidden");E.lab2CommanderDropdown?.classList.add("hidden")}});
 
 function deckPrimaryCategory(c){return (c.categories||[]).find(x=>!/^commander$/i.test(x))||(c.categories||[])[0]||"Sin categoría"}
 function typeBucket(c){const t=String(c.typeLine||"");for(const x of ["Creature","Instant","Sorcery","Artifact","Enchantment","Planeswalker","Battle","Land"])if(t.includes(x))return x;return t.split("—")[0].trim()||"Otro"}
@@ -759,7 +888,7 @@ function wireDeckListPreviews(root){
   });
 }
 function renderDeckInspector(kind,detail,filterNames=null,filterLabel=""){
-  const prefix=kind==="lab"?"lab":"improve",panel=E[prefix+"DeckInspector"],listEl=E[prefix+"DeckList"],sortEl=E[prefix+"DeckSort"],filterEl=E[prefix+"DeckFilter"];
+  const prefix=kind==="lab"?"lab":kind==="lab2"?"lab2":kind==="lab3"?"lab3":"improve",panel=E[prefix+"DeckInspector"],listEl=E[prefix+"DeckList"],sortEl=E[prefix+"DeckSort"],filterEl=E[prefix+"DeckFilter"];
   if(!detail||!panel){panel?.classList.add("hidden");if(kind==="improve")document.body.classList.remove("improve-with-inspector");syncFloatingNavGeometry();return}
   panel.classList.remove("hidden");if(kind==="improve"&&mode==="improve")document.body.classList.add("improve-with-inspector");syncFloatingNavGeometry();E[prefix+"DeckInspectorTitle"].textContent=detail.name;const commanderEl=E[prefix+"DeckInspectorCommander"];if(commanderEl)commanderEl.textContent=`Commander · ${(detail.commanders||[detail.commander]).filter(Boolean).join(" + ")||"—"}`;E[prefix+"DeckInspectorCount"].textContent=`Size · ${detail.size} cartas`;
   deckInspectorFilter[kind]=filterNames?new Set(filterNames.map(key)):null;
@@ -771,19 +900,21 @@ function renderDeckInspector(kind,detail,filterNames=null,filterLabel=""){
   filterEl.classList.toggle("hidden",!filterNames);
   filterEl.innerHTML=filterNames?`<span>Filtro: ${esc(filterLabel)} · ${cards.reduce((n,c)=>n+Number(c.quantity||1),0)} cartas</span><button type="button">Limpiar filtro</button>`:"";
   if(filterNames)filterEl.querySelector("button").onclick=()=>renderDeckInspector(kind,detail,null,"");
-  listEl.innerHTML=cards.map(c=>`<div class="deck-list-row"><span class="deck-qty">${c.quantity>1?`${c.quantity}×`:""}</span><span class="deck-list-name" title="${esc(c.name)}"${c.imageNormal?` data-deck-card-preview="${esc(c.imageNormal)}"`:""}>${esc(c.name)}</span><span class="deck-list-type">${esc(typeBucket(c))}</span><span class="deck-list-meta">CMC ${Number(c.cmc||0)}</span></div>`).join("")||'<p class="lab-muted">No hay cartas para este filtro.</p>';
+  listEl.innerHTML=cards.map(c=>`<div class="deck-list-row${(kind==="lab2"||kind==="lab3")?" lab2-deck-list-row":""}"><span class="deck-qty">${c.quantity>1?`${c.quantity}×`:""}</span><span class="deck-list-name" title="${esc(c.name)}"${c.imageNormal?` data-deck-card-preview="${esc(c.imageNormal)}"`:""}>${esc(c.name)}</span><span class="deck-list-type">${esc(typeBucket(c))}</span>${(kind==="lab2"||kind==="lab3")?`<span class="deck-list-category">${esc(deckPrimaryCategory(c))}</span>`:""}<span class="deck-list-meta">CMC ${Number(c.cmc||0)}</span></div>`).join("")||'<p class="lab-muted">No hay cartas para este filtro.</p>';
   wireDeckListPreviews(listEl);
   syncFloatingNavGeometry();
 }
 if(E.improveDeckSort)E.improveDeckSort.onchange=()=>deckDetail&&renderDeckInspector("improve",deckDetail,deckInspectorFilter.improve?[...deckInspectorFilter.improve] : null,E.improveDeckFilter?.querySelector("span")?.textContent?.replace(/^Filtro: | · \d+$/g,"")||"");
 if(E.labDeckSort)E.labDeckSort.onchange=()=>labDeckDetail&&renderDeckInspector("lab",labDeckDetail,deckInspectorFilter.lab?[...deckInspectorFilter.lab] : null,E.labDeckFilter?.querySelector("span")?.textContent?.replace(/^Filtro: | · \d+$/g,"")||"");
+if(E.lab2DeckSort)E.lab2DeckSort.onchange=()=>lab2DeckDetail&&renderDeckInspector("lab2",lab2DeckDetail,deckInspectorFilter.lab2?[...deckInspectorFilter.lab2] : null,E.lab2DeckFilter?.querySelector("span")?.textContent?.replace(/^Filtro: | · \d+$/g,"")||"");
+if(E.lab3DeckSort)E.lab3DeckSort.onchange=()=>lab3DeckDetail&&renderDeckInspector("lab3",lab3DeckDetail,deckInspectorFilter.lab3?[...deckInspectorFilter.lab3] : null,E.lab3DeckFilter?.querySelector("span")?.textContent?.replace(/^Filtro: | · \d+$/g,"")||"");
 
 async function selectDeck(id){
-  touchRecentDeck(id);
+  touchRecentDeck(id);const selectedCatalogDeck=decks.find(d=>d.id===Number(id));terminalSetActivity(`cargando mazo · ${selectedCatalogDeck?.name||id}`);
   improveAnalysisReady=false;E.improveTabs?.classList.add("hidden");syncImproveRibbon();E.improveHealthResults.innerHTML="";E.results.classList.add("hidden");
   data=null;active=null;E.results.classList.add("hidden");modeState.improve.data=null;selectedDeckId=id;collectionFilter="all";E.roleFilter.value="";if(E.themeFilter)E.themeFilter.value="";setCollectionFilter("all",false);E.deckPicker.classList.add("hidden");deckDetail=null;commander=null;E.deckSummary.classList.add("hidden");E.deckError.classList.add("hidden");E.deckLoading.classList.remove("hidden");
   try{
-    const catalogDeck=decks.find(d=>d.id===Number(id));
+    const catalogDeck=selectedCatalogDeck;
     deckDetail=await req("/api/deck-detail",{method:"POST",headers:authHeaders(),body:JSON.stringify({deckId:id})});
     if(!deckDetail.commander)throw new Error("No pude identificar el Commander del mazo.");
     const fallbackImage=deckDetail.commanderImage||catalogDeck?.commanderImage||"",fallbackLarge=deckDetail.commanderImageLarge||catalogDeck?.commanderImageLarge||fallbackImage,fallbackCommander={name:deckDetail.commander,image:fallbackImage,largeImage:fallbackLarge};
@@ -795,7 +926,7 @@ async function selectDeck(id){
     const search=await req(`/api/commanders?q=${encodeURIComponent(deckDetail.commander)}`).catch(()=>({results:[]}));
     const exact=(search.results||[]).find(x=>key(x.name)===key(deckDetail.commander))||search.results?.[0];
     if(exact){commander=exact;renderCommanderArt(E.deckCommanderArt,deckDetail.commander,exact,fallbackImage,fallbackLarge)}
-  }catch(e){E.deckError.textContent=e.message;E.deckError.classList.remove("hidden")}finally{E.deckLoading.classList.add("hidden")}
+  }catch(e){E.deckError.textContent=e.message;E.deckError.classList.remove("hidden")}finally{E.deckLoading.classList.add("hidden");terminalClearActivity();terminalShowSelection("Mazo",deckDetail?.name||selectedCatalogDeck?.name||String(id))}
 }
 E.analyzeExplore.onclick=()=>runAnalysis(false);
 let improveAnalysisReady=false;
@@ -1035,7 +1166,9 @@ E.completeBtn.onclick=()=>renderAssistModal();;
 E.exportBtn.onclick=()=>{if(!data)return;const unique=new Map();for(const cat of data.categories)for(const c of cat.matches)if(!unique.has(key(c.name)))unique.set(key(c.name),c);download(`manashelf-${key(commander.name).replace(/\s+/g,"-")}-recomendaciones.txt`,[...unique.values()].map(c=>`1 ${c.name}`).join("\n"))};
 
 function buildabilityHtml(x){
-  const sections=(x.ownedSections||[]).map((s,si)=>`<details class="build-section" data-build-section="${si}"><summary><span>${esc(s.label)}</span><b>${s.cards.length} en colección</b></summary><div class="build-owned-grid">${s.cards.map(c=>`<article class="build-owned-card" data-available="${c.availableQuantity>0?1:0}">${c.image?`<div class="build-card-img"><img src="${esc(c.imageNormal||c.image)}" loading="lazy">${c.imageNormal?`<img class="hover-preview" src="${esc(c.imageNormal)}" loading="lazy">`:""}</div>`:""}<div><strong>${esc(c.name)}</strong><small>${esc(typeBucket(c))} · CMC ${Number(c.cmc||0)}</small><small>Disponible ${c.availableQuantity}/${c.ownedQuantity} · ${Math.round(Number(c.synergy||0)*100)}% sinergia</small></div></article>`).join("")}</div></details>`).join("");
+  // Buildability uses the same visual card language as Explore Commander. Keeping a
+  // separate mini-card renderer here had drifted into a different product surface.
+  const sections=(x.ownedSections||[]).map((s,si)=>`<details class="build-section" data-build-section="${si}"><summary><span>${esc(s.label)}</span><b>${s.cards.length} en colección</b></summary><div class="grid build-owned-grid">${s.cards.map(c=>{const available=Number(c.availableQuantity||0),owned=Number(c.ownedQuantity||0),syn=Math.round(Number(c.synergy||0)*100),inc=Number(c.inclusionPct||0);return `<article class="card build-owned-card" data-available="${available>0?1:0}"><div class="pic build-card-img">${c.image?`<img src="${esc(c.imageNormal||c.image)}" loading="lazy" decoding="async">`:""}<span class="stock-badge ${available>0?"":"missing-stock"}"><b>${available>0?`Disponible ${available}/${owned}`:"Sin copia disponible"}</b><small>Tenés ${owned}</small></span></div><div class="card-body"><h4>${esc(c.name)}</h4><div class="metrics"><span class="syn">${syn>=0?"+":""}${syn}% sinergia</span><span>${inc}% inclusión</span></div><div class="role-line"><span class="role">${esc(typeBucket(c))}</span><span class="role">CMC ${Number(c.cmc||0)}</span></div></div></article>`}).join("")}</div></details>`).join("");
   return `<div class="build-card"><div class="kicker">QUÉ COMMANDER PUEDO ARMAR</div><h3>${esc(x.name)}</h3><span class="owned-flag">Commander en tu colección</span>
     <p class="build-lead">Tenés ${x.owned} de ${x.recommendations} recomendaciones EDHREC. El ranking usa esta cantidad absoluta.</p>
     <div class="build-controls"><label class="switch-line"><input type="checkbox" data-only-available> <span>Mostrar solo cartas con copia disponible</span></label></div>
@@ -1154,7 +1287,7 @@ E.discoverTagSearch.oninput=()=>{discoverTagQuery=E.discoverTagSearch.value.trim
 E.discoverTagsToggle.onclick=()=>{discoverTagsExpanded=!discoverTagsExpanded;renderDiscoverFilters()};
 E.discoverCollapse.onclick=()=>{discoverCollapsed=!discoverCollapsed;renderDiscover()};
 E.compareCommanderSearch.oninput=()=>{const q=key(E.compareCommanderSearch.value),pool=allOwnedCommanders,rows=pool.filter(c=>!q||key(c.name).includes(q)).filter(c=>!compareCommanders.some(x=>key(x.name)===key(c.name))).slice(0,10);E.compareCommanderDropdown.innerHTML=rows.map(c=>`<button class="drop" data-name="${esc(c.name)}">${c.image?`<img src="${esc(c.image)}">`:""}<span><strong>${esc(c.name)}</strong><small>En tu colección</small></span></button>`).join("");E.compareCommanderDropdown.classList.toggle("hidden",!rows.length);E.compareCommanderDropdown.querySelectorAll("[data-name]").forEach(b=>b.onclick=()=>{addCompare(pool.find(c=>c.name===b.dataset.name));E.compareCommanderSearch.value="";E.compareCommanderDropdown.classList.add("hidden")})};
-E.compareCommanderSearch.onfocus=()=>E.compareCommanderSearch.oninput();
+E.compareCommanderSearch.onfocus=()=>E.compareCommanderSearch.oninput();setupPopupKeyboard(E.compareCommanderSearch,E.compareCommanderDropdown,".drop");
 E.compareBtn.onclick=async()=>{
   if(compareCommanders.length<2||compareCommanders.length>10)return;
   let progressTimer=null,started=Date.now(),stage=0;
@@ -1475,7 +1608,7 @@ function renderLabResult(d,target=E.labResults,inspectorMode="lab",detail=labDec
   <section class="health-section structural-health-section" data-health-section="health" data-lab-section="health"><div class="lab-section-title"><div><span>02</span><h3>Salud estructural</h3></div><p>Los valores auditan las cartas detectadas en la lista lateral.</p></div><div class="health-cards">${health}</div></section>
   <section class="health-section rules-section" data-health-section="health" data-lab-section="rules"><div class="lab-section-title"><div><span>03</span><h3>Estructura del mazo</h3></div><p>Se evalúan los criterios estructurales del mazo y se señalan los puntos que merecen atención.</p></div>${gaps.trim()?`<div class="rules-callouts"><h4>A considerar</h4><div class="gap-grid">${gaps}</div></div>`:""}<div class="rules-strip-head"><h4>${(d.structuralRules||[]).length} criterios evaluados</h4><small>Referencia completa, no solo lo que necesita atención</small></div><div class="structural-rule-list">${structuralRules}</div></section>
   <section class="health-section identity-section" data-health-section="health" data-lab-section="identity"><div class="lab-section-title"><div><span>04</span><h3>Identidad del mazo</h3></div><p>Cada resultado muestra cuántas cartas concretas lo sostienen.</p></div><div class="theme-grid-v2">${themes}</div>${themeCoreHtml}</section>
-  <section class="health-section cut-section" data-health-section="changes" data-lab-section="changes"><div class="lab-section-title"><div><span>05</span><h3>Cambios sugeridos · IN/OUT</h3></div><p>Compará cada propuesta IN/OUT por función, curva y redundancia antes de aplicarla al mazo.</p></div><div class="swap-grid">${(d.swaps||[]).length?(d.swaps||[]).map((x,si)=>`<article class="swap-pair"><div class="swap-pair-row"><div class="swap-mini in"><div class="swap-img"><span class="swap-badge plus">+</span>${x.include.image?`<img class="swap-mini-image" src="${esc(x.include.image)}" loading="lazy" alt="">${x.include.imageNormal?`<img class="hover-preview" src="${esc(x.include.imageNormal)}" loading="lazy">`:""}`:""}</div><small>IN</small><strong>${esc(x.include.name)}</strong><p>${esc(x.include.reason||x.include.inclusionType||"Recomendación contextual")}</p></div><div class="swap-connector" data-confidence="${key(x.confidence)}"><span class="swap-arrow">→</span><b>${esc(x.confidence)}</b><small>confianza</small></div><div class="swap-mini out"><div class="swap-img"><span class="swap-badge minus">−</span>${x.cut?.image?`<img class="swap-mini-image" src="${esc(x.cut.image)}" loading="lazy" alt="">${x.cut.imageNormal?`<img class="hover-preview" src="${esc(x.cut.imageNormal)}" loading="lazy">`:""}`:""}</div><small>OUT</small>${x.cut?`<strong>${esc(x.cut.name)}</strong><p>${esc((x.cut.reasons||[]).slice(0,2).join(" · "))}</p>`:`<strong>Sin corte claro</strong><p>Prefiero no proponer un cambio sin evidencia suficiente.</p>`}</div></div><footer><span>${esc((x.pairReasons||[]).join(" · ")||"Mejor combinación contextual disponible.")}</span>${x.impact?`<div class="swap-impact"><span>CMC ${x.impact.avgCmcDelta>0?"+":""}${x.impact.avgCmcDelta}</span><span>Roles críticos protegidos ✓</span></div>`:""}</footer></article>`).join(""):`<div class="empty-cut"><strong>No encuentro un corte claro.</strong><span>No hay suficiente evidencia para recomendar una salida sin arriesgar la estructura del mazo.</span></div>`}</div><p class="lab-confidence">Revisá cada cambio según tu plan de juego, presupuesto y metajuego antes de aplicarlo.</p></section>${inspectorMode==="lab"?renderDeckMetricsLab(d.deckMetrics):""}`;
+  <section class="health-section cut-section" data-health-section="changes" data-lab-section="changes"><div class="lab-section-title"><div><span>05</span><h3>Cambios sugeridos · IN/OUT</h3></div><p>Compará cada propuesta IN/OUT por función, curva y redundancia antes de aplicarla al mazo.</p></div><div class="swap-grid">${(d.swaps||[]).length?(d.swaps||[]).map((x,si)=>`<article class="swap-pair"><div class="swap-pair-row"><div class="swap-mini in"><div class="swap-img"><span class="swap-badge plus">+</span>${x.include.image?`<img class="swap-mini-image" src="${esc(x.include.image)}" loading="lazy" alt="">${x.include.imageNormal?`<img class="hover-preview" src="${esc(x.include.imageNormal)}" loading="lazy">`:""}`:""}</div><small>IN</small><strong>${esc(x.include.name)}</strong><p>${esc(x.include.reason||x.include.inclusionType||"Recomendación contextual")}</p></div><div class="swap-connector" data-confidence="${key(x.confidence)}"><span class="swap-arrow">→</span><b>${esc(x.confidence)}</b><small>confianza</small></div><div class="swap-mini out"><div class="swap-img"><span class="swap-badge minus">−</span>${x.cut?.image?`<img class="swap-mini-image" src="${esc(x.cut.image)}" loading="lazy" alt="">${x.cut.imageNormal?`<img class="hover-preview" src="${esc(x.cut.imageNormal)}" loading="lazy">`:""}`:""}</div><small>OUT</small>${x.cut?`<strong>${esc(x.cut.name)}</strong><p>${esc((x.cut.reasons||[]).slice(0,2).join(" · "))}</p>`:`<strong>Sin corte claro</strong><p>Prefiero no proponer un cambio sin evidencia suficiente.</p>`}</div></div><footer><span>${esc((x.pairReasons||[]).join(" · ")||"Mejor combinación contextual disponible.")}</span>${x.impact?`<div class="swap-impact"><span>CMC ${x.impact.avgCmcDelta>0?"+":""}${x.impact.avgCmcDelta}</span><span>Roles críticos protegidos ✓</span></div>`:""}</footer></article>`).join(""):`<div class="empty-cut"><strong>No encuentro un corte claro.</strong><span>No hay suficiente evidencia para recomendar una salida sin arriesgar la estructura del mazo.</span></div>`}</div><p class="lab-confidence">Revisá cada cambio según tu plan de juego, presupuesto y metajuego antes de aplicarlo.</p></section>${(inspectorMode==="lab"||inspectorMode==="lab2"||inspectorMode==="lab3")?renderDeckMetricsLab(d.deckMetrics):""}`;
   const audit=(names,label)=>detail&&renderDeckInspector(inspectorMode,detail,[...new Set((names||[]).filter(Boolean))],label);
   makeTablesSortable(target);
   target.querySelectorAll("[data-metric-filter]").forEach(el=>{const run=()=>{const names=metricFilterCards(d.deckMetrics,el.dataset.metricFilter);audit(names,el.querySelector("h4")?.childNodes?.[0]?.textContent?.trim()||"Deck metric")};el.onclick=e=>{if(e.target.closest(".info-dot"))return;run()};el.onkeydown=e=>{if((e.key==="Enter"||e.key===" ")&&!e.target.closest(".info-dot")){e.preventDefault();run()}}});
@@ -1534,7 +1667,7 @@ function renderLabDeckPicker(force=false){
     wireCommanderPreview(b.querySelector("img"),previewDeck?.commander||"",previewDeck?.commanderImage||"");
     b.onclick=async()=>{
       touchRecentDeck(Number(b.dataset.id));
-      labDeck=decks.find(d=>d.id===Number(b.dataset.id));labDeckDetail=null;labAnalysisReady=false;syncLabRibbon();
+      labDeck=decks.find(d=>d.id===Number(b.dataset.id));labDeckDetail=null;labAnalysisReady=false;syncLabRibbon();terminalSetActivity(`cargando mazo LAB · ${labDeck?.name||b.dataset.id}`);
       E.labDeckSearch.value=labDeck.name;E.labDeckPicker.classList.add("hidden");E.labResults.innerHTML="";E.labAnalyze.disabled=true;E.labExportDeckBtn.disabled=true;
       E.labDeckName.textContent=labDeck.name;E.labDeckCommander.textContent=labDeck.commander||"Identificando Commander…";E.labMainCount.textContent=labDeck.exactMainCount??labDeck.size??"…";E.labSizeAudit.textContent="Leyendo detalle exacto del mazo…";
       E.labOpenDeckLink.href=labDeck.url||`https://archidekt.com/decks/${labDeck.id}`;E.labOpenDeckLink.classList.remove("hidden");
@@ -1547,20 +1680,166 @@ function renderLabDeckPicker(force=false){
         E.labDeckName.textContent=labDeckDetail.name;E.labDeckCommander.textContent=commanderName;E.labMainCount.textContent=labDeckDetail.size;E.labSizeAudit.textContent=`Size real del deck · ${labDeckDetail.excludedCount||0} carta${Number(labDeckDetail.excludedCount||0)===1?"":"s"} de Sideboard/Maybeboard excluida${Number(labDeckDetail.excludedCount||0)===1?"":"s"}`;
         E.labOpenDeckLink.href=labDeckDetail.url||labDeck.url||`https://archidekt.com/decks/${labDeck.id}`;
         renderCommanderArt(E.labDeckCommanderArt,labDeckDetail.commander||labDeck.commander||"Commander",labDeckDetail.commander||labDeck.commander||"",labDeckDetail.commanderImage||labDeck.commanderImage||"",labDeckDetail.commanderImageLarge||labDeck.commanderImageLarge||"");
-        E.labAnalyze.disabled=false;E.labExportDeckBtn.disabled=false;renderDeckInspector("lab",labDeckDetail);terminalUpdateContext(true);
-      }catch(e){showError(e)}
+        E.labAnalyze.disabled=false;E.labExportDeckBtn.disabled=false;renderDeckInspector("lab",labDeckDetail);
+      }catch(e){showError(e)}finally{terminalClearActivity();terminalShowSelection("Mazo LAB",labDeckDetail?.name||labDeck?.name||String(b.dataset.id))}
     };
   });
   hydrateVisibleDeckCounts(list,E.labDeckPicker);
   if(list.some(d=>!d.commander||!d.commanderImage) && (!lastSyncStatus||["done","done_with_errors"].includes(lastSyncStatus.status)))requestDeckCatalogRepair();
 }
-E.labDeckSearch.oninput=()=>renderLabDeckPicker(true);E.labDeckSearch.onfocus=()=>renderLabDeckPicker(true);E.labDeckSearch.onclick=()=>renderLabDeckPicker(true);
+E.labDeckSearch.oninput=()=>renderLabDeckPicker(true);E.labDeckSearch.onfocus=()=>renderLabDeckPicker(true);E.labDeckSearch.onclick=()=>renderLabDeckPicker(true);setupPopupKeyboard(E.labDeckSearch,E.labDeckPicker,".deck-option");
 E.labAnalyze.onclick=async()=>{E.labResults.innerHTML="";clearError();
   if(!labDeck)return;
-  E.labLoading.classList.remove("hidden");E.labAnalyze.disabled=true;E.labResults.innerHTML="";
+  E.labLoading.classList.remove("hidden");E.labAnalyze.disabled=true;E.labResults.innerHTML="";terminalSetActivity(`Deck Health · ${labDeck.name}`);
   try{if(!labDeckDetail||labDeckDetail.id!==labDeck.id)labDeckDetail=await req("/api/deck-detail",{method:"POST",headers:authHeaders(),body:JSON.stringify({deckId:labDeck.id})});renderDeckInspector("lab",labDeckDetail);renderLabResult(await req("/api/lab/deck-health",{method:"POST",headers:authHeaders(),body:JSON.stringify({deckId:labDeck.id,includeMetrics:true})}));labAnalysisReady=true;E.labTabs?.querySelectorAll("[data-lab-tab]").forEach(b=>b.classList.toggle("active",b.dataset.labTab==="summary"));syncLabRibbon()}catch(e){showError(e)}
-  finally{E.labLoading.classList.add("hidden");E.labAnalyze.disabled=false}
+  finally{E.labLoading.classList.add("hidden");E.labAnalyze.disabled=false;terminalClearActivity()}
 };
+
+
+function minimalThemeDescription(theme){
+  const name=String(theme?.name||theme||"Theme").trim(),k=name.toLocaleLowerCase("en-US");
+  const rules=[
+    [/spell|instant|sorcery/,"Prioriza lanzar y aprovechar instants y sorceries."],[/artifact/,"Prioriza artifacts y cartas que los generan o aprovechan."],[/enchant|aura/,"Prioriza enchantments/Auras y sus payoffs."],[/token/,"Prioriza crear, multiplicar y aprovechar tokens."],[/grave|reanim/,"Usa el cementerio como recurso y recupera valor desde él."],[/sacrifice|aristocrat/,"Convierte sacrificios y muertes en valor o daño."],[/landfall|lands? matter|lands?/,"Prioriza tierras y efectos que obtienen valor de ellas."],[/voltron|equipment/,"Concentra mejoras y protección en una amenaza principal."],[/counter/,"Construye alrededor de counters y sus payoffs."],[/lifegain|life gain/,"Gana vida repetidamente y aprovecha sus payoffs."],[/draw|card advantage/,"Prioriza robo y recompensas por generar cartas."],[/discard|wheel/,"Convierte descarte o recambio de manos en ventaja."],[/blink|flicker/,"Reutiliza permanentes mediante blink/flicker y ETB."],[/copy|clone/,"Copia spells o permanentes para multiplicar valor."],[/control/,"Prioriza respuestas, tempo y control del desarrollo rival."],[/stax|tax/,"Limita o encarece las acciones rivales mientras desarrolla su plan."],[/group slug|burn|damage/,"Aplica presión de daño o pérdida de vida de forma sostenida."],[/combo/,"Busca ensamblar interacciones de cartas que producen un cierre fuerte."],[/chaos/,"Prioriza efectos variables que alteran reglas, decisiones o resultados."],[/treasure/,"Genera y aprovecha Treasure como recurso y sinergia."],[/clue/,"Genera y aprovecha Clues como recurso y motor de valor."],[/food/,"Genera y aprovecha Food como recurso y payoff."],[/cycling/,"Aprovecha Cycling para filtrar cartas y activar payoffs."],
+  ];
+  for(const [re,desc] of rules)if(re.test(k))return desc;
+  const words=name.split(/\s+/);if(words.length<=3&&/s$/.test(name)&&!/[ /]/.test(name))return `Mazo centrado en ${name} y sus sinergias de tipo de criatura.`;
+  return `Prioriza cartas que refuerzan el plan “${name}”.`;
+}
+
+// LAB 2 · Build From Collection ------------------------------------------------------
+function lab2SettingsPayload(){return {themeFocus:Number(E.lab2ThemeFocus?.value||72),ramp:E.lab2Ramp?.value||"standard",interaction:E.lab2Interaction?.value||"standard",curve:E.lab2Curve?.value||"normal",synergyBias:E.lab2Synergy?.value||"balanced",commanderDependence:E.lab2Dependence?.value||"normal",comboPolicy:E.lab2ComboPolicy?.value||"off",landStyle:E.lab2LandStyle?.value||"balanced",protectExistingDecks:Boolean(E.lab2ProtectDecks?.checked)}}
+function resetLab2Result(){lab2BuildResult=null;lab2DeckDetail=null;E.lab2ResultWrap?.classList.add("hidden");if(E.lab2Health)E.lab2Health.innerHTML="";if(E.lab2Audit)E.lab2Audit.open=false;E.lab2DeckInspector?.classList.add("hidden")}
+function renderLab2Themes(){
+  const themes=lab2Profile?.themes||[];if(!E.lab2ThemeGrid)return;
+  E.lab2ThemeGrid.innerHTML=themes.map((t,i)=>`<button type="button" class="lab2-theme-choice${lab2Theme?.slug===t.slug?" active":""}" data-theme-index="${i}" title="${esc(minimalThemeDescription(t))}"><strong>${esc(t.name)}</strong><small>${t.fallback?"Fallback balanceado":t.localFallback?"Inferido del Commander":`${Number(t.count||0).toLocaleString()} decks EDHREC`}</small></button>`).join("")||'<p class="lab-muted">No encontré themes disponibles para este Commander.</p>';
+  E.lab2ThemeGrid.querySelectorAll("[data-theme-index]").forEach(b=>b.onclick=()=>{lab2Theme=themes[Number(b.dataset.themeIndex)]||null;renderLab2Themes();E.lab2Generate.disabled=!lab2Theme;E.lab2BuildHint.textContent=lab2Theme?`Theme seleccionado · ${lab2Theme.name}`:"Elegí un theme para continuar.";resetLab2Result();if(lab2Theme)terminalShowSelection("Theme",lab2Theme.name);else terminalUpdateContext(true)});
+}
+async function chooseLab2Commander(c){
+  clearError();lab2Commander=c;lab2Profile=null;lab2Theme=null;resetLab2Result();E.lab2CommanderSearch.value=c.name;terminalSetActivity(`perfil LAB 2 · ${c.name}`);E.lab2CommanderDropdown.classList.add("hidden");E.lab2ThemeStep.classList.remove("hidden");E.lab2Settings.classList.add("hidden");E.lab2ThemeGrid.innerHTML='<div class="lab2-inline-loading"><i></i><span>Consultando themes de EDHREC…</span></div>';
+  E.lab2CommanderCard.innerHTML=`${c.image?`<img src="${esc(c.image)}" alt="${esc(c.name)}">`:""}<div><h3>${esc(c.name)}</h3><p>${esc(c.manaCost||"")} · ${esc(c.typeLine||"")}</p><small>Preparando perfil del Commander…</small></div>`;E.lab2CommanderCard.onclick=()=>commanderModal(c);E.lab2CommanderChosen.classList.remove("hidden");
+  try{
+    lab2Profile=await req("/api/lab2/profile",{method:"POST",headers:authHeaders(),body:JSON.stringify({commander:c.name})});
+    const pc=lab2Profile.commander||c;lab2Commander={...c,...pc,image:pc.image||c.image,largeImage:pc.imageLarge||c.largeImage};
+    E.lab2CommanderCard.innerHTML=`${lab2Commander.image?`<img src="${esc(lab2Commander.image)}" alt="${esc(lab2Commander.name)}">`:""}<div><h3>${esc(lab2Commander.name)}</h3><p>${esc(lab2Commander.manaCost||"")} · ${esc(lab2Commander.typeLine||"")}</p><small>${Number(lab2Commander.ownedQuantity||0)>0?`EN TU COLECCIÓN · ${Number(lab2Commander.ownedQuantity)} copia${Number(lab2Commander.ownedQuantity)===1?"":"s"}`:"COMMANDER NO POSEÍDO · el 99 se arma desde tu colección"}</small></div>`;
+    E.lab2CommanderCard.onclick=()=>commanderModal(lab2Commander);wireCommanderPreview(E.lab2CommanderCard.querySelector("img"),lab2Commander,lab2Commander.image||"");renderLab2Themes();E.lab2Settings.classList.remove("hidden");E.lab2Generate.disabled=true;E.lab2BuildHint.textContent="Elegí un theme para continuar.";terminalClearActivity();terminalShowSelection("Commander",lab2Commander.name);
+  }catch(e){terminalClearActivity();E.lab2ThemeGrid.innerHTML="";E.lab2ThemeStep.classList.add("hidden");showError(e)}
+}
+if(E.lab2CommanderSearch&&E.lab2CommanderDropdown)setupCommanderAutocomplete(E.lab2CommanderSearch,E.lab2CommanderDropdown,chooseLab2Commander);
+if(E.lab2ThemeFocus){const update=()=>E.lab2ThemeFocusValue.textContent=`${E.lab2ThemeFocus.value}%`;E.lab2ThemeFocus.oninput=update;update()}
+function renderLab2Summary(d){
+  const b=d.build,s=b.summary||{},roles=b.roleCounts||{},targets=b.targets||{};
+  const combo=b.combo,comboCard=combo?`<div class="lab2-summary-card"><span>COMBO</span><strong>${combo.infinite?"∞":"✓"}</strong><small>${Number(combo.pieces?.length||0)} piezas · ${combo.infinite?"infinito":"completo"}</small></div>`:"";
+  const blocked=Number(d.availabilityExcluded||0),copyDetail=blocked?`${blocked} candidatas bloqueadas por otros mazos`:`${Number(s.occupiedCards||0)} slots ocupados en la lista final`;
+  E.lab2Summary.innerHTML=`<div class="lab2-summary-card"><span>SIZE</span><strong>${b.size}/100</strong><small>${b.complete?"Lista completa":"Colección insuficiente"}</small></div><div class="lab2-summary-card"><span>THEME</span><strong>${pct(s.themeDensity||0)}</strong><small>${Number(s.themeCards||0)} cartas · objetivo ${Number(targets.theme||0)}</small></div><div class="lab2-summary-card"><span>TIERRAS</span><strong>${Number(s.lands||0)}</strong><small>objetivo ${Number(targets.lands||0)} · MV ${Number(s.avgCmc||0).toFixed(2)}</small></div><div class="lab2-summary-card"><span>ESTRUCTURA</span><strong>${fmtNum(Number(roles.ramp||0),1)} / ${fmtNum(Number(roles.interaction||0),1)}</strong><small>ramp fiable / interacción</small></div><div class="lab2-summary-card"><span>COPIAS</span><strong>${Number(s.freeCards||0)}</strong><small>${esc(copyDetail)}</small></div>${comboCard}`;
+}
+function renderLab2Warnings(d){
+  const rows=[...(d.warnings||[]).map(x=>({severity:"info",message:x})),...(d.build?.shortages||[])];
+  E.lab2Warnings.classList.toggle("hidden",!rows.length);E.lab2Warnings.innerHTML=rows.length?`<div class="lab2-warning-head"><strong>${rows.some(x=>x.severity==="high")?"Compromisos detectados":"Notas del armado"}</strong><span>${rows.length}</span></div>${rows.map(x=>`<div class="lab2-warning-row ${esc(x.severity||"info")}"><b>${esc(x.label||"Nota")}</b><p>${esc(x.message||x)}</p></div>`).join("")}`:"";
+}
+function renderLab2Audit(d){
+  if(!E.lab2AuditBody)return;
+  const b=d.build||{},t=b.targets||{},r=b.roleCounts||{},mana=b.mana||{},adj=mana.targetAdjustment||{},colors=["W","U","B","R","G"],types=b.typeCounts||{},profile=t.typeProfile||{};
+  const rows=[["Theme",r.theme,t.theme],["Ramp",r.ramp,t.ramp],["Recursos",r.resources,t.resources],["Interacción",r.interaction,t.interaction],["Board wipes",r.wipes,t.wipes],["Protección / recursión",r.resilience,t.resilience],["Finishers",r.finishers,t.finishers],["Tierras",b.summary?.lands,t.lands]];
+  const typeRows=["Creature","Instant","Sorcery","Artifact","Enchantment"].map(name=>{const actual=Number(types[name]||0),floor=Number(profile.floors?.[name]||0),desired=Number(profile.desired?.[name]||0),cap=Number(profile.caps?.[name]||0);return `<div><span>${esc(name)}</span><b class="${floor&&actual<floor?"under":"ok"}">${actual}${desired?` · objetivo ~${desired}`:""}${floor?` · piso ${floor}`:""}${cap?` · tope ${cap}`:""}</b></div>`}).join("");
+  const sourceRows=colors.filter(c=>Number(mana.demand?.share?.[c]||0)>0||Number(mana.effectiveSources?.[c]??mana.sources?.[c]??0)>0).map(c=>{const sources=Number(mana.effectiveSources?.[c]??mana.sources?.[c]??0),landSources=Number(mana.landSources?.[c]??mana.sources?.[c]??0),support=Number(mana.nonlandSupport?.[c]||0),wanted=Number(mana.requirements?.required?.[c]||0),share=Math.round(Number(mana.demand?.share?.[c]||0)*100),prob=Math.round(Number(mana.sourceProbabilities?.[c]||0)*100),hard=mana.requirements?.hardest?.[c],hint=hard?`${hard.card} · ${hard.pips} pip${Number(hard.pips)===1?"":"s"} · T${hard.turn}`:"sin requisito temprano crítico";return `<span title="${esc(hint)}"><b>${c}</b><strong>${fmtNum(sources,1)}${wanted?` / ${wanted}`:""}</strong><small>${fmtNum(landSources,1)} tierras${support?` + ${fmtNum(support,1)} soporte temprano`:""} · ${prob}% cast</small></span>`}).join("");
+  const landReason=adj.reasons?.length?adj.reasons.join(" · "):"sin ajuste adicional después del primer armado",landDrops=mana.landDropProbabilities||{},basic=Number(mana.basicCount||0),nonbasic=Number(mana.nonbasicCount||0),fetches=Number(mana.fetchCount||0),manaRepairs=Array.isArray(mana.repairSwaps)?mana.repairSwaps.length:0;
+  const combo=b.combo,comboAudit=combo?`<section class="lab2-combo-audit"><h4>Combo seleccionado</h4><p><b>${combo.infinite?"Combo infinito":"Combo completo"}</b> · ${combo.pieces.map(p=>p.name).join(" + ")}</p>${combo.produces?.length?`<p>Resultado: ${combo.produces.map(x=>x.name||x).join(" · ")}</p>`:""}${combo.manaNeeded?`<p>Maná requerido: ${esc(String(combo.manaNeeded))}</p>`:""}</section>`:"";
+  E.lab2AuditBody.innerHTML=`<div class="lab2-audit-grid"><section><h4>Objetivos dinámicos</h4><div class="lab2-target-list">${rows.map(([name,actual,target])=>`<div><span>${esc(name)}</span><b class="${Number(actual||0)<Number(target||0)?"under":"ok"}">${fmtNum(Number(actual||0),1)} / ${fmtNum(Number(target||0),1)}</b></div>`).join("")}</div><h4 class="lab2-subhead">Balance por tipo</h4><div class="lab2-target-list">${typeRows}</div></section><section><h4>Base de maná</h4><p>Objetivo inicial ${Number(adj.baseTarget??t.lands??0)} → final <b>${Number(t.lands||0)}</b>. ${esc(landReason)}.</p><div class="lab2-mana-meta"><span><b>${basic}</b><small>básicas</small></span><span><b>${nonbasic}</b><small>no básicas</small></span><span><b>${fetches}</b><small>fetches</small></span><span><b>${manaRepairs}</b><small>swaps de fixing</small></span><span><b>${Math.round(Number(landDrops.turn3||0)*100)}%</b><small>3 tierras en T3</small></span></div><div class="lab2-mana-sources">${sourceRows||'<span><small>Sin demanda de color detectada.</small></span>'}</div></section></div>${comboAudit}<div class="lab2-audit-notes">${(b.audit?.notes||[]).map(n=>`<p>• ${esc(n)}</p>`).join("")}</div>`;
+}
+function lab2AvailabilityLabel(c){
+  if(c.builder?.syntheticBasic)return "Básica ilimitada";
+  if(key(c.name)===key(lab2DeckDetail?.commander))return Number(c.builder?.ownedQuantity||lab2Profile?.commander?.ownedQuantity||0)>0?"Commander poseído":"Commander no poseído";
+  const avail=Number(c.builder?.availableQuantity||0),used=Number(c.builder?.usedQuantity||0),qty=Number(c.quantity||1);
+  if(avail>=qty)return `Disponible · ${avail}`;
+  if(used>0)return `En otros mazos · ${used}`;
+  return "En colección";
+}
+function renderLab2DeckTable(){
+  if(!lab2DeckDetail)return;const order={Commander:0,"Combo Piece":1,"Theme Engine":2,"Theme Payoff":3,"Theme Support":4,"Ramp / Fixing":5,"Draw / Resources":6,Interaction:7,"Board Wipe":8,"Protection / Recursion":9,Finisher:10,Utility:11,Land:12,Lands:12};
+  const cards=[...(lab2DeckDetail.mainboard||[])].sort((a,b)=>(order[deckPrimaryCategory(a)]??50)-(order[deckPrimaryCategory(b)]??50)||typeBucket(a).localeCompare(typeBucket(b))||a.name.localeCompare(b.name));
+  E.lab2DeckTable.innerHTML=cards.map(c=>`<tr><td><span class="lab2-table-qty">${Number(c.quantity||1)}×</span><button type="button" class="lab2-card-name"${c.imageNormal?` data-deck-card-preview="${esc(c.imageNormal)}"`:""} title="${esc(c.builder?.selectionReason||"")}">${esc(c.name)}</button></td><td>${esc(typeBucket(c))}</td><td><span class="lab2-category-pill">${esc(deckPrimaryCategory(c))}</span></td><td>${Number(c.cmc||0)}</td><td>${esc(lab2AvailabilityLabel(c))}</td></tr>`).join("");wireDeckListPreviews(E.lab2DeckTable);
+}
+function renderLab2Build(d){
+  lab2BuildResult=d;lab2DeckDetail=d.deckDetail;E.lab2ResultTitle.textContent=`${d.build.commander} · ${d.build.theme?.name||"Theme"}`;const sourceLabel=d.themeSource==="theme-page"?"EDHREC theme":d.themeSource==="cache"?"EDHREC cache":d.themeSource==="commander-evidence"?"evidencia del Commander":d.themeSource==="fallback"?"balance estructural":d.themeSource||"EDHREC";E.lab2ResultMeta.textContent=`${d.candidateCount} candidatos legales evaluados · builder v${d.builderVersion} · ${sourceLabel}`;renderLab2Summary(d);renderLab2Warnings(d);renderLab2Audit(d);renderLab2DeckTable();renderDeckInspector("lab2",lab2DeckDetail);renderLabResult(d.health,E.lab2Health,"lab2",lab2DeckDetail);E.lab2ResultWrap.classList.remove("hidden");terminalUpdateContext(true);
+}
+async function lab2ProgressOnce(){
+  const p=await req("/api/lab2/progress",{headers:authHeaders()}).catch(()=>null);if(!p?.message)return;
+  E.lab2LoadingText.textContent=p.message;if(p.active)terminalSetActivity(`LAB 2 · ${p.message}`);
+}
+async function runLab2Build(){
+  if(!lab2Commander?.name)return showError(new Error("Elegí un Commander."));if(!lab2Theme)return showError(new Error("Elegí un theme."));clearError();resetLab2Result();E.lab2Loading.classList.remove("hidden");E.lab2Generate.disabled=true;E.lab2LoadingText.textContent="Preparando build…";terminalSetActivity(`LAB 2 · preparando ${lab2Commander.name} / ${lab2Theme.name}`);
+  let tick=null;try{tick=setInterval(lab2ProgressOnce,450);void lab2ProgressOnce();const d=await req("/api/lab2/build",{method:"POST",headers:authHeaders(),body:JSON.stringify({commander:lab2Commander.name,theme:lab2Theme,settings:lab2SettingsPayload()})});renderLab2Build(d);E.lab2ResultWrap.scrollIntoView({behavior:"smooth",block:"start"});terminalClearActivity();terminalShowSelection("Build",`${lab2Commander.name} · ${lab2Theme.name}`)}catch(e){showError(e)}finally{if(tick)clearInterval(tick);E.lab2Loading.classList.add("hidden");E.lab2Generate.disabled=!lab2Theme;if(terminalActivity)terminalClearActivity()}
+}
+function lab2SafeFileName(name){return String(name||"manashelf-deck").normalize("NFKD").replace(/[^\w.-]+/g,"-").replace(/^-+|-+$/g,"").slice(0,90)||"manashelf-deck"}
+function buildDiagnosticFileName(log,lab,fallbackCommander="Commander",fallbackTheme="Theme"){
+  const version=String(log?.appVersion||"unknown").replace(/^v/i,"");
+  const commander=String(log?.input?.commander||fallbackCommander||"Commander");
+  const themeRaw=log?.input?.theme,theme=String((themeRaw&&typeof themeRaw==="object"?themeRaw.name:themeRaw)||fallbackTheme||"Theme");
+  const stamp=String(log?.generatedAt||"").replace(/\D/g,"").slice(0,14);
+  const parts=[`ManaShelf-v${version}`,lab,commander,theme,"Build-Diagnostic",stamp?`${stamp}Z`:null].filter(Boolean).map(lab2SafeFileName);
+  return `${parts.join("__")}.json`;
+}
+function lab2ArchidektText(){
+  if(!lab2DeckDetail)return "";
+  return (lab2DeckDetail.mainboard||[]).map(c=>{const category=String(deckPrimaryCategory(c)||"Uncategorized").replace(/[\[\]\r\n]/g," ").trim()||"Uncategorized";return `${Number(c.quantity||1)}x ${c.name} [${category}]`}).join("\n");
+}
+function exportLab2Archidekt(){if(!lab2DeckDetail)return showError(new Error("Generá un mazo primero."));download(`${lab2SafeFileName(lab2DeckDetail.name)}-archidekt.txt`,lab2ArchidektText())}
+async function copyLab2Archidekt(){
+  if(!lab2DeckDetail)return showError(new Error("Generá un mazo primero."));const text=lab2ArchidektText();
+  try{if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(text);else{const ta=document.createElement("textarea");ta.value=text;ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);ta.select();document.execCommand("copy");ta.remove()}const before=E.lab2CopyArchidekt.textContent;E.lab2CopyArchidekt.textContent="Copiado ✓";setTimeout(()=>{if(E.lab2CopyArchidekt)E.lab2CopyArchidekt.textContent=before},1300)}catch(e){showError(new Error("No pude copiar el decklist al portapapeles."))}
+}
+async function exportLab2Log(){if(!lab2BuildResult?.diagnosticLogId)return showError(new Error("No hay un log de armado disponible."));try{const log=await req(`/api/lab2/build-log?id=${encodeURIComponent(lab2BuildResult.diagnosticLogId)}`,{headers:authHeaders()});download(buildDiagnosticFileName(log,"LAB2",lab2DeckDetail?.commander||lab2DeckDetail?.name,lab2Theme?.name),JSON.stringify(log,null,2),"application/json;charset=utf-8")}catch(e){showError(e)}}
+if(E.lab2Generate)E.lab2Generate.onclick=runLab2Build;
+if(E.lab2Rebuild)E.lab2Rebuild.onclick=runLab2Build;
+if(E.lab2Export)E.lab2Export.onclick=exportLab2Archidekt;
+if(E.lab2CopyArchidekt)E.lab2CopyArchidekt.onclick=copyLab2Archidekt;
+if(E.lab2ExportLog)E.lab2ExportLog.onclick=exportLab2Log;
+
+function lab3SettingsPayload(){return {themeFocus:Number(E.lab3ThemeFocus?.value||72),ramp:E.lab3Ramp?.value||"standard",interaction:E.lab3Interaction?.value||"standard",curve:E.lab3Curve?.value||"normal",synergyBias:E.lab3Synergy?.value||"balanced",commanderDependence:E.lab3Dependence?.value||"normal",comboPolicy:E.lab3ComboPolicy?.value||"off",landStyle:E.lab3LandStyle?.value||"balanced",protectExistingDecks:Boolean(E.lab3ProtectDecks?.checked)}}
+function resetLab3Result(){lab3BuildResult=null;lab3DeckDetail=null;E.lab3ResultWrap?.classList.add("hidden");if(E.lab3Health)E.lab3Health.innerHTML="";E.lab3DeckInspector?.classList.add("hidden")}
+function renderLab3Themes(){
+  const themes=lab3Profile?.themes||[];if(!E.lab3ThemeGrid)return;
+  const choices=themes.map((t,i)=>{
+    const mode=t.themeContractMode||t.mode||(t.semanticSupported===false?"external_fallback":"semantic");
+    const source=t.localSemantic?"Inferido por Semantic DB":t.fallback?"Fallback estructural":mode==="external_fallback"?`${Number(t.count||0).toLocaleString()} decks EDHREC · Fallback EDHREC`:`${Number(t.count||0).toLocaleString()} decks EDHREC · Contrato semántico`;
+    const title=minimalThemeDescription(t);
+    return `<button type="button" class="lab2-theme-choice${lab3Theme?.slug===t.slug?" active":""}" data-lab3-theme-index="${i}"${title?` title="${esc(title)}"`:""}><strong>${esc(t.name)}</strong><small>${source}</small></button>`;
+  }).join("")||'<p class="lab-muted">No encontré themes para este Commander.</p>';
+  E.lab3ThemeGrid.innerHTML=choices;
+  E.lab3ThemeGrid.querySelectorAll("[data-lab3-theme-index]").forEach(b=>b.onclick=()=>{lab3Theme=themes[Number(b.dataset.lab3ThemeIndex)]||null;renderLab3Themes();E.lab3Generate.disabled=!lab3Theme;E.lab3BuildHint.textContent=lab3Theme?`Theme seleccionado · ${lab3Theme.name}`:"Elegí un theme para continuar.";resetLab3Result();if(lab3Theme)terminalShowSelection("LAB 3 theme",lab3Theme.name)});
+}
+async function chooseLab3Commander(c){
+  clearError();lab3Commander=c;lab3Profile=null;lab3Theme=null;resetLab3Result();E.lab3CommanderSearch.value=c.name;E.lab3CommanderDropdown.classList.add("hidden");E.lab3ThemeStep.classList.remove("hidden");E.lab3Settings.classList.add("hidden");E.lab3ThemeGrid.innerHTML='<div class="lab2-inline-loading"><i></i><span>Consultando Semantic DB + themes…</span></div>';terminalSetActivity(`perfil LAB 3 · ${c.name}`);
+  E.lab3CommanderCard.innerHTML=`${c.image?`<img src="${esc(c.image)}" alt="${esc(c.name)}">`:""}<div><h3>${esc(c.name)}</h3><p>${esc(c.manaCost||"")} · ${esc(c.typeLine||"")}</p><small>Validando Commander en Semantic DB…</small></div>`;E.lab3CommanderChosen.classList.remove("hidden");
+  try{lab3Profile=await req("/api/lab3/profile",{method:"POST",headers:authHeaders(),body:JSON.stringify({commander:c.name})});const pc=lab3Profile.commander||c;lab3Commander={...c,...pc,image:pc.image||c.image,largeImage:pc.imageLarge||c.largeImage};E.lab3CommanderCard.innerHTML=`${lab3Commander.image?`<img src="${esc(lab3Commander.image)}" alt="${esc(lab3Commander.name)}">`:""}<div><h3>${esc(lab3Commander.name)}</h3><p>${esc(lab3Commander.manaCost||"")} · ${esc(lab3Commander.typeLine||"")}</p><small>${Number(lab3Commander.ownedQuantity||0)>0?`EN TU COLECCIÓN · ${Number(lab3Commander.ownedQuantity)} copia${Number(lab3Commander.ownedQuantity)===1?"":"s"}`:"COMMANDER NO POSEÍDO · el 99 se arma desde tu colección"} · ${esc(lab3Commander.semanticStatus||"semantic")}</small></div>`;E.lab3CommanderCard.onclick=()=>commanderModal(lab3Commander);wireCommanderPreview(E.lab3CommanderCard.querySelector("img"),lab3Commander,lab3Commander.image||"");renderLab3Themes();E.lab3Settings.classList.remove("hidden");E.lab3Generate.disabled=true;E.lab3BuildHint.textContent="Elegí un theme para continuar.";terminalClearActivity();terminalShowSelection("LAB 3 Commander",lab3Commander.name)}catch(e){terminalClearActivity();E.lab3ThemeGrid.innerHTML="";E.lab3ThemeStep.classList.add("hidden");showError(e)}
+}
+if(E.lab3CommanderSearch&&E.lab3CommanderDropdown)setupCommanderAutocomplete(E.lab3CommanderSearch,E.lab3CommanderDropdown,chooseLab3Commander);
+if(E.lab3ThemeFocus){const update=()=>E.lab3ThemeFocusValue.textContent=`${E.lab3ThemeFocus.value}%`;E.lab3ThemeFocus.oninput=update;update()}
+function renderLab3Build(d){
+  lab3BuildResult=d;const b=d.build||{},s=b.summary||{},r=s.roleCounts||{},cov=b.validation?.semanticCoverage||{},ctx=b.context?.summary||{},targets=b.targets||{},mana=b.mana||{},shortfallCount=Object.keys(mana.shortfalls||{}).length;E.lab3ResultTitle.textContent=`${lab3Commander?.name||"Commander"} · ${b.theme||lab3Theme?.name||"Theme"}`;E.lab3ResultMeta.textContent=`${Number(d.candidateCount||0)} candidatas · builder v${d.builderVersion} · context v${d.contextEngineVersion} · ${d.themeSource||"semantic"}`;
+  const combo=b.combo,comboCard=combo?.selected?`<div class="lab2-summary-card"><span>COMBO</span><strong>${combo.infinite?"∞":"✓"}</strong><small>${Number(combo.pieces?.length||0)} piezas · ${combo.infinite?"infinito":"completo"}</small></div>`:"";
+  E.lab3Summary.innerHTML=`<div class="lab2-summary-card"><span>SIZE</span><strong>${Number(b.size||0)}/100</strong><small>${b.complete?"Lista completa":"Lista incompleta"}</small></div><div class="lab2-summary-card"><span>THEME</span><strong>${Number(s.themeCards||0)}</strong><small>objetivo ${Number(targets.theme||0)}</small></div><div class="lab2-summary-card"><span>RAMP / INTERACCIÓN</span><strong>${fmtNum(Number(r.ramp||0),1)} / ${fmtNum(Number(r.interaction||0),1)}</strong><small>contratos semánticos</small></div><div class="lab2-summary-card"><span>SEMÁNTICA</span><strong>${Number(cov.supported||0)} / ${Number(cov.partial||0)} / ${Number(cov.gap||0)}</strong><small>supported / partial / gap</small></div><div class="lab2-summary-card"><span>MANÁ</span><strong>${Math.round(Number(mana.weightedCoverage??1)*100)}%</strong><small>${shortfallCount?`${shortfallCount} color${shortfallCount===1?"":"es"} bajo objetivo`:"fuentes de color cubiertas"}</small></div><div class="lab2-summary-card"><span>DEPENDENCIAS</span><strong>${Math.round(Number(ctx.dependencyCoverage??ctx.avgDependencySatisfaction??0)*100)}%</strong><small>redundancia ${Math.round(Number(ctx.dependencyRedundancy||0)*100)}%</small></div><div class="lab2-summary-card"><span>PACKAGES</span><strong>${Number(ctx.packageLinks||0)}</strong><small>support ${Math.round(Number(ctx.avgSupportContribution||0)*100)}% · dead risk ${Math.round(Number(ctx.avgDeadCardRisk||0)*100)}%</small></div>${comboCard}`;
+  const shortageRows=Object.entries(b.shortages||{}).map(([k,v])=>({severity:"high",label:k,message:`${fmtNum(Number(v.have||0),1)} / ${fmtNum(Number(v.target||0),1)}`})),manaRows=Object.entries(mana.shortfalls||{}).map(([color,v])=>({severity:"high",label:`Maná ${color}`,message:`${fmtNum(Number(v.sources||0),1)} / ${fmtNum(Number(v.target||0),1)} fuentes`})),warnings=[...(d.warnings||[]).map(x=>({severity:"info",label:"Nota",message:x})),...shortageRows,...manaRows];E.lab3Warnings.classList.toggle("hidden",!warnings.length);E.lab3Warnings.innerHTML=warnings.length?warnings.map(x=>`<div class="lab2-warning-row ${esc(x.severity)}"><b>${esc(x.label)}</b><p>${esc(x.message)}</p></div>`).join(""):"";
+  const bottlenecks=b.context?.bottlenecks||[],roleRows=Object.entries(b.context?.roleCoverage||{}).filter(([,v])=>Number(v)>0).sort((a,b)=>b[1]-a[1]).slice(0,12),manaColors=Object.keys(mana.sourceTargets||{}),themeFacets=Object.entries(s.themeFacets||b.diagnostics?.themeFacetCounts||{}).filter(([,v])=>Number(v)>0).sort((a,b)=>b[1]-a[1]),restrictedSources=mana.restrictedSources||[];E.lab3Context.innerHTML=`<div class="lab2-audit-grid"><section><h4>Coverage estructural</h4><div class="lab2-target-list">${roleRows.map(([k,v])=>`<div><span>${esc(k)}</span><b>${fmtNum(Number(v),1)}</b></div>`).join("")||"<p>Sin roles detectados.</p>"}</div></section><section><h4>Fuentes de maná</h4><div class="lab2-target-list">${manaColors.map(color=>`<div><span>${esc(color)} · demanda ${Number(mana.pipDemand?.[color]||0)} pips</span><b class="${Number(mana.sourceCoverage?.[color]||0)<.8?"under":"ok"}">${fmtNum(Number(mana.sourcesByColor?.[color]||0),1)} / ${Number(mana.sourceTargets?.[color]||0)} · ${Math.round(Number(mana.sourceCoverage?.[color]||0)*100)}%</b></div>`).join("")||"<p>Sin demanda de color detectada.</p>"}</div></section><section><h4>Facetas del theme</h4><div class="lab2-target-list">${themeFacets.map(([name,count])=>`<div><span>${esc(name)}</span><b>${Number(count)}</b></div>`).join("")||"<p>Sin facetas temáticas detectadas.</p>"}</div></section><section><h4>Fuentes restringidas</h4><div class="lab2-target-list">${restrictedSources.slice(0,12).map(x=>`<div><span>${esc(x.name)} · ${esc((x.colors||[]).join("/"))}</span><b class="${Number(x.usability||0)<.5?"under":"ok"}">${Math.round(Number(x.usability||0)*100)}%</b></div>`).join("")||"<p>Sin fuentes restringidas seleccionadas.</p>"}</div></section><section><h4>Bottlenecks</h4><div class="lab2-target-list">${bottlenecks.slice(0,12).map(x=>`<div><span>${esc(x.dependency)}</span><b class="${Number(x.satisfaction)<.45?"under":"ok"}">${Math.round(Number(x.satisfaction||0)*100)}% · demanda ${Number(x.demand||0)}</b></div>`).join("")||"<p>No hay bottlenecks fuertes detectados.</p>"}</div></section><section><h4>Contexto de packages</h4><div class="lab2-target-list"><div><span>Dependency coverage</span><b>${Math.round(Number(ctx.dependencyCoverage||0)*100)}%</b></div><div><span>Redundancia</span><b>${Math.round(Number(ctx.dependencyRedundancy||0)*100)}%</b></div><div><span>Producer → consumer links</span><b>${Number(ctx.packageLinks||0)}</b></div><div><span>Dependencia del Commander</span><b>${Math.round(Number(ctx.commanderDependence||0)*100)}%</b></div></div></section></div>`;
+  E.lab3DeckTable.innerHTML=(b.deck||[]).map(c=>`<tr><td><span class="lab2-table-qty">${Number(c.quantity||1)}×</span><button type="button" class="lab2-card-name"${c.imageNormal?` data-deck-card-preview="${esc(c.imageNormal)}"`:""} title="${esc(c.selectionReason||"")}">${esc(c.name)}</button></td><td>${esc(c.typeLine||"")}</td><td><span class="lab2-category-pill">${esc(c.category||c.selectionPhase||"Sin categoría")}</span></td><td>${Math.round(Number(c.themeScore||0)*100)}%</td><td>${esc(c.semanticStatus||"—")}</td></tr>`).join("");wireDeckListPreviews(E.lab3DeckTable);
+  lab3DeckDetail=d.deckDetail||null;if(lab3DeckDetail)renderDeckInspector("lab3",lab3DeckDetail);if(d.health&&E.lab3Health)renderLabResult(d.health,E.lab3Health,"lab3",lab3DeckDetail);E.lab3ResultWrap.classList.remove("hidden");terminalUpdateContext(true);
+}
+async function lab3ProgressOnce(){const p=await req("/api/lab3/progress",{headers:authHeaders()}).catch(()=>null);if(!p?.message)return;E.lab3LoadingText.textContent=p.message;if(p.active)terminalSetActivity(`LAB 3 · ${p.message}`)}
+async function runLab3Build(){if(!lab3Commander?.name)return showError(new Error("Elegí un Commander."));if(!lab3Theme)return showError(new Error("Elegí un theme."));clearError();resetLab3Result();E.lab3Loading.classList.remove("hidden");E.lab3Generate.disabled=true;E.lab3LoadingText.textContent="Preparando Semantic DB…";let tick=null;try{tick=setInterval(lab3ProgressOnce,450);void lab3ProgressOnce();const d=await req("/api/lab3/build",{method:"POST",headers:authHeaders(),body:JSON.stringify({commander:lab3Commander.name,theme:lab3Theme,settings:lab3SettingsPayload()})});renderLab3Build(d);E.lab3ResultWrap.scrollIntoView({behavior:"smooth",block:"start"});terminalClearActivity();terminalShowSelection("LAB 3 build",`${lab3Commander.name} · ${lab3Theme.name}`)}catch(e){showError(e)}finally{if(tick)clearInterval(tick);E.lab3Loading.classList.add("hidden");E.lab3Generate.disabled=!lab3Theme;if(terminalActivity)terminalClearActivity()}}
+function lab3ArchidektText(){return (lab3BuildResult?.build?.deck||[]).map(c=>{const category=String(c.category||c.selectionPhase||"Uncategorized").replace(/[\[\]\r\n]/g," ").trim()||"Uncategorized";return `${Number(c.quantity||1)}x ${c.name} [${category}]`}).join("\n")}
+function exportLab3Deck(){if(!lab3BuildResult)return showError(new Error("Generá un mazo primero."));download(`${lab2SafeFileName(lab3Commander?.name)}-lab3-archidekt.txt`,lab3ArchidektText())}
+async function copyLab3Archidekt(){
+  if(!lab3BuildResult)return showError(new Error("Generá un mazo primero."));const text=lab3ArchidektText();
+  try{if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(text);else{const ta=document.createElement("textarea");ta.value=text;ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);ta.select();document.execCommand("copy");ta.remove()}const before=E.lab3CopyArchidekt.textContent;E.lab3CopyArchidekt.textContent="Copiado ✓";setTimeout(()=>{if(E.lab3CopyArchidekt)E.lab3CopyArchidekt.textContent=before},1300)}catch(e){showError(new Error("No pude copiar el decklist al portapapeles."))}
+}
+async function exportLab3Log(){if(!lab3BuildResult?.diagnosticLogId)return showError(new Error("No hay log LAB 3 disponible."));try{const log=await req(`/api/lab3/build-log?id=${encodeURIComponent(lab3BuildResult.diagnosticLogId)}`,{headers:authHeaders()});download(buildDiagnosticFileName(log,"LAB3",lab3Commander?.name,lab3Theme?.name),JSON.stringify(log,null,2),"application/json;charset=utf-8")}catch(e){showError(e)}}
+let lab3StressTimer=null;
+function renderLab3Stress(s){if(!E.lab3StressStatus)return;const active=Boolean(s?.active),done=Boolean(s?.exportReady),completed=Number(s?.completed||0),planned=Number(s?.planned||s?.requested||200),failed=Number(s?.failed||0);E.lab3StressStatus.textContent=s?.message||"Listo para ejecutar.";E.lab3StressProgress.max=Math.max(1,planned);E.lab3StressProgress.value=Math.min(planned,completed+failed);E.lab3StressStart.disabled=active;E.lab3StressCancel.classList.toggle("hidden",!active);E.lab3StressExport.classList.toggle("hidden",!done);const summary=s?.summary;if(summary)E.lab3StressSummary.textContent=`${completed}/${planned} completos · ${failed} fallidos · ${Number(summary.anomalous||0)} con anomalías · ${Number(summary.uniqueThemes||0)} themes · seed ${s.seed}`;else E.lab3StressSummary.textContent=active?`${completed}/${planned||200} casos · pool global · seed ${s?.seed||"manashelf-lab3-stress-3"}`:"Seed fija: manashelf-lab3-stress-3 · pool global · reproducible";const clusters=s?.clusters||[];E.lab3StressClusters.classList.toggle("hidden",!clusters.length);E.lab3StressClusters.innerHTML=clusters.slice(0,10).map(c=>`<span data-severity="${esc(c.severity||"medium")}" title="${esc(c.examples?.[0]?.message||"")}">${esc(c.family)} · ${Number(c.count||0)}</span>`).join("")}
+async function pollLab3Stress(){try{const s=await req("/api/lab3/stress/status",{headers:authHeaders()});renderLab3Stress(s);if(!s.active&&lab3StressTimer){clearInterval(lab3StressTimer);lab3StressTimer=null}}catch(e){if(lab3StressTimer){clearInterval(lab3StressTimer);lab3StressTimer=null}showError(e)}}
+async function startLab3Stress(){clearError();try{const s=await req("/api/lab3/stress/start",{method:"POST",headers:authHeaders(),body:JSON.stringify({runs:200,seed:"manashelf-lab3-stress-3"})});renderLab3Stress(s);if(lab3StressTimer)clearInterval(lab3StressTimer);lab3StressTimer=setInterval(pollLab3Stress,1000);void pollLab3Stress()}catch(e){showError(e)}}
+async function cancelLab3Stress(){try{renderLab3Stress(await req("/api/lab3/stress/cancel",{method:"POST",headers:authHeaders(),body:"{}"}))}catch(e){showError(e)}}
+async function exportLab3Stress(){try{const r=await fetch("/api/lab3/stress/export",{headers:authHeaders()});if(!r.ok){let msg=`HTTP ${r.status}`;try{const j=await r.json();msg=j.error||j.detail||msg}catch{}throw new Error(msg)}const blob=await r.blob(),cd=r.headers.get("content-disposition")||"",m=cd.match(/filename=\?"?([^";]+)\?"?/i),name=m?.[1]||"ManaShelf-LAB3-STRESS-CORPUS-v2.zip",a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}catch(e){showError(e)}}
+if(E.lab3Generate)E.lab3Generate.onclick=runLab3Build;if(E.lab3Rebuild)E.lab3Rebuild.onclick=runLab3Build;if(E.lab3Export)E.lab3Export.onclick=exportLab3Deck;if(E.lab3CopyArchidekt)E.lab3CopyArchidekt.onclick=copyLab3Archidekt;if(E.lab3ExportLog)E.lab3ExportLog.onclick=exportLab3Log;if(E.lab3StressStart)E.lab3StressStart.onclick=startLab3Stress;if(E.lab3StressCancel)E.lab3StressCancel.onclick=cancelLab3Stress;if(E.lab3StressExport)E.lab3StressExport.onclick=exportLab3Stress;
 
 
 const saved=localStorage.getItem("ms-user");if(saved)E.u.value=saved;saveLists();setAccess("public");
