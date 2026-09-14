@@ -1,0 +1,41 @@
+import fs from "node:fs/promises";
+import path from "node:path";
+import os from "node:os";
+import { cardIdentityKey, cardNameAliases } from "../../lib/card-identity.mjs";
+import { loadRuntimeIndex, isDeckPlayableCard } from "./runtime-reader.mjs";
+import { readRuntimeServingHeader, loadRuntimeServingSelection, LAB3_SERVING_RUNTIME_VERSION } from "./runtime-serving.mjs";
+
+export const LAB3_RUNTIME_CATALOG_VERSION=2;
+
+export function defaultLab3IndexCandidates(projectRoot=process.cwd()){
+  return [process.env.MANASHELF_LAB3_INDEX,path.join(os.homedir(),".manashelf","semantic-lab3","lab3-runtime-index.jsonl.gz"),path.join(projectRoot,"data","lab3-runtime-index.jsonl.gz")].filter(Boolean);
+}
+export function defaultLab3ServingCandidates(projectRoot=process.cwd()){
+  return [process.env.MANASHELF_LAB3_SERVING_INDEX,path.join(os.homedir(),".manashelf","semantic-lab3","lab3-runtime-serving.jsonl.gz"),path.join(projectRoot,"data","lab3-runtime-serving.jsonl.gz")].filter(Boolean);
+}
+async function firstExisting(paths){for(const p of paths){try{const st=await fs.stat(p);if(st.isFile())return {path:p,stat:st};}catch{}}return null;}
+function aliasPriority(card,alias){const exact=cardIdentityKey(card?.name)===alias,legal=card?.legalities?.commander==="legal",playable=isDeckPlayableCard(card);return (legal?1000:0)+(playable?300:0)+(exact?80:0)+(String(card?.layout||"")==="normal"?10:0);}
+function aliasesFor(card){return isDeckPlayableCard(card)?cardNameAliases(card?.name):[cardIdentityKey(card?.name)];}
+
+export class Lab3RuntimeCatalog{
+  constructor({projectRoot=process.cwd(),paths=null,servingPaths=null,maxCachedCards=12000}={}){
+    this.projectRoot=projectRoot;this.paths=paths||defaultLab3IndexCandidates(projectRoot);this.servingPaths=servingPaths||defaultLab3ServingCandidates(projectRoot);this.loaded=null;this.loadedPath=null;this.loadedMtime=0;this.servingHeader=null;this.servingPath=null;this.servingMtime=0;this.cardCache=new Map();this.aliasCache=new Map();this.aliasPriority=new Map();this.oracleAliases=new Map();this.maxCachedCards=Math.max(500,Number(maxCachedCards||12000));
+  }
+  async resolve(){return firstExisting(this.paths);}
+  async resolveServing(){return firstExisting(this.servingPaths);}
+  async ensureServing(){const found=await this.resolveServing();if(!found)return null;if(this.servingHeader&&this.servingPath===found.path&&this.servingMtime===found.stat.mtimeMs)return {path:found.path,stat:found.stat,header:this.servingHeader};this.servingHeader=await readRuntimeServingHeader(found.path);this.servingPath=found.path;this.servingMtime=found.stat.mtimeMs;return {path:found.path,stat:found.stat,header:this.servingHeader};}
+  _dropOracle(oracleId){const aliases=this.oracleAliases.get(oracleId)||[];for(const a of aliases){if(this.aliasCache.get(a)?.oracleId===oracleId){this.aliasCache.delete(a);this.aliasPriority.delete(a);}}this.oracleAliases.delete(oracleId);this.cardCache.delete(oracleId);}
+  _trim(){while(this.cardCache.size>this.maxCachedCards){const oldest=this.cardCache.keys().next().value;if(oldest==null)break;this._dropOracle(oldest);}}
+  _remember(card){const oid=String(card?.oracleId||"");if(!oid||!card?.name)return;this.cardCache.delete(oid);this.cardCache.set(oid,card);const owned=[];for(const alias of aliasesFor(card)){if(!alias)continue;const p=aliasPriority(card,alias);if(!this.aliasCache.has(alias)||p>Number(this.aliasPriority.get(alias)||-Infinity)){this.aliasCache.set(alias,card);this.aliasPriority.set(alias,p);}owned.push(alias);}this.oracleAliases.set(oid,owned);this._trim();}
+  _cachedByName(name){for(const alias of cardNameAliases(name)){const c=this.aliasCache.get(alias);if(c)return c;}return null;}
+  async status(){const [found,serving]=await Promise.all([this.resolve(),this.resolveServing()]);let servingHeader=this.servingHeader;if(serving&&!servingHeader)try{servingHeader=await readRuntimeServingHeader(serving.path);this.servingHeader=servingHeader;this.servingPath=serving.path;this.servingMtime=serving.stat.mtimeMs;}catch{}return {version:LAB3_RUNTIME_CATALOG_VERSION,available:Boolean(found),path:found?.path||null,bytes:found?.stat?.size||0,loaded:Boolean(this.loaded),loadedCards:this.loaded?.cards?.size||0,loadedOracleCards:this.loaded?.byOracleId?.size||0,header:this.loaded?.header||servingHeader?.sourceRuntime?{schema:servingHeader.sourceRuntime.schema,schemaVersion:servingHeader.sourceRuntime.schemaVersion,semantic:servingHeader.semantic,views:servingHeader.views}:null,candidates:this.paths,serving:{version:LAB3_SERVING_RUNTIME_VERSION,available:Boolean(serving),path:serving?.path||null,bytes:serving?.stat?.size||0,sourceRuntimeSha256:servingHeader?.sourceRuntime?.sha256||null,cachedCards:this.cardCache.size,candidates:this.servingPaths}};}
+  // Full canonical load is retained for offline audits/stress/training. Interactive
+  // lookups below use the compact serving projection and never materialize 38k cards.
+  async ensureLoaded(){const found=await this.resolve();if(!found)throw new Error(`LAB3 semantic runtime index not found. Looked in: ${this.paths.join(", ")}`);if(this.loaded&&this.loadedPath===found.path&&this.loadedMtime===found.stat.mtimeMs)return this.loaded;this.loaded=await loadRuntimeIndex(found.path);this.loadedPath=found.path;this.loadedMtime=found.stat.mtimeMs;return this.loaded;}
+  async _select({names=[],oracleIds=[]}={}){const serving=await this.ensureServing();if(!serving)return null;const result=await loadRuntimeServingSelection(serving.path,{names,oracleIds});for(const card of result.byOracleId.values())this._remember(card);return result;}
+  async get(name){const cached=this._cachedByName(name);if(cached)return cached;const serving=await this._select({names:[name]});if(serving)return this._cachedByName(name);const idx=await this.ensureLoaded();return idx.get(name);}
+  async getByOracleId(oracleId){const key=String(oracleId||"");if(this.cardCache.has(key))return this.cardCache.get(key);const serving=await this._select({oracleIds:[key]});if(serving)return this.cardCache.get(key)||null;const idx=await this.ensureLoaded();return idx.getByOracleId(key);}
+  async getMany(names){const requested=[...new Set((names||[]).map(x=>String(x||"").trim()).filter(Boolean))],missing=requested.filter(name=>!this._cachedByName(name));if(missing.length){const serving=await this._select({names:missing});if(!serving){const idx=await this.ensureLoaded();const out=new Map();for(const name of requested){const card=idx.get(name);if(card)out.set(name,card);}return out;}}const out=new Map();for(const name of requested){const card=this._cachedByName(name);if(card)out.set(name,card);}return out;}
+  async getManyOracleIds(oracleIds){const requested=[...new Set((oracleIds||[]).map(x=>String(x||"").trim()).filter(Boolean))],missing=requested.filter(id=>!this.cardCache.has(id));if(missing.length){const serving=await this._select({oracleIds:missing});if(!serving){const idx=await this.ensureLoaded();const out=new Map();for(const id of requested){const card=idx.getByOracleId(id);if(card)out.set(id,card);}return out;}}const out=new Map();for(const id of requested){const card=this.cardCache.get(id);if(card)out.set(id,card);}return out;}
+  async getManyCombined({names=[],oracleIds=[]}={}){const requestedNames=[...new Set((names||[]).map(x=>String(x||"").trim()).filter(Boolean))],requestedIds=[...new Set((oracleIds||[]).map(x=>String(x||"").trim()).filter(Boolean))],missingNames=requestedNames.filter(name=>!this._cachedByName(name)),missingIds=requestedIds.filter(id=>!this.cardCache.has(id));if(missingNames.length||missingIds.length){const serving=await this._select({names:missingNames,oracleIds:missingIds});if(!serving){const idx=await this.ensureLoaded();const byName=new Map(),byOracleId=new Map();for(const name of requestedNames){const card=idx.get(name);if(card)byName.set(name,card);}for(const id of requestedIds){const card=idx.getByOracleId(id);if(card)byOracleId.set(id,card);}return {byName,byOracleId};}}const byName=new Map(),byOracleId=new Map();for(const name of requestedNames){const card=this._cachedByName(name);if(card)byName.set(name,card);}for(const id of requestedIds){const card=this.cardCache.get(id);if(card)byOracleId.set(id,card);}return {byName,byOracleId};}
+}

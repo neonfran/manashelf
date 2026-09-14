@@ -1,0 +1,15 @@
+import fs from "node:fs/promises";
+import path from "node:path";
+import {FIELD_QUALITY_REGISTRY_VERSION} from "./schema.mjs";
+import {fingerprint,stableJson} from "./io.mjs";
+import {compareDeckQuality} from "./deck-quality.mjs";
+const normalizeSettings=x=>JSON.parse(stableJson(x||{}));
+export function fieldPairKey({commander,theme,settings,collectionFingerprint}){return fingerprint({commander:String(commander||"").toLocaleLowerCase("en-US"),theme:String(theme||"").toLocaleLowerCase("en-US"),settings:normalizeSettings(settings),collectionFingerprint:String(collectionFingerprint||"")});}
+export function collectionFingerprint(cards=[]){return fingerprint((cards||[]).map(c=>({name:String(c.name||""),quantity:Number(c.quantity||c.ownedQuantity||0)})).sort((a,b)=>a.name.localeCompare(b.name)));}
+export class FieldQualityRegistry{
+  constructor({file=path.join(process.cwd(),".manashelf-cache","field-quality-registry.jsonl"),appVersion="unknown"}={}){this.file=file;this.appVersion=appVersion;this.loaded=false;this.rows=[];}
+  async load(){if(this.loaded)return this.rows;this.loaded=true;try{const src=await fs.readFile(this.file,"utf8");this.rows=src.split(/\r?\n/).filter(Boolean).map(x=>JSON.parse(x));}catch(e){if(e.code!=="ENOENT")throw e;this.rows=[];}return this.rows;}
+  async record({engine,commander,theme,settings,collectionFingerprint:cf,quality,resolvable=true,cardCount=100,metadata={}}={}){if(!["lab2","vnext"].includes(engine))throw new Error("Field registry engine must be lab2 or vnext");await this.load();const pairKey=fieldPairKey({commander,theme,settings,collectionFingerprint:cf}),row={version:FIELD_QUALITY_REGISTRY_VERSION,recordedAt:new Date().toISOString(),appVersion:this.appVersion,engine,pairKey,commander:String(commander||""),theme:String(theme||""),settingsFingerprint:fingerprint(normalizeSettings(settings)),collectionFingerprint:String(cf||""),quality,resolvable:Boolean(resolvable),cardCount:Number(cardCount||0),metadata};await fs.mkdir(path.dirname(this.file),{recursive:true});await fs.appendFile(this.file,JSON.stringify(row)+"\n");this.rows.push(row);return row;}
+  async comparablePairs({appVersion=this.appVersion}={}){await this.load();const latest=new Map();for(const r of this.rows){if(r.appVersion!==appVersion||!r.resolvable||r.cardCount!==100)continue;latest.set(`${r.pairKey}|${r.engine}`,r);}const keys=new Set([...latest.values()].map(x=>x.pairKey)),pairs=[];for(const key of keys){const lab2=latest.get(`${key}|lab2`),vnext=latest.get(`${key}|vnext`);if(!lab2||!vnext)continue;pairs.push({pairKey:key,lab2,vnext,comparison:compareDeckQuality(lab2.quality,vnext.quality)});}return pairs;}
+  async status({appVersion=this.appVersion}={}){const pairs=await this.comparablePairs({appVersion}),noWorse=pairs.filter(x=>x.comparison.noWorse).length,severe=pairs.filter(x=>x.comparison.severeRegression).length,mean=pairs.length?pairs.reduce((n,x)=>n+x.comparison.delta,0)/pairs.length:0;return {version:FIELD_QUALITY_REGISTRY_VERSION,appVersion,pairs:pairs.length,noWorse,noWorseRate:pairs.length?noWorse/pairs.length:0,meanDelta:mean,severeRegressions:severe};}
+}

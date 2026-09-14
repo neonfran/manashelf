@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ManaShelf v2.5.49-beta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://cards.scryfall.io" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<div class="grid-bg"></div><div class="glow glow-a"></div><div class="glow glow-b"></div>
+<header>
+  <div class="brand"><span>✦</span> ManaShelf <small>v2.5.48</small><span class="beta-pill">BETA</span></div>
+  <!-- EXPERIMENTAL: removable terminal-style sticky context indicator -->
+  <div id="terminalStatus" class="terminal-status" aria-live="polite" aria-label="Contexto actual"><span class="terminal-prompt">›</span><span id="terminalText">ready</span><i class="terminal-cursor" aria-hidden="true"></i></div>
+  <div class="header-actions"><button id="themeToggle" class="ghost" title="Cambiar entre tema oscuro y claro" aria-label="Cambiar tema">☾</button><button id="langToggle" class="ghost language-toggle" title="Cambiar idioma" aria-label="Cambiar idioma">ES</button><button id="historyBtn" class="ghost">Historial</button><button id="shortlistBtn" class="ghost">★ Shortlist <b id="shortlistCount">0</b></button></div>
+</header>
+<main>
+<section class="hero">
+  <div class="kicker">HERRAMIENTA COMMANDER BASADA EN TU COLECCIÓN</div>
+  <h1>Tu colección.<br><span>Tu próximo deck.</span></h1>
+</section>
+
+<section id="loginPanel" class="login-panel">
+  <div class="access-tabs">
+    <button id="accessPublic" class="access-tab active">Colección pública</button>
+    <button id="accessPrivate" class="access-tab">Colección privada</button>
+  </div>
+  <div class="panel">
+    <div class="panel-label" id="accessLabel">LEER COLECCIÓN PÚBLICA</div>
+    <div class="control"><span>@</span><input id="username" placeholder="usuario de Archidekt"></div>
+    <div id="passwordRow" class="control hidden"><span>••</span><input id="password" type="password" placeholder="contraseña"></div>
+    <button id="checkUser" class="primary wide">Abrir colección →</button>
+    <div id="userStatus" class="status">No hace falta iniciar sesión si la colección es pública.</div>
+  </div>
+</section>
+
+<section id="accountBar" class="account-bar account-panel-v2 hidden">
+  <div class="account-top-row-v2">
+    <div class="account-identity-v2">
+      <span class="account-online-dot" aria-hidden="true"></span>
+      <div id="accountAvatar" class="account-avatar-v2" aria-hidden="true">M</div>
+      <div class="account-identity-copy-v2">
+        <strong id="accountName" class="account-name-v2"></strong>
+        <span id="accountStats" class="account-meta-v2"></span>
+      </div>
+      <em id="accessBadge" class="account-status-pill-v2"></em>
+    </div>
+
+    <div class="account-actions account-actions-v2">
+      <button id="cacheBtn" class="account-action-btn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h12m0 0-3-3m3 3-3 3M20 17H8m0 0 3 3m-3-3 3-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span><strong>Caché</strong><small>Actualizar / Borrar</small></span>
+      </button>
+      <button id="reconnect" class="account-action-btn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 7h12m0 0-3-3m3 3-3 3M17 17H5m0 0 3 3m-3-3 3-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span><strong>Cambiar colección</strong></span>
+      </button>
+      <button id="logout" class="account-action-btn account-action-danger" type="button">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M10 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4M14 8l4 4-4 4M9 12h9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span><strong>Cerrar sesión</strong></span>
+      </button>
+    </div>
+  </div>
+
+  <div id="dashboard" class="account-metrics-v2 hidden" aria-label="Resumen de colección">
+    <div class="account-metric-v2 metric-purple">
+      <span class="account-metric-icon-v2" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M5 6h14l-1 14H6L5 6Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M4 3h16v3H4V3Zm5 7h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+      <div><small>Mazos</small><strong id="accountMetricDecks">0</strong><span>gestionados</span></div>
+    </div>
+    <div class="account-metric-v2 metric-pink">
+      <span class="account-metric-icon-v2" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="m12 3 8 4-8 4-8-4 8-4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m4 12 8 4 8-4M4 17l8 4 8-4" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></span>
+      <div><small>Cartas únicas</small><strong id="accountMetricUnique">0</strong><span>nombres de carta</span></div>
+    </div>
+    <div class="account-metric-v2 metric-teal">
+      <span class="account-metric-icon-v2" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="8" y="8" width="10" height="11" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M6 15H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1" stroke="currentColor" stroke-width="1.8"/></svg></span>
+      <div><small>Copias</small><strong id="accountMetricCopies">0</strong><span>copias en total</span></div>
+    </div>
+    <div class="account-metric-v2 metric-amber">
+      <span class="account-metric-icon-v2" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M5 5h14v14H5z" stroke="currentColor" stroke-width="1.8"/><path d="M8 9h8M8 12h8M8 15h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+      <div><small>Registros Archidekt</small><strong id="accountMetricRecords">0</strong><span>filas informadas</span></div>
+    </div>
+  </div>
+
+  <div id="syncMini" class="sync-mini sync-panel-v2 hidden">
+    <div class="sync-title-v2"><span class="sync-symbol-v2">↻</span><strong id="syncMiniTitle">Sincronizando mazos</strong></div>
+    <div class="sync-layout-v2">
+      <div class="sync-progress-v2">
+        <div class="sync-head-v2"><span></span><strong id="syncCount">0 / 0</strong></div>
+        <progress id="syncMiniProgress" max="1" value="0"></progress>
+        <div class="sync-sub-v2"><span id="syncMiniText">Preparando…</span></div>
+      </div>
+      <span id="syncTime" class="sync-time-pill-v2"></span>
+    </div>
+    <div id="syncActions" class="sync-actions hidden"><button id="showSyncErrors" class="tiny">Ver errores</button><button id="retrySync" class="tiny accent">↻ Recargar mazos</button></div>
+  </div>
+  <p id="dashText" class="hidden" aria-hidden="true"></p>
+</section>
+<section class="mode-tabs">
+  <button id="modeExplore" class="mode active"><b>01</b><span>Explorar Commander<small>Cualquier leyenda</small></span></button>
+  <button id="modeImprove" class="mode"><b>02</b><span>Mejorar mi mazo<small>Deck existente</small></span></button>
+  <button id="modeRank" class="mode"><b>03</b><span>¿Qué Commander puedo armar?<small>Desde tu colección</small></span></button>
+  <button id="modeLab" class="mode lab-mode"><b>⚗1</b><span>LAB 1<small>Deck check++</small></span></button>
+  <button id="modeLab2" class="mode lab2-mode lab-locked" aria-label="LAB 2 · bloqueado"><b>⚗2</b><span>LAB 2<small>Deck builder++</small></span><i id="modeLab2Lock" class="lab-lock" aria-hidden="true">🔒</i></button>
+  <button id="modeLab3" class="mode lab3-mode lab-locked" aria-label="LAB 3 · bloqueado"><b>⚗3</b><span>LAB 3<small>Semantic builder</small></span><i id="modeLab3Lock" class="lab-lock" aria-hidden="true">🔒</i></button>
+</section>
+
+<section id="exploreFlow" class="flow-panel">
+  <div class="flow-head"><span>EXPLORAR COMMANDER</span><p>Buscá una criatura legendaria y cruzá EDHREC con tu colección.</p></div>
+  <div class="commander-search">
+    <div class="control"><span>♛</span><input id="commanderSearch" placeholder="Buscar criatura legendaria…" autocomplete="off"></div>
+    <div id="dropdown" class="dropdown hidden"></div>
+  </div>
+  <div id="chosen" class="chosen hidden">
+    <div id="chosenCard" class="chosen-card commander-click"></div>
+    <button id="analyzeExplore" class="primary big">Analizar colección →</button>
+  </div>
+</section>
+
+  <nav id="improveTabs" class="ribbon-tabs hidden" aria-label="Secciones del análisis">
+    <button type="button" data-improve-tab="deckcheck" class="active">Chequeo del mazo</button>
+    <button type="button" data-improve-tab="changes">SWAPS</button>
+    <button type="button" data-improve-tab="recommendations">EDHREComendaciones</button>
+  </nav>
+
+<section id="improveFlow" class="flow-panel hidden">
+  <div class="flow-head"><span>MEJORAR MI MAZO</span></div>
+  <div class="deck-autocomplete">
+    <div class="control"><span>⌕</span><input id="deckSearch" placeholder="Escribí el nombre del mazo…" autocomplete="off"></div>
+    <div id="deckPicker" class="deck-picker deck-dropdown hidden"></div>
+  </div>
+  <div id="deckLoading" class="inline-loading hidden"><i></i><span>Leyendo Commander, Size y cartas del deck…</span></div>
+  <div id="deckSummary" class="deck-summary hidden">
+    <div id="deckCommanderArt" class="deck-art commander-click"></div>
+    <div class="deck-info"><div class="panel-label">DECK SELECCIONADO</div><h2 id="deckName"></h2>
+      <div class="deck-commander"><span>Commander</span><strong id="deckCommander"></strong></div>
+      <div class="deck-counts"><span><b>SIZE</b> · <strong id="mainCount">0</strong> cartas</span><small id="sizeAudit"></small></div>
+      <a id="openDeckLink" class="ghost-link hidden" target="_blank" rel="noopener">Abrir en Archidekt ↗</a>
+    </div>
+    <div class="improve-actions"><button id="analyzeImprove" class="primary big">Analizar mazo →</button><button id="exportDeckBtn" class="ghost">Exportar decklist ⇩</button></div>
+  </div>
+  <div id="deckError" class="status bad hidden"></div>
+  <div id="improveHealthLoading" class="lab-loading hidden"><span></span><p>Analizando recomendaciones, estructura, curva e identidad…</p></div>
+
+  <div id="improveHealthResults" class="lab-results improve-health-results" data-view="deckcheck"></div>
+  <aside id="improveDeckInspector" class="deck-inspector hidden">
+    <button type="button" id="improveDeckInspectorToggle" class="deck-inspector-toggle" title="Colapsar Deck List" aria-label="Colapsar Deck List"><span class="deck-toggle-triangle collapse">▶</span></button>
+    <div class="deck-inspector-head">
+      <div class="deck-inspector-titlebar"><span>DECK LIST</span></div>
+      <div class="deck-inspector-context"><strong id="improveDeckInspectorTitle">Mazo</strong><small id="improveDeckInspectorCommander">Commander · —</small></div>
+      <div class="deck-inspector-tools"><small id="improveDeckInspectorCount" class="deck-size-pill">Size · —</small><label class="deck-sort-label"><select id="improveDeckSort" aria-label="Ordenar deck"><option value="" selected>Ordenar…</option><option value="type:asc">Tipo ↑</option><option value="type:desc">Tipo ↓</option><option value="category:asc">Categoría ↑</option><option value="category:desc">Categoría ↓</option><option value="cmc:asc">CMC ↑</option><option value="cmc:desc">CMC ↓</option><option value="name:asc">Nombre ↑</option><option value="name:desc">Nombre ↓</option></select></label></div>
+    </div>
+    <div id="improveDeckFilter" class="deck-inspector-filter hidden"></div>
+    <div id="improveDeckList" class="deck-card-list"></div>
+  </aside>
+</section>
+
+<section id="rankFlow" class="flow-panel hidden">
+  <div class="flow-head"><span>DESCUBRIR COMMANDERS</span><p>Explorá únicamente criaturas legendarias Commander-legales de tu colección. EDHREC se consulta solo cuando elegís analizar o comparar.</p></div>
+  <div class="discovery-tools">
+    <div class="control discover-main-search"><span>⌕</span><input id="discoverSearch" placeholder="Buscar Commander por nombre, color o señal…" autocomplete="off"></div>
+    <div class="tag-panel">
+      <div class="tag-filter-head">
+        <div><strong>FILTRAR POR TAG EDHREC</strong><small>Elegí uno o varios. No hace falta recorrer toda la lista.</small></div>
+        <button id="discoverTagsToggle" class="ghost tiny" type="button">Ver todos los tags</button>
+      </div>
+      <div class="tag-search-row">
+        <div class="control tag-search"><span>⌕</span><input id="discoverTagSearch" placeholder="Buscar tag…" autocomplete="off"></div>
+        <div id="discoverSelectedTags" class="discover-selected-tags"></div>
+      </div>
+      <div id="discoverFilters" class="discover-filters"></div>
+    </div>
+  </div>
+  <div class="discover-list-head">
+    <div class="discover-list-title"><span>COMMANDERS DE TU COLECCIÓN</span><strong id="discoverGalleryCount">—</strong><div id="discoverStatus" class="status">Cargando Commanders de tu colección…</div><div id="discoverLoadProgress" class="discover-load-progress hidden"><i id="discoverLoadProgressBar"></i></div></div>
+    <button id="discoverCollapse" class="primary discover-gallery-toggle">Ocultar Commanders</button>
+  </div>
+  <div id="discoverGrid" class="discover-grid"></div>
+
+  <div class="compare-five">
+    <div><div class="panel-label">COMPARAR SELECCIÓN · HASTA 10</div><p>Elegí entre 2 y 10 criaturas legendarias de tu colección. ManaShelf consulta EDHREC solamente para esas cartas y las ordena por cantidad de recomendaciones que ya tenés.</p></div>
+    <div class="commander-search">
+      <div class="control"><span>＋</span><input id="compareCommanderSearch" placeholder="Agregar a la selección…" autocomplete="off"></div>
+      <div id="compareCommanderDropdown" class="dropdown hidden"></div>
+    </div>
+    <div id="compareChips" class="compare-chips"></div>
+    <div class="floating-compare-wrap hidden" id="floatingCompareWrap">
+      <button id="compareBtn" class="primary floating-compare" disabled>Comparar selección</button>
+      <small id="compareProgressCaption" class="compare-progress-caption hidden"></small>
+    </div>
+    <div id="rankResults" class="rank-results"></div>
+  </div>
+  <div id="rankOneResult" class="buildability-result"></div>
+  <div class="hidden" aria-hidden="true"><input id="rankCommanderSearch"><div id="rankCommanderDropdown"></div><div id="rankCommanderChosen"></div><div id="rankCommanderCard"></div><button id="rankOneBtn"></button><button id="rankBtn"></button></div>
+</section>
+
+<section id="loading" class="loading hidden"><i></i><div class="analysis-progress"><strong id="loadingTitle">Analizando…</strong><span id="loadingText"></span><div class="analysis-track"><b></b></div><small id="loadingElapsed">0s · progreso de red no cuantificable</small></div></section>
+
+
+<nav id="labTabs" class="ribbon-tabs lab-ribbon-tabs hidden" aria-label="Secciones de Deck Health Lab">
+  <button type="button" data-lab-tab="summary" class="active">Resumen</button>
+  <button type="button" data-lab-tab="health">Salud</button>
+  <button type="button" data-lab-tab="rules">Estructura</button>
+  <button type="button" data-lab-tab="identity">Identidad</button>
+  <button type="button" data-lab-tab="changes">IN/OUT</button>
+  <button type="button" data-lab-tab="metrics">Métricas</button>
+</nav>
+
+<section id="labFlow" class="flow-panel lab-panel hidden">
+  <div class="lab-banner"><b>⚗ MANASHELF LAB</b><span>FUNCIÓN EXPERIMENTAL · SOLO LECTURA · NO MODIFICA ARCHIDEKT</span></div>
+  <div class="flow-head"><span>SALUD DEL MAZO + SALUD DE TEMÁTICAS</span><p>Analizá un mazo con métricas experimentales sin modificar tu lista en Archidekt.</p></div>
+  <div class="deck-autocomplete">
+    <div class="control lab-control"><span>⌕</span><input id="labDeckSearch" placeholder="Buscar mazo para analizar…" autocomplete="off"></div>
+    <div id="labDeckPicker" class="deck-picker deck-dropdown hidden"></div>
+  </div>
+  <div id="labDeckChosen" class="deck-summary lab-deck-summary hidden">
+    <div id="labDeckCommanderArt" class="deck-art commander-click"></div>
+    <div class="deck-info"><div class="panel-label">DECK SELECCIONADO</div><h2 id="labDeckName"></h2>
+      <div class="deck-commander"><span>Commander</span><strong id="labDeckCommander"></strong></div>
+      <div class="deck-counts"><span><b>SIZE</b> · <strong id="labMainCount">—</strong> cartas</span><small id="labSizeAudit"></small></div>
+      <a id="labOpenDeckLink" class="ghost-link hidden" target="_blank" rel="noopener">Abrir en Archidekt ↗</a>
+    </div>
+    <div class="improve-actions"><button id="labAnalyze" class="primary big">Analizar Deck Health →</button><button id="labExportDeckBtn" class="ghost">Exportar decklist ⇩</button></div>
+  </div>
+  <div id="labLoading" class="lab-loading hidden"><span></span><p>Clasificando cartas y detectando el plan del mazo…</p></div>
+  <div class="lab-workspace">
+    <div id="labResults" class="lab-results"></div>
+    <aside id="labDeckInspector" class="deck-inspector lab-inspector hidden">
+      <button type="button" class="deck-inspector-toggle" title="Colapsar Deck List" aria-label="Colapsar Deck List"><span class="deck-toggle-triangle collapse">▶</span></button>
+      <div class="deck-inspector-head">
+        <div class="deck-inspector-titlebar"><span>DECK LIST</span></div>
+        <div class="deck-inspector-context"><strong id="labDeckInspectorTitle">Mazo</strong><small id="labDeckInspectorCommander">Commander · —</small></div>
+        <div class="deck-inspector-tools"><small id="labDeckInspectorCount" class="deck-size-pill">Size · —</small><label class="deck-sort-label"><select id="labDeckSort" aria-label="Ordenar deck del LAB"><option value="" selected>Ordenar…</option><option value="type:asc">Tipo ↑</option><option value="type:desc">Tipo ↓</option><option value="category:asc">Categoría ↑</option><option value="category:desc">Categoría ↓</option><option value="cmc:asc">CMC ↑</option><option value="cmc:desc">CMC ↓</option><option value="name:asc">Nombre ↑</option><option value="name:desc">Nombre ↓</option></select></label></div>
+      </div>
+      <div id="labDeckFilter" class="deck-inspector-filter hidden"></div>
+      <div id="labDeckList" class="deck-card-list"></div>
+    </aside>
+  </div>
+</section>
+
+<section id="lab2Flow" class="flow-panel lab2-panel hidden">
+  <div class="lab2-banner"><b>⚗2 MANASHELF LAB 2</b><span>GENERADOR EXPERIMENTAL · CONSTRUYE DESDE TU COLECCIÓN · NO MODIFICA ARCHIDEKT</span></div>
+  <div class="flow-head"><span>BUILD FROM COLLECTION</span><p>Elegí un Commander, seleccioná uno de sus themes y ManaShelf arma un deck coherente usando las mejores cartas legales disponibles en tu colección.</p></div>
+
+  <div class="lab2-step">
+    <div class="lab2-step-head"><b>01</b><div><strong>Commander</strong><small>Buscá una criatura legendaria Commander-legal.</small></div></div>
+    <div class="commander-search lab2-commander-search">
+      <div class="control lab2-control"><span>♛</span><input id="lab2CommanderSearch" placeholder="Buscar criatura legendaria…" autocomplete="off"></div>
+      <div id="lab2CommanderDropdown" class="dropdown hidden"></div>
+    </div>
+    <div id="lab2CommanderChosen" class="chosen lab2-commander-chosen hidden"><div id="lab2CommanderCard" class="chosen-card commander-click"></div></div>
+  </div>
+
+  <div id="lab2ThemeStep" class="lab2-step hidden">
+    <div class="lab2-step-head"><b>02</b><div><strong>Theme</strong><small>La construcción prioriza esta mecánica sin sacrificar estructura, curva ni maná.</small></div></div>
+    <div id="lab2ThemeGrid" class="lab2-theme-grid"></div>
+  </div>
+
+  <div id="lab2Settings" class="lab2-step hidden">
+    <div class="lab2-step-head"><b>03</b><div><strong>Ajustes</strong><small>Definen prioridades del armado. El motor sigue respetando legalidad, estructura y validación de maná.</small></div></div>
+    <div class="lab2-settings-grid">
+      <label class="lab2-setting lab2-range-setting"><span><strong>Foco en el theme</strong><small>Cuánto espacio priorizar para cartas que realmente expresan el theme elegido.</small></span><div><input id="lab2ThemeFocus" type="range" min="35" max="100" value="72"><output id="lab2ThemeFocusValue">72%</output></div></label>
+      <label class="lab2-setting"><span><strong>Ramp</strong><small>Cuánta aceleración de maná buscar, además del ajuste automático por curva y coste del Commander.</small></span><select id="lab2Ramp"><option value="standard">Estándar</option><option value="more">Más ramp</option><option value="heavy">Mucho ramp</option></select></label>
+      <label class="lab2-setting"><span><strong>Interacción</strong><small>Cuánto espacio dedicar a removal, counters, wipes y otras respuestas.</small></span><select id="lab2Interaction"><option value="standard">Estándar</option><option value="more">Más respuestas</option></select></label>
+      <label class="lab2-setting"><span><strong>Curva</strong><small>Cuánto favorecer costes bajos y penalizar cartas caras al ordenar candidatos.</small></span><select id="lab2Curve"><option value="normal">Normal</option><option value="lower">Más baja</option><option value="fastest">Muy baja</option></select></label>
+      <label class="lab2-setting"><span><strong>Sinergia vs eficiencia</strong><small>Balancea piezas que trabajan con el plan contra cartas fuertes y eficientes por sí solas.</small></span><select id="lab2Synergy"><option value="synergy">Sinergia primero</option><option value="balanced" selected>Balanceado</option><option value="efficiency">Eficiencia primero</option></select></label>
+      <label class="lab2-setting"><span><strong>Dependencia del Commander</strong><small>Cuánto aceptar cartas cuyo rendimiento baja si el Commander no está disponible.</small></span><select id="lab2Dependence"><option value="conservative">Baja dependencia</option><option value="normal" selected>Balanceada</option><option value="all-in">Alta dependencia</option></select></label>
+      <label class="lab2-setting"><span><strong>Plan de combo</strong><small>Es independiente del theme. Usa Commander Spellbook y, si elige un combo, incluye todas sus piezas exactas o ninguna.</small></span><select id="lab2ComboPolicy"><option value="off" selected>No buscar combos</option><option value="synergistic">Sólo si encaja</option><option value="infinite">Priorizar combo infinito</option></select></label>
+      <label class="lab2-setting"><span><strong>Base de maná</strong><small>Define cuánto priorizar básicas o fixing. Siempre se validan colores producidos, pips, curva y ramp; “Básicas primero” sólo conserva no básicas realmente importantes.</small></span><select id="lab2LandStyle"><option value="basics">Básicas primero</option><option value="safe">Segura · más tierras</option><option value="balanced" selected>Balanceada</option><option value="lean">Ajustada · menos tierras</option></select></label>
+      <label class="lab2-setting lab2-switch-setting"><span><strong>Proteger mazos existentes</strong><small>No usa copias que ya están comprometidas en otros mazos cuando la sincronización puede verificarlo.</small></span><input id="lab2ProtectDecks" type="checkbox" checked><i aria-hidden="true"></i></label>
+    </div>
+    <div class="lab2-build-actions"><button id="lab2Generate" class="primary big" disabled>Generar mazo →</button><span id="lab2BuildHint">Elegí un theme para continuar.</span></div>
+  </div>
+
+  <div id="lab2Loading" class="lab-loading lab2-loading hidden"><span></span><p id="lab2LoadingText">Preparando pool legal de tu colección…</p></div>
+
+  <div id="lab2ResultWrap" class="hidden">
+    <div class="lab2-result-head"><div><span>MAZO GENERADO · LAB 2</span><h2 id="lab2ResultTitle"></h2><p id="lab2ResultMeta"></p></div><div class="lab2-result-actions"><button id="lab2Export" class="ghost">Exportar para Archidekt ⇩</button><button id="lab2CopyArchidekt" class="ghost">Copiar para Archidekt</button><button id="lab2ExportLog" class="ghost">Exportar log diagnóstico</button><button id="lab2Rebuild" class="ghost">Regenerar</button></div></div>
+    <div id="lab2Summary" class="lab2-summary-grid"></div>
+    <div id="lab2Warnings" class="lab2-warnings hidden"></div>
+    <details id="lab2Audit" class="lab2-audit"><summary>Criterio de armado <span>objetivos, maná y decisiones</span></summary><div id="lab2AuditBody" class="lab2-audit-body"></div></details>
+    <section class="lab2-deck-section"><div class="lab2-section-title"><div><span>DECK LIST</span><h3>Deck list · roles y categorías</h3></div><small>La categoría indica por qué la carta ocupa ese slot principal; una carta puede cubrir varios roles.</small></div><div class="lab2-table-wrap"><table class="lab2-deck-table"><thead><tr><th>CARTA</th><th>TIPO</th><th>CATEGORÍA</th><th>CMC</th><th>DISPONIBILIDAD</th></tr></thead><tbody id="lab2DeckTable"></tbody></table></div></section>
+    <section class="lab2-health-title"><span>DECK HEALTH</span><h3>Auditoría del mazo generado</h3><p>Se vuelve a evaluar el resultado con el mismo Deck Health y Deck Metrics experimentales del LAB.</p></section>
+    <div class="lab2-health-workspace"><div id="lab2Health" class="lab-results"></div><aside id="lab2DeckInspector" class="deck-inspector lab2-inspector hidden"><button type="button" class="deck-inspector-toggle" title="Colapsar Deck List" aria-label="Colapsar Deck List"><span class="deck-toggle-triangle collapse">▶</span></button><div class="deck-inspector-head"><div class="deck-inspector-titlebar"><span>DECK LIST</span></div><div class="deck-inspector-context"><strong id="lab2DeckInspectorTitle">Mazo generado</strong><small id="lab2DeckInspectorCommander">Commander · —</small></div><div class="deck-inspector-tools"><small id="lab2DeckInspectorCount" class="deck-size-pill">Size · —</small><label class="deck-sort-label"><select id="lab2DeckSort" aria-label="Ordenar deck generado"><option value="type:asc" selected>Tipo ↑</option><option value="type:desc">Tipo ↓</option><option value="category:asc">Categoría ↑</option><option value="category:desc">Categoría ↓</option><option value="cmc:asc">CMC ↑</option><option value="cmc:desc">CMC ↓</option><option value="name:asc">Nombre ↑</option><option value="name:desc">Nombre ↓</option></select></label></div></div><div id="lab2DeckFilter" class="deck-inspector-filter hidden"></div><div id="lab2DeckList" class="deck-card-list"></div></aside></div>
+  </div>
+</section>
+
+<section id="lab3Flow" class="flow-panel lab2-panel lab3-panel hidden">
+  <div class="lab2-banner lab3-banner"><b>⚗3 MANASHELF LAB 3</b><span>SEMANTIC BUILDER · CONTRATOS + CONTEXTO DE DECK · LAB 2 PERMANECE INTACTO</span></div>
+  <div class="flow-head"><span>SEMANTIC BUILD FROM COLLECTION</span><p>Construye desde tu colección usando la Semantic DB, contratos de roles/arquetipos y dependencias del deck. EDHREC sólo ordena candidatos semánticamente compatibles.</p></div>
+  <div class="lab2-step"><div class="lab2-step-head"><b>01</b><div><strong>Commander</strong><small>Debe existir en el índice semántico y ser Commander-legal.</small></div></div><div class="commander-search lab2-commander-search"><div class="control lab2-control"><span>♛</span><input id="lab3CommanderSearch" placeholder="Buscar criatura legendaria…" autocomplete="off"></div><div id="lab3CommanderDropdown" class="dropdown hidden"></div></div><div id="lab3CommanderChosen" class="chosen lab2-commander-chosen hidden"><div id="lab3CommanderCard" class="chosen-card commander-click"></div></div></div>
+  <div id="lab3ThemeStep" class="lab2-step hidden"><div class="lab2-step-head"><b>02</b><div><strong>Theme</strong><small>El contrato semántico decide compatibilidad; EDHREC puede ordenar, no fabricar afinidad.</small></div></div><div id="lab3ThemeGrid" class="lab2-theme-grid"></div></div>
+  <div id="lab3Settings" class="lab2-step hidden"><div class="lab2-step-head"><b>03</b><div><strong>Ajustes</strong><small>Prioridades del builder contextual. No usa Classification 7 para decidir el deck.</small></div></div><div class="lab2-settings-grid">
+    <label class="lab2-setting lab2-range-setting"><span><strong>Foco en el theme</strong><small>Prioridad de densidad temática semántica.</small></span><div><input id="lab3ThemeFocus" type="range" min="35" max="100" value="72"><output id="lab3ThemeFocusValue">72%</output></div></label>
+    <label class="lab2-setting"><span><strong>Ramp</strong><small>Aceleración estructural, no simples mana abilities.</small></span><select id="lab3Ramp"><option value="standard">Estándar</option><option value="more">Más ramp</option><option value="heavy">Mucho ramp</option></select></label>
+    <label class="lab2-setting"><span><strong>Interacción</strong><small>Removal, counters y graveyard hate con dirección semántica.</small></span><select id="lab3Interaction"><option value="standard">Estándar</option><option value="more">Más respuestas</option></select></label>
+    <label class="lab2-setting"><span><strong>Curva</strong><small>Preferencia por costes bajos sin ignorar el contexto.</small></span><select id="lab3Curve"><option value="normal">Normal</option><option value="lower">Más baja</option><option value="fastest">Muy baja</option></select></label>
+    <label class="lab2-setting"><span><strong>Sinergia vs eficiencia</strong><small>Balance entre contratos/contexto y señales externas.</small></span><select id="lab3Synergy"><option value="synergy">Sinergia primero</option><option value="balanced" selected>Balanceado</option><option value="efficiency">Eficiencia primero</option></select></label>
+    <label class="lab2-setting"><span><strong>Dependencia del Commander</strong><small>Penaliza cartas cuyo plan necesita al Commander disponible.</small></span><select id="lab3Dependence"><option value="conservative">Baja dependencia</option><option value="normal" selected>Balanceada</option><option value="all-in">Alta dependencia</option></select></label>
+    <label class="lab2-setting"><span><strong>Plan de combo</strong><small>Usa Commander Spellbook. Si elige un paquete, LAB 3 bloquea todas sus piezas exactas o ninguna.</small></span><select id="lab3ComboPolicy"><option value="off" selected>No buscar combos</option><option value="synergistic">Sólo si encaja</option><option value="infinite">Priorizar combo infinito</option></select></label>
+    <label class="lab2-setting"><span><strong>Base de maná</strong><small>Básicas ilimitadas; no básicas desde tu colección.</small></span><select id="lab3LandStyle"><option value="basics">Básicas primero</option><option value="safe">Segura · más tierras</option><option value="balanced" selected>Balanceada</option><option value="lean">Ajustada · menos tierras</option></select></label>
+    <label class="lab2-setting lab2-switch-setting"><span><strong>Proteger mazos existentes</strong><small>No toma copias comprometidas cuando el uso cruzado está sincronizado.</small></span><input id="lab3ProtectDecks" type="checkbox" checked><i aria-hidden="true"></i></label>
+  </div><div class="lab2-build-actions"><button id="lab3Generate" class="primary big" disabled>Generar con LAB 3 →</button><span id="lab3BuildHint">Elegí un theme para continuar.</span></div></div>
+  <section class="lab3-stress-panel" aria-labelledby="lab3StressTitle"><div><span>LAB 3 · STRESS HARNESS v4</span><h3 id="lab3StressTitle">Corpus automático · 200 builds</h3><p>Selecciona Commanders y themes de forma estratificada sobre el pool global Commander-legal del runtime semántico, registra semántica directa, inferida o fallback efectivo, ejecuta LAB 3 y agrupa anomalías por familia. El stress es deliberadamente independiente de tu colección y no modifica LAB 2 ni tus mazos.</p></div><div class="lab3-stress-actions"><button id="lab3StressStart" type="button" class="ghost">Ejecutar 200 builds</button><button id="lab3StressCancel" type="button" class="ghost hidden">Detener</button><button id="lab3StressExport" type="button" class="primary hidden">Exportar corpus ZIP</button></div><div class="lab3-stress-progress"><div><strong id="lab3StressStatus">Listo para ejecutar.</strong><small id="lab3StressSummary">Seed fija: manashelf-lab3-stress-4 · pool global · reproducible</small></div><progress id="lab3StressProgress" max="200" value="0"></progress></div><div id="lab3StressClusters" class="lab3-stress-clusters hidden"></div></section>
+  <div id="lab3Loading" class="lab-loading lab2-loading hidden"><span></span><p id="lab3LoadingText">Preparando Semantic DB…</p></div>
+  <div id="lab3ResultWrap" class="hidden"><div class="lab2-result-head"><div><span>MAZO GENERADO · LAB 3</span><h2 id="lab3ResultTitle"></h2><p id="lab3ResultMeta"></p></div><div class="lab2-result-actions"><button id="lab3Export" class="ghost">Exportar para Archidekt ⇩</button><button id="lab3CopyArchidekt" class="ghost">Copiar para Archidekt</button><button id="lab3ExportLog" class="ghost">Exportar log semántico</button><button id="lab3Rebuild" class="ghost">Regenerar</button></div></div>
+    <div id="lab3Summary" class="lab2-summary-grid"></div><div id="lab3Warnings" class="lab2-warnings hidden"></div>
+    <details class="lab2-audit" open><summary>Contexto semántico <span>dependencias, coverage y bottlenecks</span></summary><div id="lab3Context" class="lab2-audit-body"></div></details>
+    <section class="lab2-deck-section"><div class="lab2-section-title"><div><span>DECK LIST</span><h3>Selección contextual LAB 3</h3></div><small>El status semántico expone cuándo una carta todavía depende de cobertura parcial.</small></div><div class="lab2-table-wrap"><table class="lab2-deck-table"><thead><tr><th>CARTA</th><th>TIPO</th><th>CATEGORÍA</th><th>THEME</th><th>SEMÁNTICA</th></tr></thead><tbody id="lab3DeckTable"></tbody></table></div></section>
+    <section class="lab2-health-title"><span>DECK HEALTH · COMPARACIÓN</span><h3>Auditoría del mazo generado</h3><p>Evalúa el resultado de LAB 3 con la misma interfaz de Deck Health y Deck Metrics de LAB 2 para poder compararlos. Esta auditoría ocurre después del build y no interviene en la selección semántica.</p></section>
+    <div class="lab2-health-workspace"><div id="lab3Health" class="lab-results"></div><aside id="lab3DeckInspector" class="deck-inspector lab2-inspector hidden"><button type="button" class="deck-inspector-toggle" title="Colapsar Deck List" aria-label="Colapsar Deck List"><span class="deck-toggle-triangle collapse">▶</span></button><div class="deck-inspector-head"><div class="deck-inspector-titlebar"><span>DECK LIST</span></div><div class="deck-inspector-context"><strong id="lab3DeckInspectorTitle">Mazo generado</strong><small id="lab3DeckInspectorCommander">Commander · —</small></div><div class="deck-inspector-tools"><small id="lab3DeckInspectorCount" class="deck-size-pill">Size · —</small><label class="deck-sort-label"><select id="lab3DeckSort" aria-label="Ordenar deck generado"><option value="type:asc" selected>Tipo ↑</option><option value="type:desc">Tipo ↓</option><option value="category:asc">Categoría ↑</option><option value="category:desc">Categoría ↓</option><option value="cmc:asc">CMC ↑</option><option value="cmc:desc">CMC ↓</option><option value="name:asc">Nombre ↑</option><option value="name:desc">Nombre ↓</option></select></label></div></div><div id="lab3DeckFilter" class="deck-inspector-filter hidden"></div><div id="lab3DeckList" class="deck-card-list"></div></aside></div>
+  </div>
+</section>
+
+<section id="results" class="results hidden">
+  <div class="results-top"><div><div class="kicker" id="resultModeLabel">RESULTADOS</div><h2 id="title"></h2><p id="meta"></p></div>
+    <div class="result-actions"><button id="completeBtn" class="ghost">Completar a 100</button><button id="exportBtn" class="ghost">Exportar resultados</button></div>
+  </div>
+  <div class="summary-explainer">
+    <div class="stat total-stat"><span>RECOMENDACIONES EDHREC ÚNICAS</span><strong id="sumTotal">0</strong></div>
+    <div class="summary-branch">
+      <div class="stat"><span>EN COLECCIÓN</span><strong id="sumOwned">0</strong></div>
+      <div class="stat"><span>CON COPIA DISPONIBLE</span><strong id="sumAvailable">0</strong></div>
+      <div class="stat"><span>SIN COPIA DISPONIBLE</span><strong id="sumOccupied">0</strong></div>
+      <div class="stat"><span>NO POSEÍDAS</span><strong id="sumMissing">0</strong></div>
+    </div>
+    <p class="summary-note"><strong id="sumUsed">0</strong> de las recomendadas que tenés aparecen en al menos un mazo. Ese dato puede superponerse con “disponible” si poseés más de una copia.</p>
+  </div>
+
+  <div class="toolbar">
+    <div class="filter-stack state-filter" role="group" aria-label="Estado de colección">
+      <button id="filterAll" class="state-choice active" data-state="all" aria-pressed="true">Todas</button>
+      <button id="filterOwned" class="state-choice" data-state="owned" aria-pressed="false">En Colección</button>
+      <button id="filterAvailable" class="state-choice" data-state="available" aria-pressed="false">Disponibles</button>
+      <button id="hideInDeckToggle" class="state-choice in-deck-filter hidden" aria-pressed="false">Ya en el mazo</button>
+    </div>
+    <div class="toolbar-right">
+      <label class="select-labeled"><span>ROL MANASHELF</span><select id="roleFilter" title="Roles inferidos por ManaShelf desde tipo y texto Oracle de Scryfall; no son categorías EDHREC."><option value="">Todos los roles ManaShelf</option></select></label>
+      <label class="select-labeled hidden" id="themeFilterWrap"><span>TEMÁTICA</span><select id="themeFilter" title="Temáticas que EDHREC asocia a este Commander y que tenés evidencia de sostener."><option value="">Todas las temáticas</option></select></label>
+      <label class="select-labeled sort-labeled"><span>ORDENAR POR</span><select id="sort"><option value="synergy">Sinergia</option><option value="inclusion">Inclusión</option><option value="availability">Disponibles</option><option value="name">Nombre</option></select></label>
+      <div class="view-toggle"><button id="viewCards" class="active" title="Vista en miniaturas"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1"/><rect x="9" y="1.5" width="5.5" height="5.5" rx="1"/><rect x="1.5" y="9" width="5.5" height="5.5" rx="1"/><rect x="9" y="9" width="5.5" height="5.5" rx="1"/></svg></button><button id="viewList" title="Vista en lista"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><line x1="1.5" y1="3" x2="14.5" y2="3"/><line x1="1.5" y1="8" x2="14.5" y2="8"/><line x1="1.5" y1="13" x2="14.5" y2="13"/></svg></button></div>
+    </div>
+  </div>
+
+  <div class="shell">
+    <aside><div class="asideTitle">SECCIONES EDHREC</div><p class="asideHelp">Estas categorías vienen de EDHREC. Los roles del filtro de arriba los infiere ManaShelf.</p><div id="categories"></div></aside>
+    <div class="catalog">
+      <div class="catalogHead"><h3 id="categoryTitle"></h3><p id="categoryMeta"></p></div>
+      <div id="listHeader" class="list-header hidden"><div>CARTA</div><div>TIPO</div><div>CATEGORÍA</div><div>CMC</div><div>COLECCIÓN</div></div>
+      <div id="grid" class="grid"></div>
+      <div id="empty" class="empty hidden">No hay cartas para mostrar con estos filtros.</div>
+    </div>
+  </div>
+</section>
+
+<div id="syncErrorPanel" class="sync-error-panel hidden"><div class="sync-error-head"><strong>Mazos que no pudieron sincronizarse</strong><button id="closeSyncErrors" class="tiny">Cerrar</button></div><div id="syncErrorList"></div></div>
+<div id="error" class="error hidden"></div>
+</main>
+
+<div id="modal" class="modal hidden"><div class="modal-card"><button id="modalClose" class="modal-x">×</button><div id="modalBody"></div></div></div>
+<div id="drawer" class="drawer hidden"><div class="drawer-head"><strong id="drawerTitle">Shortlist</strong><button id="drawerClose">×</button></div><div id="drawerBody"></div></div>
+
+<footer><span>ManaShelf · local-first</span><span>v2.5.49-beta</span></footer>
+<script type="module" src="/app.js"></script>
+</body></html>
