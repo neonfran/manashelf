@@ -5,5 +5,10 @@
   "workspaces": [
     "client",
     "server"
-  ]
+  ],
+  "scripts": {
+    "build": "npm run build --workspace client",
+    "postinstall": "npm run build --workspace client",
+    "start": "node server/index.mjs"
+  }
 }
