@@ -1,0 +1,2 @@
+import {evaluateDeckQuality,compareDeckQuality} from "./deck-quality.mjs";
+export function benchmarkPair({lab2Cards,vnextCards,commander,theme,themeModel=null}={}){const lab2=evaluateDeckQuality({engine:"lab2",cards:lab2Cards,commander,theme,themeModel}),vnext=evaluateDeckQuality({engine:"vnext",cards:vnextCards,commander,theme,themeModel});return {lab2,vnext,comparison:compareDeckQuality(lab2,vnext)};}

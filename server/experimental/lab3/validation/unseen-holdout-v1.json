@@ -1,0 +1,552 @@
+{
+  "schema": "manashelf-lab3-unseen-holdout-plan-v1",
+  "version": 1,
+  "sourceCheckpoint": "CP06",
+  "sourceEvidence": "ManaShelf-v6-rebuild-CP06-unseen-60-evidence.zip/plan.json",
+  "validationOnly": true,
+  "trainingAllowed": false,
+  "seed": "manashelf-lab3-stress-holdout-1",
+  "seedNum": 426539128,
+  "cases": [
+    {
+      "id": "holdout-001",
+      "commander": "Page, Loose Leaf",
+      "commanderOracleId": "3bbad38b-7d88-4ff2-9fd3-5081536e7c56",
+      "colorKey": "C",
+      "theme": "Artifacts",
+      "facet": "artifacts",
+      "themeAvailability": 2201
+    },
+    {
+      "id": "holdout-002",
+      "commander": "Marvin, Murderous Mimic",
+      "commanderOracleId": "22f0dbbb-9d8d-42bc-8903-fc0b65e00952",
+      "colorKey": "C",
+      "theme": "Artifacts",
+      "facet": "artifacts",
+      "themeAvailability": 2201
+    },
+    {
+      "id": "holdout-003",
+      "commander": "Yue, the Moon Spirit",
+      "commanderOracleId": "961f1883-2f97-4249-90f9-416279d7a9dd",
+      "colorKey": "U",
+      "theme": "Historic",
+      "facet": "historic",
+      "themeAvailability": 2821
+    },
+    {
+      "id": "holdout-004",
+      "commander": "Headliner Scarlett",
+      "commanderOracleId": "f5420901-b5e6-4d54-b3e8-5f45e37f1fab",
+      "colorKey": "R",
+      "theme": "Historic",
+      "facet": "historic",
+      "themeAvailability": 2864
+    },
+    {
+      "id": "holdout-005",
+      "commander": "Asmodeus the Archfiend",
+      "commanderOracleId": "1e4032f6-9741-4845-9325-781c9e489172",
+      "colorKey": "B",
+      "theme": "Historic",
+      "facet": "historic",
+      "themeAvailability": 2813
+    },
+    {
+      "id": "holdout-006",
+      "commander": "Zhuge Jin, Wu Strategist",
+      "commanderOracleId": "ce995d3f-be7c-4d2a-8ec4-c7f7f831f0bf",
+      "colorKey": "U",
+      "theme": "Historic",
+      "facet": "historic",
+      "themeAvailability": 2821
+    },
+    {
+      "id": "holdout-007",
+      "commander": "Svyelun of Sea and Sky",
+      "commanderOracleId": "872bebff-720d-459b-8f86-fb9129a8d1fb",
+      "colorKey": "U",
+      "theme": "Merfolk Kindred",
+      "facet": "kindred:merfolk",
+      "themeAvailability": 223
+    },
+    {
+      "id": "holdout-008",
+      "commander": "Queen Mother Ramonda",
+      "commanderOracleId": "f5619a13-b229-4202-a217-bf6509706e77",
+      "colorKey": "W",
+      "theme": "Historic",
+      "facet": "historic",
+      "themeAvailability": 2882
+    },
+    {
+      "id": "holdout-009",
+      "commander": "Smaug, the Great Calamity // Spew Flame",
+      "commanderOracleId": "fc75cfec-e1f6-4cb5-8a3c-2f7b2c39c03f",
+      "colorKey": "R",
+      "theme": "Spellslinger",
+      "facet": "spellslinger",
+      "themeAvailability": 1580
+    },
+    {
+      "id": "holdout-010",
+      "commander": "Boromir, Warden of the Tower",
+      "commanderOracleId": "d72b57e5-1c6e-4f02-968f-7e2dd24f0d3c",
+      "colorKey": "W",
+      "theme": "Historic",
+      "facet": "historic",
+      "themeAvailability": 2882
+    },
+    {
+      "id": "holdout-011",
+      "commander": "Super Shredder",
+      "commanderOracleId": "b7ee76bf-d15a-489e-8f05-414788f8f649",
+      "colorKey": "B",
+      "theme": "Counters",
+      "facet": "counters",
+      "themeAvailability": 792
+    },
+    {
+      "id": "holdout-012",
+      "commander": "Lier, Disciple of the Drowned",
+      "commanderOracleId": "f224db3d-cdd2-43f2-b625-4b861efa6449",
+      "colorKey": "U",
+      "theme": "Graveyard",
+      "facet": "graveyard",
+      "themeAvailability": 854
+    },
+    {
+      "id": "holdout-013",
+      "commander": "Citizen V, Helmut Zemo",
+      "commanderOracleId": "974fbeb0-77d6-4a29-aa91-226cb5b32233",
+      "colorKey": "B",
+      "theme": "Lifegain",
+      "facet": "lifegain",
+      "themeAvailability": 579
+    },
+    {
+      "id": "holdout-014",
+      "commander": "Namor the Sub-Mariner",
+      "commanderOracleId": "dff11626-ad4d-443a-b7db-f508790b5fd2",
+      "colorKey": "U",
+      "theme": "Tokens",
+      "facet": "tokens",
+      "themeAvailability": 531
+    },
+    {
+      "id": "holdout-015",
+      "commander": "Rescue, Pepper Potts",
+      "commanderOracleId": "54917578-9493-499e-b200-51d5cf7978ff",
+      "colorKey": "U",
+      "theme": "Counters",
+      "facet": "counters",
+      "themeAvailability": 683
+    },
+    {
+      "id": "holdout-016",
+      "commander": "Iron Fist, Hero for Hire",
+      "commanderOracleId": "58c8bf6a-1b13-4c90-9e0b-24fb687f1e13",
+      "colorKey": "R",
+      "theme": "Spellslinger",
+      "facet": "spellslinger",
+      "themeAvailability": 1580
+    },
+    {
+      "id": "holdout-017",
+      "commander": "Jaws, Relentless Predator",
+      "commanderOracleId": "1202725c-170b-42d7-9f82-a431a987f30e",
+      "colorKey": "R",
+      "theme": "Tokens",
+      "facet": "tokens",
+      "themeAvailability": 687
+    },
+    {
+      "id": "holdout-018",
+      "commander": "Grim Reaper, Lethal Legionnaire",
+      "commanderOracleId": "edf429a8-6a4d-4d2a-b0ca-c0c72a0698a3",
+      "colorKey": "B",
+      "theme": "Sacrifice",
+      "facet": "sacrifice",
+      "themeAvailability": 1548
+    },
+    {
+      "id": "holdout-019",
+      "commander": "Bushmaster, Coiled Henchman",
+      "commanderOracleId": "21067a25-f749-4b79-bc6d-820a91af2834",
+      "colorKey": "G",
+      "theme": "Historic",
+      "facet": "historic",
+      "themeAvailability": 2685
+    },
+    {
+      "id": "holdout-020",
+      "commander": "Feldon, Ronom Excavator",
+      "commanderOracleId": "76c97e3d-a9be-4ed7-a2ef-f97870d8f58a",
+      "colorKey": "R",
+      "theme": "Historic",
+      "facet": "historic",
+      "themeAvailability": 2864
+    },
+    {
+      "id": "holdout-021",
+      "commander": "Linvala, Keeper of Silence",
+      "commanderOracleId": "88dadc31-dfac-41b3-bf2a-65fa89e3c16d",
+      "colorKey": "W",
+      "theme": "Historic",
+      "facet": "historic",
+      "themeAvailability": 2882
+    },
+    {
+      "id": "holdout-022",
+      "commander": "Nakia, Wakandan Operative",
+      "commanderOracleId": "3f2ab9ff-10b8-494a-be7a-2fce172f62a3",
+      "colorKey": "G",
+      "theme": "Counters",
+      "facet": "counters",
+      "themeAvailability": 1111
+    },
+    {
+      "id": "holdout-023",
+      "commander": "White Widow, Free Agent",
+      "commanderOracleId": "4f0c055f-f614-44b0-9374-c53541f89185",
+      "colorKey": "W",
+      "theme": "Graveyard",
+      "facet": "graveyard",
+      "themeAvailability": 537
+    },
+    {
+      "id": "holdout-024",
+      "commander": "Nikara, Lair Scavenger",
+      "commanderOracleId": "2a2376b8-6962-4f9e-ba36-fd7de87dc77d",
+      "colorKey": "B",
+      "theme": "Historic",
+      "facet": "historic",
+      "themeAvailability": 2813
+    },
+    {
+      "id": "holdout-025",
+      "commander": "Kaervek, the Punisher",
+      "commanderOracleId": "fa9a6083-75ab-41ae-b607-39d21d9a3d3a",
+      "colorKey": "B",
+      "theme": "Graveyard",
+      "facet": "graveyard",
+      "themeAvailability": 1384
+    },
+    {
+      "id": "holdout-026",
+      "commander": "Casey Jones, Asphalt Hooligan",
+      "commanderOracleId": "1eaa37a3-8769-4213-bcd5-39bcf4771273",
+      "colorKey": "R",
+      "theme": "Historic",
+      "facet": "historic",
+      "themeAvailability": 2864
+    },
+    {
+      "id": "holdout-027",
+      "commander": "Sierra, Nuka's Biggest Fan",
+      "commanderOracleId": "e4fb15b6-02bb-4923-953a-69784ca780b8",
+      "colorKey": "W",
+      "theme": "Tokens",
+      "facet": "tokens",
+      "themeAvailability": 796
+    },
+    {
+      "id": "holdout-028",
+      "commander": "Spiders-Man, Heroic Horde",
+      "commanderOracleId": "d21d7557-9702-46c1-8277-42a3442084c2",
+      "colorKey": "G",
+      "theme": "Lifegain",
+      "facet": "lifegain",
+      "themeAvailability": 494
+    },
+    {
+      "id": "holdout-029",
+      "commander": "Loot, Exuberant Explorer",
+      "commanderOracleId": "f6476884-f73f-465f-8e7f-ea312a5b306d",
+      "colorKey": "G",
+      "theme": "Lands Matter",
+      "facet": "lands",
+      "themeAvailability": 750
+    },
+    {
+      "id": "holdout-030",
+      "commander": "Emissary Green",
+      "commanderOracleId": "c43e7fa5-ff93-42d9-af79-ee417a8e41a7",
+      "colorKey": "G",
+      "theme": "Artifacts",
+      "facet": "artifacts",
+      "themeAvailability": 2415
+    },
+    {
+      "id": "holdout-031",
+      "commander": "Aya of Alexandria",
+      "commanderOracleId": "27b690f2-d7ce-43b6-8e8b-98a8ffe487bb",
+      "colorKey": "WR",
+      "theme": "Tokens",
+      "facet": "tokens",
+      "themeAvailability": 1315
+    },
+    {
+      "id": "holdout-032",
+      "commander": "Agrus Kos, Spirit of Justice",
+      "commanderOracleId": "11b7ee78-fca6-4b34-93e4-e60492583d50",
+      "colorKey": "WR",
+      "theme": "Historic",
+      "facet": "historic",
+      "themeAvailability": 3699
+    },
+    {
+      "id": "holdout-033",
+      "commander": "Jyoti, Moag Ancient",
+      "commanderOracleId": "67f0cef6-8ef4-4c39-b306-2b580036894e",
+      "colorKey": "UG",
+      "theme": "Lands Matter",
+      "facet": "lands",
+      "themeAvailability": 929
+    },
+    {
+      "id": "holdout-034",
+      "commander": "Kellan, the Fae-Blooded // Birthright Boon",
+      "commanderOracleId": "10c48d19-d91f-4674-b186-477acaf08e5a",
+      "colorKey": "WR",
+      "theme": "Spellslinger",
+      "facet": "spellslinger",
+      "themeAvailability": 2757
+    },
+    {
+      "id": "holdout-035",
+      "commander": "The Balrog, Durin's Bane",
+      "commanderOracleId": "d113af33-d75d-44e4-a8dc-31f8984edc42",
+      "colorKey": "BR",
+      "theme": "Historic",
+      "facet": "historic",
+      "themeAvailability": 3630
+    },
+    {
+      "id": "holdout-036",
+      "commander": "Aron, Benalia's Ruin",
+      "commanderOracleId": "d8b06606-9b1f-4e72-a280-12a6e912bb50",
+      "colorKey": "WB",
+      "theme": "Sacrifice",
+      "facet": "sacrifice",
+      "themeAvailability": 1970
+    },
+    {
+      "id": "holdout-037",
+      "commander": "Witherbloom, the Balancer",
+      "commanderOracleId": "fbb04a21-e513-4317-aac8-fa6df91c3438",
+      "colorKey": "BG",
+      "theme": "Spellslinger",
+      "facet": "spellslinger",
+      "themeAvailability": 2585
+    },
+    {
+      "id": "holdout-038",
+      "commander": "The Thirteenth Doctor",
+      "commanderOracleId": "3778e06c-62c7-4b8f-90ff-b2fc2d2e213c",
+      "colorKey": "UG",
+      "theme": "Counters",
+      "facet": "counters",
+      "themeAvailability": 1558
+    },
+    {
+      "id": "holdout-039",
+      "commander": "The Master, Mesmerist",
+      "commanderOracleId": "306b6b9b-f488-4ea8-9f5e-9e8e7354df64",
+      "colorKey": "UB",
+      "theme": "Counters",
+      "facet": "counters",
+      "themeAvailability": 1158
+    },
+    {
+      "id": "holdout-040",
+      "commander": "Iceman and Firestar",
+      "commanderOracleId": "f01c779a-97be-4727-ab62-33579f52447a",
+      "colorKey": "UR",
+      "theme": "Graveyard",
+      "facet": "graveyard",
+      "themeAvailability": 1335
+    },
+    {
+      "id": "holdout-041",
+      "commander": "Hapatra, Vizier of Poisons",
+      "commanderOracleId": "a8ddea1c-8d80-49c1-a5b4-630d5e51d66e",
+      "colorKey": "BG",
+      "theme": "Tokens",
+      "facet": "tokens",
+      "themeAvailability": 1269
+    },
+    {
+      "id": "holdout-042",
+      "commander": "Bolg, Erebor's Reckoning",
+      "commanderOracleId": "eab096fd-a7e2-4b96-99ec-1039d3a552f3",
+      "colorKey": "BR",
+      "theme": "Historic",
+      "facet": "historic",
+      "themeAvailability": 3630
+    },
+    {
+      "id": "holdout-043",
+      "commander": "Aang, A Lot to Learn",
+      "commanderOracleId": "854278bc-2bcf-45dd-abd5-6aca7a1e5fc9",
+      "colorKey": "WG",
+      "theme": "Sacrifice",
+      "facet": "sacrifice",
+      "themeAvailability": 945
+    },
+    {
+      "id": "holdout-044",
+      "commander": "Dragonlord Ojutai",
+      "commanderOracleId": "654ff673-4630-4068-9bcf-e88a7877eb58",
+      "colorKey": "WU",
+      "theme": "Historic",
+      "facet": "historic",
+      "themeAvailability": 3667
+    },
+    {
+      "id": "holdout-045",
+      "commander": "Bard, Heir of Girion",
+      "commanderOracleId": "b0e88bd6-50a3-48d7-a15f-ec51f6bced0d",
+      "colorKey": "WU",
+      "theme": "Historic",
+      "facet": "historic",
+      "themeAvailability": 3667
+    },
+    {
+      "id": "holdout-046",
+      "commander": "The Fifth Doctor",
+      "commanderOracleId": "992ddd9f-e0db-4383-909c-6dacca41d188",
+      "colorKey": "WU",
+      "theme": "Counters",
+      "facet": "counters",
+      "themeAvailability": 1244
+    },
+    {
+      "id": "holdout-047",
+      "commander": "Butterbur, Bree Innkeeper",
+      "commanderOracleId": "ec136f6f-015b-4200-97b6-a2c1bf39e135",
+      "colorKey": "WG",
+      "theme": "Lifegain",
+      "facet": "lifegain",
+      "themeAvailability": 1029
+    },
+    {
+      "id": "holdout-048",
+      "commander": "Gert and Old Lace, Runaways",
+      "commanderOracleId": "aaded61e-32c2-4e02-8557-3f8cd927a64e",
+      "colorKey": "RG",
+      "theme": "Graveyard",
+      "facet": "graveyard",
+      "themeAvailability": 1070
+    },
+    {
+      "id": "holdout-049",
+      "commander": "Karazikar, the Eye Tyrant",
+      "commanderOracleId": "47fde936-be71-4550-826b-b98d139cc57a",
+      "colorKey": "BR",
+      "theme": "Historic",
+      "facet": "historic",
+      "themeAvailability": 3630
+    },
+    {
+      "id": "holdout-050",
+      "commander": "Hama Pashar, Ruin Seeker",
+      "commanderOracleId": "c7371040-160c-4502-b7f9-77b7f54cc020",
+      "colorKey": "WU",
+      "theme": "Historic",
+      "facet": "historic",
+      "themeAvailability": 3667
+    },
+    {
+      "id": "holdout-051",
+      "commander": "Hidetsugu and Kairi",
+      "commanderOracleId": "18591d9e-c9f5-4ae8-aee1-8580bc8fa600",
+      "colorKey": "UB",
+      "theme": "Spellslinger",
+      "facet": "spellslinger",
+      "themeAvailability": 3050
+    },
+    {
+      "id": "holdout-052",
+      "commander": "Nashi, Searcher in the Dark",
+      "commanderOracleId": "ade8fc6f-efaa-4a24-96d8-99ef5026cd74",
+      "colorKey": "UB",
+      "theme": "Graveyard",
+      "facet": "graveyard",
+      "themeAvailability": 2163
+    },
+    {
+      "id": "holdout-053",
+      "commander": "Judge Magister Gabranth",
+      "commanderOracleId": "1a846ad6-15c9-4bf9-9127-612018a557b9",
+      "colorKey": "WB",
+      "theme": "Sacrifice",
+      "facet": "sacrifice",
+      "themeAvailability": 1970
+    },
+    {
+      "id": "holdout-054",
+      "commander": "Exdeath, Void Warlock // Neo Exdeath, Dimension's End",
+      "commanderOracleId": "98c9d798-8c48-4a2d-a076-ce17d31df6f5",
+      "colorKey": "BG",
+      "theme": "Lifegain",
+      "facet": "lifegain",
+      "themeAvailability": 997
+    },
+    {
+      "id": "holdout-055",
+      "commander": "Aatchik, Emerald Radian",
+      "commanderOracleId": "405c4a7b-dbb3-48a1-9205-7dbe6e2ad363",
+      "colorKey": "BG",
+      "theme": "Sacrifice",
+      "facet": "sacrifice",
+      "themeAvailability": 1996
+    },
+    {
+      "id": "holdout-056",
+      "commander": "Aisha of Sparks and Smoke",
+      "commanderOracleId": "eae3e762-dacd-4bd2-923c-3abb5ceb729a",
+      "colorKey": "WR",
+      "theme": "Spellslinger",
+      "facet": "spellslinger",
+      "themeAvailability": 2757
+    },
+    {
+      "id": "holdout-057",
+      "commander": "The Council of Four",
+      "commanderOracleId": "3dfb006f-6620-4602-ac3c-d40a5a15a981",
+      "colorKey": "WU",
+      "theme": "Tokens",
+      "facet": "tokens",
+      "themeAvailability": 1140
+    },
+    {
+      "id": "holdout-058",
+      "commander": "Ellivere of the Wild Court",
+      "commanderOracleId": "97f9b82f-b3cf-44ff-9abc-2d92d7cbaa27",
+      "colorKey": "WG",
+      "theme": "Tokens",
+      "facet": "tokens",
+      "themeAvailability": 1423
+    },
+    {
+      "id": "holdout-059",
+      "commander": "Grub, Storied Matriarch // Grub, Notorious Auntie",
+      "commanderOracleId": "180286e4-67fa-44d5-9e90-4a4e99c016a7",
+      "colorKey": "BR",
+      "theme": "Clones",
+      "facet": "clones",
+      "themeAvailability": 98
+    },
+    {
+      "id": "holdout-060",
+      "commander": "Rona, Disciple of Gix",
+      "commanderOracleId": "409305b3-5373-4376-8096-c04a73184cef",
+      "colorKey": "UB",
+      "theme": "Graveyard",
+      "facet": "graveyard",
+      "themeAvailability": 2163
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+.manashelf-cache/
+node_modules/
+.DS_Store
+Thumbs.db
+
+# Internal documentation and planning notes: not needed for the app to run,
+# kept locally/in git history but not meant to ship to a public GitHub repo.
+docs/
+BACKLOG.md
+CHANGELOG.md
+HANDOFF.md
+START-HERE.txt
+README-THEME-CORPUS.txt
+RELEASE-VALIDATION-*.txt
+LAB3-STRESS-HARNESS-*.txt
+
+# Automated tests and one-off maintenance scripts: valuable for development,
+# not required for the running app itself.
+server/tests/
+server/experimental/**/tests/
+server/tools/
+RUN-THEME-CORPUS.bat
+
+# Retired/superseded code kept only as a local safety net during the migration.
+Archive/

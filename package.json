@@ -1,0 +1,9 @@
+{
+  "name": "manashelf",
+  "version": "2.5.57-beta.0",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server"
+  ]
+}

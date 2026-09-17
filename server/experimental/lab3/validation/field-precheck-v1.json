@@ -1,0 +1,34 @@
+{
+  "schema": "manashelf-lab3-field-precheck-v1",
+  "version": 1,
+  "validationOnly": true,
+  "trainingAllowed": false,
+  "description": "Connected-collection field precheck that runs before formal Stress/unseen recertification. These cases are validation evidence only and are not part of either fixed corpus.",
+  "gates": {
+    "deckSize": 100,
+    "minThemeFidelity": 0.8,
+    "minStructuralCoverage": 0.95,
+    "minManaReliability": 0.95,
+    "minDependencySatisfaction": 0.8
+  },
+  "cases": [
+    {
+      "id": "field-bruna-voltron",
+      "commander": "Bruna, Light of Alabaster",
+      "theme": {"name": "Voltron", "slug": "voltron"},
+      "settings": {"themeFocus":85,"ramp":"more","interaction":"standard","curve":"normal","synergyBias":"balanced","protectExistingDecks":false,"commanderDependence":"normal","comboPolicy":"synergistic","landStyle":"balanced"}
+    },
+    {
+      "id": "field-kotis-voltron",
+      "commander": "Kotis, the Fangkeeper",
+      "theme": {"name": "Voltron", "slug": "voltron"},
+      "settings": {"themeFocus":85,"ramp":"more","interaction":"standard","curve":"normal","synergyBias":"balanced","protectExistingDecks":false,"commanderDependence":"normal","comboPolicy":"synergistic","landStyle":"balanced"}
+    },
+    {
+      "id": "field-animar-counters",
+      "commander": "Animar, Soul of Elements",
+      "theme": {"name": "+1/+1 Counters", "slug": "plus-1-plus-1-counters"},
+      "settings": {"themeFocus":85,"ramp":"more","interaction":"standard","curve":"normal","synergyBias":"balanced","protectExistingDecks":false,"commanderDependence":"normal","comboPolicy":"synergistic","landStyle":"balanced"}
+    }
+  ]
+}

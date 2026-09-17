@@ -1,0 +1,21 @@
+{
+  "schema": "manashelf-knowledge-db",
+  "schemaVersion": 1,
+  "createdAt": "2026-09-16T17:35:33.127Z",
+  "runtime": {
+    "path": "data/lab3-runtime-index.jsonl.gz",
+    "sha256": "f4282534e4bf95d33a67b8d454b8329c88045f6ec7a225905cb63292be674c4a"
+  },
+  "themeCorpus": {
+    "path": "data/lab3-theme-corpus.json.gz",
+    "sha256": "e074b86422a344e73424dec1ce86e44feef9ad3ee896b8d4e4b74ac230c3b3c0"
+  },
+  "metadata": {
+    "builderBoundary": "vnext-candidate",
+    "builderVersion": 11,
+    "themeUnderstandingVersion": 6,
+    "contextEngineVersion": 7,
+    "manaModelVersion": 4,
+    "status": "candidate"
+  }
+}
