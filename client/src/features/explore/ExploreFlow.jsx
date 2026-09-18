@@ -17,11 +17,11 @@ export default function ExploreFlow() {
     setData(null);
     setCommander(c);
     setQuery(c.name);
-    setOwnedStatus("Consultando colección…");
+    setOwnedStatus(t("Consultando colección…"));
     setActivity(`colección · ${c.name}`);
     try {
       const own = await collectionLookup(c.name);
-      setOwnedStatus(own.owned ? `EN TU COLECCIÓN · Tenés ${own.quantity}` : t("NO ESTÁ EN TU COLECCIÓN"));
+      setOwnedStatus(own.owned ? t(`EN TU COLECCIÓN · Tenés ${own.quantity}`) : t("NO ESTÁ EN TU COLECCIÓN"));
     } catch {
       setOwnedStatus("");
     } finally {
@@ -33,7 +33,7 @@ export default function ExploreFlow() {
 
   const runAnalysis = async () => {
     if (!sessionId) return showError(new Error(t("Conectá una colección primero.")));
-    if (!commander?.name) return showError(new Error("Elegí un Commander."));
+    if (!commander?.name) return showError(new Error(t("Elegí un Commander.")));
     clearError();
     setLoading(true);
     setActivity(`analizando · ${commander.name}`);

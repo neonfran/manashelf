@@ -6,8 +6,8 @@ const MODE_LABELS = {
   improve: "Mejorar mi mazo",
   rank: "Descubrir Commanders",
   lab: "ManaShelf Lab",
-  lab2: "ManaShelf Lab 2",
-  lab3: "ManaShelf Lab 3",
+  lab2: "ManaShelf DeckBuilder Classic",
+  lab3: "ManaShelf DeckBuilder Semantic",
 };
 
 function useTerminalText() {
@@ -18,7 +18,7 @@ function useTerminalText() {
 
   useEffect(() => {
     const target = terminalActivity
-      ? `procesando // ${terminalActivity}`
+      ? `${t("procesando")} // ${t(terminalActivity)}`
       : terminalNotice
         ? terminalNotice.text
         : terminalSubject

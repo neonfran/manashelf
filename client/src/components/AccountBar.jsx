@@ -16,7 +16,7 @@ function syncCopy(s) {
 }
 
 export default function AccountBar() {
-  const { t, session, accessMode, syncState, logoutLocal, openModal, notifySyncRetry } = useApp();
+  const { t, tAttr, session, accessMode, syncState, logoutLocal, openModal, notifySyncRetry } = useApp();
   const [retrying, setRetrying] = useState(false);
   if (!session) return null;
 
@@ -51,7 +51,7 @@ export default function AccountBar() {
           <div className="account-avatar-v2" aria-hidden="true">{(session.username || "M").trim().charAt(0).toUpperCase()}</div>
           <div className="account-identity-copy-v2">
             <strong className="account-name-v2">{session.username}</strong>
-            <span className="account-meta-v2">Archidekt · {Number(session.archidektRecords || 0).toLocaleString("es-AR")} registros · {session.totalDecks} mazos</span>
+            <span className="account-meta-v2">{t(`Archidekt · ${Number(session.archidektRecords || 0).toLocaleString("es-AR")} registros · ${session.totalDecks} mazos`)}</span>
           </div>
           <em className="account-status-pill-v2">{accessMode === "private" ? t("COLECCIÓN PRIVADA") : t("COLECCIÓN PÚBLICA")}</em>
         </div>
@@ -71,7 +71,7 @@ export default function AccountBar() {
         </div>
       </div>
 
-      <div className="account-metrics-v2" aria-label="Resumen de colección">
+      <div className="account-metrics-v2" aria-label={tAttr("Resumen de colección")}>
         <div className="account-metric-v2 metric-purple"><span className="account-metric-icon-v2" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M5 6h14l-1 14H6L5 6Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /><path d="M4 3h16v3H4V3Zm5 7h6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg></span><div><small>{t("Mazos")}</small><strong>{Number(session.totalDecks || 0).toLocaleString("es-AR")}</strong><span>{t("gestionados")}</span></div></div>
         <div className="account-metric-v2 metric-pink"><span className="account-metric-icon-v2" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="m12 3 8 4-8 4-8-4 8-4Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /><path d="m4 12 8 4 8-4M4 17l8 4 8-4" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /></svg></span><div><small>{t("Cartas únicas")}</small><strong>{Number(session.uniqueCards || 0).toLocaleString("es-AR")}</strong><span>{t("nombres de carta")}</span></div></div>
         <div className="account-metric-v2 metric-teal"><span className="account-metric-icon-v2" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="8" y="8" width="10" height="11" rx="2" stroke="currentColor" strokeWidth="1.8" /><path d="M6 15H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1" stroke="currentColor" strokeWidth="1.8" /></svg></span><div><small>{t("Copias")}</small><strong>{Number(session.totalCopies || 0).toLocaleString("es-AR")}</strong><span>{t("copias en total")}</span></div></div>

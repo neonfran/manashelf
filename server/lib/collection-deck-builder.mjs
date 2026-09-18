@@ -10,7 +10,7 @@ import { cardIdentityKey } from "./card-identity.mjs";
 import { availableComboPackages, comboPackageBaseScore, normalizeComboPolicy, COMBO_ENGINE_VERSION } from "./combo-engine.mjs";
 import { themeFlags, archetypeKind, themeEvidence, themeDependencyBaseline, archetypeDependencyGroups } from "./archetype-contracts.mjs";
 
-export const COLLECTION_BUILDER_VERSION = 15;
+export const COLLECTION_BUILDER_VERSION = 17;
 export const MANA_MODEL_VERSION = 5;
 
 const COLORS=["W","U","B","R","G"];
@@ -36,17 +36,78 @@ const isBasic=c=>/\bbasic land\b/i.test(typeOf(c))||BASIC_NAMES.has(key(c?.name)
 const allowsMultiple=c=>isBasic(c)||/a deck can have any number of cards named|a deck can have up to (?:nine|\d+) cards named/i.test(textOf(c));
 const colorSubset=(cardColors,commanderColors)=>{const allowed=new Set(commanderColors||[]);return (cardColors||[]).every(c=>allowed.has(c))};
 
+// Commander Brackets (WotC beta system, magic.wizards.com/en/formats/commander). Each bracket
+// past "none" restricts some combination of: Game Changers (Scryfall's own `game_changer` flag,
+// so this list never needs manual upkeep here), Mass Land Denial, Extra Turns, and two-card
+// infinite combos. "none" keeps pre-bracket behavior (no filtering) for backward compatibility.
+export const BRACKETS=["none","exhibition","core","upgraded","optimized","cedh"];
+// Per WotC's exact wording: "These cards regularly destroy, exile, and bounce other lands, keep
+// lands tapped, or change what mana is produced by four or more lands per player without
+// replacing them." This is a heuristic Oracle-text approximation of that definition (examples
+// WotC cites: Armageddon, Ruination, Sunder, Winter Orb, Blood Moon) — not exhaustive, and
+// deliberately narrower than ordinary single-target land destruction (e.g. Strip Mine,
+// Wasteland), which the official rule does not restrict.
+export const MASS_LAND_DENIAL_PATTERNS=[
+  /destroy all (?:other )?lands\b/i,
+  /(?:destroy|exile|sacrifice) all (?:nonbasic|non-basic) lands\b/i,
+  /each player sacrifices (?:all|each|two|three|four|five|\d+) lands?\b/i,
+  /each player (?:returns|puts) (?:all|each|two|three|four|five|\d+) lands? (?:they control )?(?:to|into) (?:its|their|his or her) owner'?s hand/i,
+  /players can'?t untap more than one land/i,
+  /lands don'?t untap during (?:their|each) controllers?'? untap step/i,
+  /nonbasic lands (?:you control )?are (?:Mountains?|Islands?|Swamps?|Plains?|Forests?)\b/i,
+];
+export const EXTRA_TURN_PATTERNS=[/takes? an extra turn/i,/take an additional turn/i,/extra turns? after this one/i];
+export const isGameChanger=card=>Boolean(metaOf(card).gameChanger);
+export const isMassLandDenialText=text=>MASS_LAND_DENIAL_PATTERNS.some(re=>re.test(String(text||"")));
+export const isExtraTurnText=text=>EXTRA_TURN_PATTERNS.some(re=>re.test(String(text||"")));
+const isMassLandDenial=card=>isMassLandDenialText(textOf(card));
+const isExtraTurnCard=card=>isExtraTurnText(textOf(card));
+// Bracket 1 (Exhibition) and 2 (Core) allow zero Game Changers; Bracket 3 (Upgraded) allows up
+// to three; 4 (Optimized) and 5 (cEDH) are unrestricted. Exhibition additionally bans extra-turn
+// cards outright; Core/Upgraded only ask that they "appear in low quantities and are not
+// intended to be chained" — a soft guideline this builder does not attempt to enforce by count.
+export const BRACKET_RULES={
+  exhibition:{gameChangerCap:0,massLandDenial:false,extraTurns:false,twoCardCombo:false},
+  core:{gameChangerCap:0,massLandDenial:false,extraTurns:true,twoCardCombo:false},
+  upgraded:{gameChangerCap:3,massLandDenial:false,extraTurns:true,twoCardCombo:false},
+  optimized:{gameChangerCap:Infinity,massLandDenial:true,extraTurns:true,twoCardCombo:true},
+  cedh:{gameChangerCap:Infinity,massLandDenial:true,extraTurns:true,twoCardCombo:true}
+};
+
+// Estimator (the inverse of the builder-side filter above): given signals measured from an
+// already-built deck, report the lowest bracket whose rules the deck does not violate. Mirrors
+// how community bracket calculators work (Archidekt's own estimator currently only checks Game
+// Changers; this also checks Mass Land Denial and two-card combos, using the same definitions
+// as the generative side above instead of a second, possibly-drifting copy of the rules).
+export function estimateBracket({gameChangerCount=0,hasMassLandDenial=false,hasExtraTurn=false,hasTwoCardCombo=false}={}){
+  for(const bracket of BRACKETS){
+    if(bracket==="none")continue;
+    const rule=BRACKET_RULES[bracket];
+    if(gameChangerCount>rule.gameChangerCap)continue;
+    if(hasMassLandDenial&&!rule.massLandDenial)continue;
+    if(hasExtraTurn&&!rule.extraTurns)continue;
+    if(hasTwoCardCombo&&!rule.twoCardCombo)continue;
+    return bracket;
+  }
+  return "cedh";
+}
+
 function normalizedSettings(input={}){
   return {
     themeFocus:Math.max(0,Math.min(100,Number(input.themeFocus??72))),
     ramp:["standard","more","heavy"].includes(input.ramp)?input.ramp:"standard",
-    interaction:["standard","more"].includes(input.interaction)?input.interaction:"standard",
+    interaction:["less","standard","more"].includes(input.interaction)?input.interaction:"standard",
     curve:["normal","lower","fastest"].includes(input.curve)?input.curve:"normal",
     synergyBias:["synergy","balanced","efficiency"].includes(input.synergyBias)?input.synergyBias:"balanced",
     protectExistingDecks:input.protectExistingDecks!==false,
     commanderDependence:["conservative","normal","all-in"].includes(input.commanderDependence)?input.commanderDependence:"normal",
     comboPolicy:normalizeComboPolicy(input.comboPolicy),
-    landStyle:["basics","safe","balanced","lean"].includes(input.landStyle)?input.landStyle:"balanced"
+    landStyle:["basics","safe","balanced","lean"].includes(input.landStyle)?input.landStyle:"balanced",
+    bracket:BRACKETS.includes(input.bracket)?input.bracket:"none",
+    // Only meaningful when the chosen bracket allows a finite, nonzero number of Game Changers
+    // (currently just "upgraded", cap 3). Locks the highest-power eligible ones into the deck
+    // instead of letting synergy scoring decide whether they earn a slot.
+    forceGameChangers:Boolean(input.forceGameChangers)
   };
 }
 
@@ -103,9 +164,9 @@ function targetProfile(commanderMeta,settings,themeName=""){
   lands=Math.round(Math.max(35,Math.min(41,lands)));
   let ramp=settings.ramp==="heavy"?14:settings.ramp==="more"?12:10;
   if(commanderCmc>=6)ramp++;
-  const interaction=settings.interaction==="more"?13:10;
+  const interaction=settings.interaction==="more"?13:settings.interaction==="less"?7:10;
   const resources=settings.curve==="fastest"?11:10;
-  const wipes=settings.interaction==="more"?3:2;
+  const wipes=settings.interaction==="more"?3:settings.interaction==="less"?1:2;
   let resilience=settings.commanderDependence==="conservative"?6:settings.commanderDependence==="all-in"?3:4;
   let finishers=settings.curve==="fastest"?3:2;
   if(tf.voltron){resilience=Math.max(resilience,7);finishers=1}
@@ -375,11 +436,15 @@ function incrementCounts(counts,card,delta=1){for(const k of ROLE_KEYS)counts[k]
 function incrementType(typeCounts,card,delta=1){const t=typeBucket(card);typeCounts[t]=(typeCounts[t]||0)+delta}
 function incrementTraits(traitCounts,card,delta=1){for(const t of cardTraits(card))traitCounts[t]=(traitCounts[t]||0)+delta}
 
-function chooseComboPackage(comboCandidates,pool,settings,themeName="",commander="",commanderColors=[]){
+function chooseComboPackage(comboCandidates,pool,settings,themeName="",commander="",commanderColors=[],bracketRule=null){
   const policy=normalizeComboPolicy(settings.comboPolicy);if(policy==="off"||!comboCandidates?.length)return null;
   const available=availableComboPackages(comboCandidates,pool,{commander,commanderColors,policy,protectExistingDecks:settings.protectExistingDecks,maxPieces:6});
   let best=null;
   for(const pkg of available){
+    // Commander Brackets restrict "intentional two-card infinite combos" below Optimized/cEDH.
+    // pkg.pieces always includes the commander when it is required, so a length of 2 here means
+    // exactly two cards (commander + one other, or two non-commander cards) assemble the combo.
+    if(bracketRule&&!bracketRule.twoCardCombo&&Array.isArray(pkg.pieces)&&pkg.pieces.length===2)continue;
     // First release only locks singleton exact-card packages. A variant requiring multiple
     // copies or a generic template is skipped until the builder can prove that substitution.
     if(pkg.nonCommanderPieces.some(p=>Number(p.quantity||1)!==1))continue;
@@ -407,10 +472,10 @@ function comboCompleteness(mainboard,comboPackage,policy="off"){
   return {required,selected:true,complete:missing.length===0,missing,reason:missing.length?"selected-package-incomplete":null};
 }
 
-function selectNonlands(candidates,targets,settings,commanderColors,themeName="",comboPackage=null){
+function selectNonlands(candidates,targets,settings,commanderColors,themeName="",comboPackage=null,forcedCards=[]){
   const pool=candidates.filter(c=>!isLand(c)),weights=scoreWeights(settings),selected=[],selectedKeys=new Set();
   const state={counts:{ramp:0,resources:0,interaction:0,wipes:0,resilience:0,finishers:0,theme:0},typeCounts:Object.fromEntries(TYPE_KEYS.map(k=>[k,0])),traitCounts:Object.fromEntries(TRAIT_KEYS.map(k=>[k,0])),facetCounts:{},supportCounts:{creatures:0,artifacts:0,enchantments:0,tokens:0,graveyard:0,lands:0,tags:{}}};
-  const trace=new Map(),structuralTradeoffs=[],lockedKeys=new Set((comboPackage?.nonCommanderPieces||[]).filter(p=>!isLand(p.card)).map(p=>key(p.name)));
+  const trace=new Map(),structuralTradeoffs=[],lockedKeys=new Set([...(comboPackage?.nonCommanderPieces||[]).filter(p=>!isLand(p.card)).map(p=>key(p.name)),...forcedCards.filter(c=>!isLand(c)).map(c=>key(c.name))]);
   const add=(card,{phase="general-fill",focusRole=null,focusFacet=null,replaces=null,gain=null}={})=>{
     if(!card||selectedKeys.has(key(card.name))||selected.length>=targets.nonlands)return false;
     const contextScore=candidateDynamicScore(card,state,targets,settings,commanderColors,themeName,weights,focusRole,focusFacet);
@@ -425,6 +490,9 @@ function selectNonlands(candidates,targets,settings,commanderColors,themeName=""
   // 0) A selected combo is an atomic package. Lock every exact nonland piece before any
   // theme/role quota so later repair and quality passes cannot silently dismantle it.
   if(comboPackage){for(const p of comboPackage.nonCommanderPieces||[]){if(isLand(p.card))continue;add(p.card,{phase:`combo:${comboPackage.id}`})}}
+  // 0b) "Forzar Game Changers permitidos": lock in the highest-power Game Changers the bracket
+  // allows before scoring decides anything, same treatment as combo pieces above.
+  for(const c of forcedCards){if(isLand(c))continue;add(c,{phase:"bracket-forced"})}
 
   // 1) Seed the theme with its best-supported cards, not every textual false positive.
   const themeSeed=Math.min(Math.max(8,Math.round(targets.theme*.30)),Math.max(8,targets.nonlands-42));
@@ -802,24 +870,43 @@ function validateFinalDeck(mainboard,commanderColors,settings){
 
 export function buildCollectionDeck({commander,commanderMeta={},theme=null,candidates=[],comboCandidates=[],settings:rawSettings={}}={}){
   const settings=normalizedSettings(rawSettings),commanderColors=commanderMeta.colorIdentity||[],themeName=theme?.name||"",withBasics=injectUnlimitedBasics(candidates,commanderColors),targets=targetProfile(commanderMeta,settings,themeName);
+  const bracketRule=BRACKET_RULES[settings.bracket]||null,bracketExclusions=[];
   const legal=withBasics.filter(c=>{
     if(!c?.name||key(c.name)===key(commander))return false;
     const basic=isBasic(c),owned=Number(c.ownedQuantity||c.quantity||0)>0,available=c.availableQuantity==null?owned:Number(c.availableQuantity||0)>0;
     if(!basic&&(!owned||(settings.protectExistingDecks&&!available)))return false;
-    return colorSubset(c.meta?.colorIdentity||c.colorIdentity||[],commanderColors);
+    if(!colorSubset(c.meta?.colorIdentity||c.colorIdentity||[],commanderColors))return false;
+    if(bracketRule&&!isLand(c)){
+      if(!bracketRule.massLandDenial&&isMassLandDenial(c)){bracketExclusions.push({name:c.name,reason:"mass_land_denial"});return false}
+      if(!bracketRule.extraTurns&&isExtraTurnCard(c)){bracketExclusions.push({name:c.name,reason:"extra_turn"});return false}
+    }
+    return true;
   });
-  const classified=applySemanticClassification(legal.map(c=>({...c,quantity:1,meta:c.meta||{}})),{commanderName:commander}),byKey=new Map(legal.map(c=>[key(c.name),c])),pool=classified.map(c=>{const merged={...byKey.get(key(c.name)),...c,meta:c.meta||byKey.get(key(c.name))?.meta||{}};const evidence=themeEvidence(merged,themeName);return {...merged,contextThemeAffinity:evidence.context,archetypeAffinity:evidence.archetype,effectiveThemeAffinity:evidence.effective,themeEvidenceMode:evidence.explicit?"archetype+context":"context"}});
-  const comboPackage=chooseComboPackage(comboCandidates,pool,settings,themeName,commander,commanderColors),lands=pool.filter(isLand),nonlands=pool.filter(c=>!isLand(c)),baseLandTarget=targets.lands;
+  // Bracket 3 (Upgraded) allows up to 3 Game Changers rather than banning them outright: keep
+  // only the highest-EDHREC-power candidates up to that cap so scoring still picks the best
+  // ones, instead of admitting every Game Changer the collection happens to own.
+  const legalAfterGameChangers=(!bracketRule||bracketRule.gameChangerCap===Infinity)?legal:(()=>{
+    const changers=legal.filter(c=>!isLand(c)&&isGameChanger(c)),others=legal.filter(c=>isLand(c)||!isGameChanger(c));
+    if(!bracketRule.gameChangerCap){bracketExclusions.push(...changers.map(c=>({name:c.name,reason:"game_changer"})));return others}
+    const kept=[...changers].sort((a,b)=>edhrecPower(b)-edhrecPower(a)).slice(0,bracketRule.gameChangerCap),keptKeys=new Set(kept.map(c=>key(c.name)));
+    bracketExclusions.push(...changers.filter(c=>!keptKeys.has(key(c.name))).map(c=>({name:c.name,reason:"game_changer"})));
+    return [...others,...kept];
+  })();
+  const classified=applySemanticClassification(legalAfterGameChangers.map(c=>({...c,quantity:1,meta:c.meta||{}})),{commanderName:commander}),byKey=new Map(legalAfterGameChangers.map(c=>[key(c.name),c])),pool=classified.map(c=>{const merged={...byKey.get(key(c.name)),...c,meta:c.meta||byKey.get(key(c.name))?.meta||{}};const evidence=themeEvidence(merged,themeName);return {...merged,contextThemeAffinity:evidence.context,archetypeAffinity:evidence.archetype,effectiveThemeAffinity:evidence.effective,themeEvidenceMode:evidence.explicit?"archetype+context":"context"}});
+  const comboPackage=chooseComboPackage(comboCandidates,pool,settings,themeName,commander,commanderColors,bracketRule),lands=pool.filter(isLand),nonlands=pool.filter(c=>!isLand(c)),baseLandTarget=targets.lands;
   if(comboPackage?.infinite&&settings.comboPolicy==="infinite")targets.finishers=Math.min(targets.finishers,1);
-  let picked=selectNonlands(nonlands,targets,settings,commanderColors,themeName,comboPackage),landAdjustment=adjustLandTargetFromSelection(baseLandTarget,picked.selected,targets,settings,themeName);
-  for(let pass=0;pass<3&&landAdjustment.target!==targets.lands;pass++){targets.lands=landAdjustment.target;targets.nonlands=99-targets.lands;targets.typeProfile=typeStructureProfile(themeName,targets.nonlands);picked=selectNonlands(nonlands,targets,settings,commanderColors,themeName,comboPackage);landAdjustment=adjustLandTargetFromSelection(baseLandTarget,picked.selected,targets,settings,themeName)}
-  targets.lands=landAdjustment.target;targets.nonlands=99-targets.lands;targets.typeProfile=typeStructureProfile(themeName,targets.nonlands);if(picked.selected.length!==targets.nonlands)picked=selectNonlands(nonlands,targets,settings,commanderColors,themeName,comboPackage);
+  // "Forzar Game Changers permitidos": only meaningful when the bracket allows a finite, nonzero
+  // count (today only "upgraded", cap 3) — those are exactly the ones legalAfterGameChangers kept.
+  const forcedGameChangers=(settings.forceGameChangers&&bracketRule&&bracketRule.gameChangerCap>0&&bracketRule.gameChangerCap!==Infinity)?nonlands.filter(isGameChanger):[];
+  let picked=selectNonlands(nonlands,targets,settings,commanderColors,themeName,comboPackage,forcedGameChangers),landAdjustment=adjustLandTargetFromSelection(baseLandTarget,picked.selected,targets,settings,themeName);
+  for(let pass=0;pass<3&&landAdjustment.target!==targets.lands;pass++){targets.lands=landAdjustment.target;targets.nonlands=99-targets.lands;targets.typeProfile=typeStructureProfile(themeName,targets.nonlands);picked=selectNonlands(nonlands,targets,settings,commanderColors,themeName,comboPackage,forcedGameChangers);landAdjustment=adjustLandTargetFromSelection(baseLandTarget,picked.selected,targets,settings,themeName)}
+  targets.lands=landAdjustment.target;targets.nonlands=99-targets.lands;targets.typeProfile=typeStructureProfile(themeName,targets.nonlands);if(picked.selected.length!==targets.nonlands)picked=selectNonlands(nonlands,targets,settings,commanderColors,themeName,comboPackage,forcedGameChangers);
   const castabilityRepair=repairCastability({selected:picked.selected,pool:nonlands,lands,landTarget:targets.lands,commanderMeta,commanderColors,settings,themeName,targets,comboPackage,selectionTrace:picked.selectionTrace});
   picked={...picked,selected:castabilityRepair.selected,selectionTrace:castabilityRepair.selectionTrace};
   const landPick=castabilityRepair.landPick;let chosen=[...picked.selected,...landPick.selected];
   chosen=chosen.slice(0,99);const aggregated=aggregateCards(chosen);
   const commanderCard={name:commander,quantity:1,ownedQuantity:Number(commanderMeta.ownedQuantity||0),availableQuantity:Number(commanderMeta.availableQuantity||commanderMeta.ownedQuantity||0),meta:commanderMeta,isCommander:true,themeAffinity:1,contextThemeAffinity:1,archetypeAffinity:1,effectiveThemeAffinity:1,commanderAffinity:1,semantic:applySemanticClassification([{name:commander,quantity:1,meta:commanderMeta}],{commanderName:commander})[0]?.semantic};
-  const mainboard=[commanderCard,...aggregated].map(c=>{const category=cardCategory(c),sr=strongestRole(c);return {...c,primaryCategory:category,categories:[category],typeLine:typeOf(c),cmc:cmcOf(c),imageNormal:c.meta?.normal||c.meta?.large||c.meta?.small||c.imageNormal||null,selectionScore:round(baseCandidateScore(c,settings,commanderColors),3),selectionContextScore:round(picked.selectionTrace?.[key(c.name)]?.contextScoreAtSelection??baseCandidateScore(c,settings,commanderColors),3),selectionPhase:c.isCommander?"commander":c.syntheticBasic?"mana-basic":picked.selectionTrace?.[key(c.name)]?.phase||"mana-land",selectionTrace:c.isCommander?{phase:"commander"}:c.syntheticBasic?{phase:"mana-basic"}:picked.selectionTrace?.[key(c.name)]||{phase:"mana-land"},selectionReason:c.isCommander?"Commander":c.comboPiece?`Combo ${c.comboPiece.comboId} · pieza ${c.comboPiece.index}/${c.comboPiece.total}${c.comboPiece.infinite?" · infinito":""}`:c.syntheticBasic?"Básica ilimitada · asignada por demanda de color":Number(c.effectiveThemeAffinity ?? c.themeAffinity ?? 0)>=.62?`Alta afinidad de arquetipo con ${themeName||"el theme"}`:sr.quality>=.55?`${category} · calidad ${Math.round(sr.quality*100)}%`:category,comboPiece:c.comboPiece||null,contextThemeAffinity:round(contextThemeAffinity(c),3),archetypeAffinity:round(c.archetypeAffinity||0,3),effectiveThemeAffinity:round(c.effectiveThemeAffinity ?? c.themeAffinity ?? 0,3),themeEvidenceMode:c.themeEvidenceMode||"context",roleQuality:sr.quality,roleQualityName:sr.role,semanticRoles:roleIds(c),semanticFacts:c.semantic?.facts||{},semanticDependencies:c.semantic?.dependencies||[],semanticGlobalDependencies:c.semantic?.globalDependencies||[],semanticThemeDependencies:c.semantic?.themeDependencies||[],semanticRoleDependencies:c.semantic?.roleDependencies||{},semanticRoleDependencyGroups:c.semantic?.roleDependencyGroups||{},semanticProduces:c.semantic?.produces||[],semanticBenefitsFrom:c.semantic?.benefitsFrom||[],roleQualities:Object.fromEntries(ROLE_KEYS.map(r=>[r,round(roleQuality(c,r),3)])),themeFacets:themeFacetTags(c,themeName)}});
+  const mainboard=[commanderCard,...aggregated].map(c=>{const category=cardCategory(c),sr=strongestRole(c);return {...c,primaryCategory:category,categories:[category],typeLine:typeOf(c),cmc:cmcOf(c),imageNormal:c.meta?.normal||c.meta?.large||c.meta?.small||c.imageNormal||null,selectionScore:round(baseCandidateScore(c,settings,commanderColors),3),selectionContextScore:round(picked.selectionTrace?.[key(c.name)]?.contextScoreAtSelection??baseCandidateScore(c,settings,commanderColors),3),selectionPhase:c.isCommander?"commander":c.syntheticBasic?"mana-basic":picked.selectionTrace?.[key(c.name)]?.phase||"mana-land",selectionTrace:c.isCommander?{phase:"commander"}:c.syntheticBasic?{phase:"mana-basic"}:picked.selectionTrace?.[key(c.name)]||{phase:"mana-land"},selectionReason:c.isCommander?"Commander":c.comboPiece?`Combo ${c.comboPiece.comboId} · pieza ${c.comboPiece.index}/${c.comboPiece.total}${c.comboPiece.infinite?" · infinito":""}`:c.syntheticBasic?"Básica ilimitada · asignada por demanda de color":(picked.selectionTrace?.[key(c.name)]?.phase==="bracket-forced")?`Forzado por bracket (${bracketRule?.gameChangerCap} Game Changer${bracketRule?.gameChangerCap===1?"":"s"} permitidos) · Game Changer`:Number(c.effectiveThemeAffinity ?? c.themeAffinity ?? 0)>=.62?`Alta afinidad de arquetipo con ${themeName||"el theme"}`:sr.quality>=.55?`${category} · calidad ${Math.round(sr.quality*100)}%`:category,comboPiece:c.comboPiece||null,contextThemeAffinity:round(contextThemeAffinity(c),3),archetypeAffinity:round(c.archetypeAffinity||0,3),effectiveThemeAffinity:round(c.effectiveThemeAffinity ?? c.themeAffinity ?? 0,3),themeEvidenceMode:c.themeEvidenceMode||"context",roleQuality:sr.quality,roleQualityName:sr.role,semanticRoles:roleIds(c),semanticFacts:c.semantic?.facts||{},semanticDependencies:c.semantic?.dependencies||[],semanticGlobalDependencies:c.semantic?.globalDependencies||[],semanticThemeDependencies:c.semantic?.themeDependencies||[],semanticRoleDependencies:c.semantic?.roleDependencies||{},semanticRoleDependencyGroups:c.semantic?.roleDependencyGroups||{},semanticProduces:c.semantic?.produces||[],semanticBenefitsFrom:c.semantic?.benefitsFrom||[],roleQualities:Object.fromEntries(ROLE_KEYS.map(r=>[r,round(roleQuality(c,r),3)])),themeFacets:themeFacetTags(c,themeName)}});
   const actualCounts={ramp:0,resources:0,interaction:0,wipes:0,resilience:0,finishers:0,theme:0},actualTypes=Object.fromEntries(TYPE_KEYS.map(k=>[k,0])),actualTraits=Object.fromEntries(TRAIT_KEYS.map(k=>[k,0])),actualFacets={},actualSupport={creatures:0,artifacts:0,enchantments:0,tokens:0,graveyard:0,lands:0,tags:{}};for(const c of chosen)if(!isLand(c)){incrementCounts(actualCounts,c,1);incrementType(actualTypes,c,1);incrementTraits(actualTraits,c,1);incrementFacetCounts(actualFacets,c,themeName,1);incrementSupportCounts(actualSupport,c,1)}
   for(const k of ROLE_KEYS)actualCounts[k]=round(actualCounts[k],1);
   const landCount=chosen.filter(isLand).length,size=mainboard.reduce((n,c)=>n+Number(c.quantity||1),0),occupiedCards=mainboard.filter(c=>!c.isCommander&&!c.syntheticBasic&&Number(c.availableQuantity||0)<=0&&Number(c.ownedQuantity||0)>0).reduce((n,c)=>n+Number(c.quantity||1),0),nonlandChosen=chosen.filter(c=>!isLand(c)),themeCount=nonlandChosen.filter(c=>Number(c.effectiveThemeAffinity ?? c.themeAffinity ?? 0)>=.45).length,avgMv=nonlandChosen.length?nonlandChosen.reduce((n,c)=>n+cmcOf(c),0)/nonlandChosen.length:0;
@@ -837,6 +924,7 @@ export function buildCollectionDeck({commander,commanderMeta={},theme=null,candi
     combo:comboPackage?{engineVersion:COMBO_ENGINE_VERSION,policy:settings.comboPolicy,id:comboPackage.id,infinite:Boolean(comboPackage.infinite),pieces:(comboPackage.pieces||[]).map(p=>({name:p.name,quantity:p.quantity,mustBeCommander:Boolean(p.mustBeCommander)})),produces:comboPackage.produces||[],manaNeeded:comboPackage.manaNeeded||null,manaValueNeeded:comboPackage.manaValueNeeded||null,easyPrerequisites:comboPackage.easyPrerequisites||null,notablePrerequisites:comboPackage.notablePrerequisites||null,popularity:comboPackage.popularity||0,url:comboPackage.url||null,score:comboPackage.score,themeMean:comboPackage.themeMean,commanderMean:comboPackage.commanderMean,complete:comboValidation.complete}:null,
     mana:{modelVersion:MANA_MODEL_VERSION,sources:landPick.sources,landSources:landPick.landSources,nonlandSupport:landPick.nonlandSupport,effectiveSources:landPick.effectiveSources,rawSources:landPick.rawSources,demand:landPick.demand,requirements:landPick.requirements,sourceProbabilities:landPick.sourceProbabilities,landDropProbabilities:landPick.landDropProbabilities,targetAdjustment:landAdjustment,basicCount:landPick.basicCount,nonbasicCount:landPick.nonbasicCount,basicRatio:landPick.basicRatio,fetchCount:landPick.fetchCount,tappedCount:landPick.tappedCount,utilityCount:landPick.utilityCount,repairSwaps:landPick.repairSwaps,castabilitySwaps:castabilityRepair.swaps,repairBasicFloor:landPick.repairBasicFloor,nonlandSupportDetails:landPick.nonlandSupportDetails,selectedNonbasics:landPick.selectedNonbasics,validation:manaValidation},
     shortages,metrics,complete:size===100&&finalValidation.valid&&comboValidation.complete,invariants:{...finalValidation.checks,manaTargetMet:manaValidation.validated,comboComplete:comboValidation.complete},validation:{...finalValidation,combo:comboValidation},
+    bracket:settings.bracket==="none"?null:{name:settings.bracket,excludedCount:bracketExclusions.length,excluded:bracketExclusions.slice(0,60),forcedGameChangers:forcedGameChangers.map(c=>c.name)},
     audit:{candidatePool:pool.length,landCandidates:lands.length,nonlandCandidates:nonlands.length,selectedUnique:mainboard.length,typeProfile:targets.typeProfile,traitCounts:actualTraits,themeFacetCounts:actualFacets,supportCounts:actualSupport,structuralTradeoffs:picked.structuralTradeoffs||[],candidateDiagnostics:diagnosticCandidates,notes:["Las tierras básicas se consideran de disponibilidad ilimitada dentro de la identidad de color del Commander.","La cantidad de tierras se recalcula con curva real, coste del Commander y ramp temprano de calidad suficiente.","Las fuentes de color condicionales o que filtran maná aportan menos que una fuente irrestricta; produced_mana no se trata automáticamente como acceso perfecto.","Artifact Creature cuenta como Creature para estructura y también como Artifact para saturación; los tipos superpuestos no pueden eludir los topes.","Ramp, recursos e interacción se cubren por calidad del rol: una pieza condicionada no vale lo mismo que una opción barata y fiable.","Los themes con perfil explícito usan afinidad semántica de arquetipo para cumplir su cuota; EDHREC/contexto ordena opciones coherentes pero no fabrica pertenencia temática.","Los pisos estructurales alcanzables tienen prioridad sobre la densidad temática blanda; si una reparación sacrifica theme para recuperar un rol, el trade-off queda auditado.","Los combos de Commander Spellbook se tratan como paquetes atómicos: todas las piezas exactas verificables o ninguna; templates genéricos no se asumen.","Después de construir la base de maná, el builder puede reemplazar cartas prescindibles con pips difíciles por alternativas más casteables sólo si preservan estructura y función táctica; una excepción de rol sólo se admite para cuellos severos de triple pip con redundancia demostrable. Cada swap queda auditado.","El resultado se vuelve a auditar con Deck Health y Deck Metrics."]}
   };
 }

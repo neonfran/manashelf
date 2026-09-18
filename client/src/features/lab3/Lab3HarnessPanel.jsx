@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useApp } from "../../context/AppContext.jsx";
 import { authHeaders } from "../../api.js";
 
 async function downloadBlob(url, fallbackName) {
@@ -24,6 +25,7 @@ async function downloadBlob(url, fallbackName) {
 // Shared UI for LAB 3's recertification (3 + 200 + 60) and stress-harness (200 builds)
 // panels: both poll a start/status/cancel job every second and offer a ZIP export once done.
 export default function Lab3HarnessPanel({ kind, title, description, startLabel, defaultTotal, api, showError }) {
+  const { t } = useApp();
   const [status, setStatus] = useState(null);
   const timerRef = useRef(null);
 
@@ -78,14 +80,14 @@ export default function Lab3HarnessPanel({ kind, title, description, startLabel,
 
   return (
     <section className="lab3-stress-panel" aria-labelledby={`lab3-${kind}-title`}>
-      <div><span>{kind === "recert" ? "LAB 3 · RECERTIFICACIÓN" : "LAB 3 · STRESS HARNESS v4"}</span><h3 id={`lab3-${kind}-title`}>{title}</h3><p>{description}</p></div>
+      <div><span>{kind === "recert" ? t("LAB 3 · RECERTIFICACIÓN") : "LAB 3 · STRESS HARNESS v4"}</span><h3 id={`lab3-${kind}-title`}>{title}</h3><p>{description}</p></div>
       <div className="lab3-stress-actions">
         <button type="button" className={kind === "recert" ? "primary" : "ghost"} disabled={active} onClick={start}>{startLabel}</button>
-        {active && <button type="button" className="ghost" onClick={cancel}>Detener {kind === "recert" ? "recertificación" : ""}</button>}
-        {exportReady && <button type="button" className="primary" onClick={doExport}>{kind === "recert" ? "Exportar evidencia completa" : "Exportar corpus ZIP"}</button>}
+        {active && <button type="button" className="ghost" onClick={cancel}>{t(`Detener ${kind === "recert" ? "recertificación" : ""}`)}</button>}
+        {exportReady && <button type="button" className="primary" onClick={doExport}>{kind === "recert" ? t("Exportar evidencia completa") : t("Exportar corpus ZIP")}</button>}
       </div>
       <div className="lab3-stress-progress">
-        <div><strong>{status?.message || "Listo para " + (kind === "recert" ? "recertificar." : "ejecutar.")}</strong><small>{summaryText}</small></div>
+        <div><strong>{status?.message || t("Listo para " + (kind === "recert" ? "recertificar." : "ejecutar."))}</strong><small>{t(summaryText)}</small></div>
         <progress max={Math.max(1, total)} value={Math.min(total, processed)}></progress>
       </div>
       {clusters.length > 0 && (

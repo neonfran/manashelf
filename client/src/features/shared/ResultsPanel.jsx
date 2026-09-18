@@ -4,7 +4,7 @@ import { key, download } from "../../utils.js";
 import { mainboardSet, contextualAvailable, usedOutsideCurrentDeck, statusOf, typeBucket, categoryDesc } from "./resultsLogic.js";
 
 export default function ResultsPanel({ data, commander, deckDetail = null, mode, selectedDeckId = null, resultModeLabel, hideInDeck = false, onToggleHideInDeck }) {
-  const { t, shortlist, toggleShortlist, openModal } = useApp();
+  const { t, tAttr, shortlist, toggleShortlist, openModal } = useApp();
   const [collectionFilter, setCollectionFilter] = useState("all");
   const [roleFilter, setRoleFilter] = useState("");
   const [themeFilter, setThemeFilter] = useState("");
@@ -53,7 +53,7 @@ export default function ResultsPanel({ data, commander, deckDetail = null, mode,
     <section className="results">
       <div className="results-top">
         <div><div className="kicker">{resultModeLabel}</div><h2>{mode === "improve" ? `${deckDetail?.name || ""} · ${commander.name}` : commander.name}</h2>
-          <p>{sync.status === "done" ? `Uso en mazos sincronizado: ${sync.syncedDecks || 0}/${sync.totalDecks || 0}` : `Resultados listos · uso en mazos ${sync.syncedDecks || 0}/${sync.totalDecks || 0}`}</p>
+          <p>{t(sync.status === "done" ? `Uso en mazos sincronizado: ${sync.syncedDecks || 0}/${sync.totalDecks || 0}` : `Resultados listos · uso en mazos ${sync.syncedDecks || 0}/${sync.totalDecks || 0}`)}</p>
         </div>
         <div className="result-actions">
           <button className="ghost" onClick={() => openModal("assist", { data, deckDetail, mode, commander })}>{t("Completar a 100")}</button>
@@ -73,7 +73,7 @@ export default function ResultsPanel({ data, commander, deckDetail = null, mode,
       </div>
 
       <div className="toolbar">
-        <div className="filter-stack state-filter" role="group" aria-label="Estado de colección">
+        <div className="filter-stack state-filter" role="group" aria-label={tAttr("Estado de colección")}>
           <button className={`state-choice${collectionFilter === "all" ? " active" : ""}`} aria-pressed={collectionFilter === "all"} onClick={() => setCollectionFilter("all")}>{t("Todas")}</button>
           <button className={`state-choice${collectionFilter === "owned" ? " active" : ""}`} aria-pressed={collectionFilter === "owned"} onClick={() => setCollectionFilter("owned")}>{t("En Colección")}</button>
           <button className={`state-choice${collectionFilter === "available" ? " active" : ""}`} aria-pressed={collectionFilter === "available"} onClick={() => setCollectionFilter("available")}>{t("Disponibles")}</button>
@@ -83,14 +83,14 @@ export default function ResultsPanel({ data, commander, deckDetail = null, mode,
         </div>
         <div className="toolbar-right">
           <label className="select-labeled"><span>{t("ROL MANASHELF")}</span>
-            <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} title="Roles inferidos por ManaShelf desde tipo y texto Oracle de Scryfall; no son categorías EDHREC.">
+            <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} title={tAttr("Roles inferidos por ManaShelf desde tipo y texto Oracle de Scryfall; no son categorías EDHREC.")}>
               <option value="">{t("Todos los roles ManaShelf")}</option>
               {roles.map((r) => <option key={r}>{r}</option>)}
             </select>
           </label>
           {themes.length > 0 && (
             <label className="select-labeled"><span>{t("TEMÁTICA")}</span>
-              <select value={themeFilter} onChange={(e) => setThemeFilter(e.target.value)} title="Temáticas que EDHREC asocia a este Commander y que tenés evidencia de sostener.">
+              <select value={themeFilter} onChange={(e) => setThemeFilter(e.target.value)} title={tAttr("Temáticas que EDHREC asocia a este Commander y que tenés evidencia de sostener.")}>
                 <option value="">{t("Todas las temáticas")}</option>
                 {themes.map((th) => <option key={th}>{th}</option>)}
               </select>
@@ -105,10 +105,10 @@ export default function ResultsPanel({ data, commander, deckDetail = null, mode,
             </select>
           </label>
           <div className="view-toggle">
-            <button className={view === "cards" ? "active" : ""} title="Vista en miniaturas" onClick={() => setView("cards")}>
+            <button className={view === "cards" ? "active" : ""} title={tAttr("Vista en miniaturas")} onClick={() => setView("cards")}>
               <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.4"><rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1" /><rect x="9" y="1.5" width="5.5" height="5.5" rx="1" /><rect x="1.5" y="9" width="5.5" height="5.5" rx="1" /><rect x="9" y="9" width="5.5" height="5.5" rx="1" /></svg>
             </button>
-            <button className={view === "list" ? "active" : ""} title="Vista en lista" onClick={() => setView("list")}>
+            <button className={view === "list" ? "active" : ""} title={tAttr("Vista en lista")} onClick={() => setView("list")}>
               <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"><line x1="1.5" y1="3" x2="14.5" y2="3" /><line x1="1.5" y1="8" x2="14.5" y2="8" /><line x1="1.5" y1="13" x2="14.5" y2="13" /></svg>
             </button>
           </div>
@@ -127,7 +127,7 @@ export default function ResultsPanel({ data, commander, deckDetail = null, mode,
           </div>
         </aside>
         <div className="catalog">
-          <div className="catalogHead"><h3>{active?.label}</h3><p>{active ? `${categoryDesc(active)} ${filtered.length} visibles de ${active.totalEdhrec} recomendaciones.` : ""}</p></div>
+          <div className="catalogHead"><h3>{active?.label}</h3><p>{active ? t(`${categoryDesc(active)} ${filtered.length} visibles de ${active.totalEdhrec} recomendaciones.`) : ""}</p></div>
           {view === "list" && (
             <div className="list-header"><div>{t("CARTA")}</div><div>{t("TIPO")}</div><div>{t("CATEGORÍA")}</div><div>CMC</div><div>{t("COLECCIÓN")}</div></div>
           )}
@@ -153,10 +153,10 @@ function CardArticle({ c, view, mode, mb, selectedDeckId, data, deckDetail }) {
   const shortlisted = shortlist.some((x) => key(x.name) === key(c.name));
 
   if (view === "list") {
-    const stockText = missing ? "No está en tu colección" : inDeck ? `Tenés ${c.ownedQuantity} · ya en este mazo` : `Disponible ${availableQty}/${c.ownedQuantity}`;
+    const stockText = missing ? t("No está en tu colección") : inDeck ? t(`Tenés ${c.ownedQuantity} · ya en este mazo`) : t(`Disponible ${availableQty}/${c.ownedQuantity}`);
     return (
       <article className={`list-row${missing ? " not-owned" : ""}${inDeck ? " in-deck" : ""}`}>
-        <span className="lr-name">{c.name}{inDeck && <b className="lr-indeck">YA EN EL MAZO</b>}</span>
+        <span className="lr-name">{c.name}{inDeck && <b className="lr-indeck">{t("YA EN EL MAZO")}</b>}</span>
         <span className="lr-type">{typeBucket(c)}</span>
         <span className="lr-role">{(c.roles || [])[0] || "—"}</span>
         <span className="lr-cmc">{Number.isFinite(Number(c.cmc)) ? Number(c.cmc) : "—"}</span>
@@ -170,25 +170,25 @@ function CardArticle({ c, view, mode, mb, selectedDeckId, data, deckDetail }) {
       <div className="pic">
         {c.image ? <img src={c.image} loading="lazy" decoding="async" alt="" /> : null}
         {missing ? <span className="stock-badge missing-stock">{t("NO ESTÁ EN TU COLECCIÓN")}</span> : inDeck ? (
-          <span className="stock-badge in-deck-stock"><b>Tenés {c.ownedQuantity}</b><small>{availableQty > 0 ? `+${availableQty} sin usar` : "Todas usadas en este mazo"}</small></span>
+          <span className="stock-badge in-deck-stock"><b>{t(`Tenés ${c.ownedQuantity}`)}</b><small>{availableQty > 0 ? t(`+${availableQty} sin usar`) : t("Todas usadas en este mazo")}</small></span>
         ) : (
-          <span className="stock-badge"><b>Disponible {availableQty}/{c.ownedQuantity}</b><small>Tenés {c.ownedQuantity} · {availableQty} sin usar</small></span>
+          <span className="stock-badge"><b>{t(`Disponible ${availableQty}/${c.ownedQuantity}`)}</b><small>{t(`Tenés ${c.ownedQuantity} · ${availableQty} sin usar`)}</small></span>
         )}
         {!missing && (
           <span className="usage-overlay" tabIndex={0}>
-            {outside.length ? `EN ${outside.length} MAZO${outside.length === 1 ? "" : "S"}` : "NO USADA FUERA"}
-            <em>{outside.length ? outside.map((d, i) => <a key={i} href={`https://archidekt.com/decks/${Number(d.deckId)}`} target="_blank" rel="noreferrer">{d.deckName} ×{Number(d.quantity || 0)}</a>) : <span>No está usada en otro mazo</span>}</em>
+            {outside.length ? t(`EN ${outside.length} MAZO${outside.length === 1 ? "" : "S"}`) : t("NO USADA FUERA")}
+            <em>{outside.length ? outside.map((d, i) => <a key={i} href={`https://archidekt.com/decks/${Number(d.deckId)}`} target="_blank" rel="noreferrer">{d.deckName} ×{Number(d.quantity || 0)}</a>) : <span>{t("No está usada en otro mazo")}</span>}</em>
           </span>
         )}
-        {inDeck && <span className="in-deck-badge">YA EN EL MAZO</span>}
+        {inDeck && <span className="in-deck-badge">{t("YA EN EL MAZO")}</span>}
       </div>
       <div className="card-body">
         <h4>{c.name}</h4>
-        <div className="metrics"><span className="syn">{c.synergy >= 0 ? "+" : ""}{Math.round(c.synergy * 100)}% sinergia</span><span>{c.inclusionPct}% inclusión</span></div>
+        <div className="metrics"><span className="syn">{t(`${c.synergy >= 0 ? "+" : ""}${Math.round(c.synergy * 100)}% sinergia`)}</span><span>{t(`${c.inclusionPct}% inclusión`)}</span></div>
         <div className="role-line">{(c.roles || []).map((r) => <span className="role" key={r}>{r}</span>)}</div>
         <div className="card-actions">
-          <button className={shortlisted ? "shortlisted" : ""} onClick={() => toggleShortlist(c)}>{shortlisted ? "★ En shortlist" : "☆ Shortlist"}</button>
-          {(!availableNow || missing) && <button onClick={() => openModal("alternatives", { card: c })}>Alternativas funcionales</button>}
+          <button className={shortlisted ? "shortlisted" : ""} onClick={() => toggleShortlist(c)}>{shortlisted ? t("★ En shortlist") : t("☆ Shortlist")}</button>
+          {(!availableNow || missing) && <button onClick={() => openModal("alternatives", { card: c })}>{t("Alternativas funcionales")}</button>}
           {mode === "improve" && !inDeck && <button onClick={() => openModal("addcut", { card: c, deckDetail, categories: data.categories })}>ADD / CUT</button>}
         </div>
       </div>

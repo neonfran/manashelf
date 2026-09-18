@@ -3,7 +3,7 @@ import { useApp } from "../../context/AppContext.jsx";
 import { lab2Unlock } from "../../api.js";
 
 export default function Lab2GateModal({ target = "lab2" }) {
-  const { t, setLab2Unlocked, setMode, closeModal } = useApp();
+  const { t, tAttr, setLab2Unlocked, setMode, closeModal } = useApp();
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -30,16 +30,16 @@ export default function Lab2GateModal({ target = "lab2" }) {
 
   return (
     <div className="lab2-gate">
-      <div className="kicker">{isLab3 ? "LAB 3" : "LAB 2"} · {t("ACCESO RESTRINGIDO")}</div>
-      <h2>{isLab3 ? t("Semantic Builder Lab") : t("Deck Builder Lab")}</h2>
-      <p>{isLab3 ? t("LAB 3 usa la misma clave experimental de LAB 2.") : t("Ingresá la contraseña de LAB 2 para continuar.")}</p>
+      <div className="kicker">{isLab3 ? "DeckBuilder Semantic" : "DeckBuilder Classic"} · {t("ACCESO RESTRINGIDO")}</div>
+      <h2>{isLab3 ? t("DeckBuilder Semantic") : t("DeckBuilder Classic")}</h2>
+      <p>{isLab3 ? t("DeckBuilder Semantic usa la misma clave experimental que DeckBuilder Classic.") : t("Ingresá la contraseña para continuar.")}</p>
       <div className="control">
         <span>⌁</span>
         <input
           ref={inputRef}
           type="password"
           autoComplete="current-password"
-          placeholder={t("Contraseña")}
+          placeholder={tAttr("Contraseña")}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); unlock(); } }}
@@ -47,7 +47,7 @@ export default function Lab2GateModal({ target = "lab2" }) {
         />
       </div>
       <p className="lab2-gate-error">{error}</p>
-      <button className="primary" disabled={busy} onClick={unlock}>{isLab3 ? t("Entrar a LAB 3") : "Entrar a LAB 2"}</button>
+      <button className="primary" disabled={busy} onClick={unlock}>{isLab3 ? t("Entrar a DeckBuilder Semantic") : t("Entrar a DeckBuilder Classic")}</button>
     </div>
   );
 }

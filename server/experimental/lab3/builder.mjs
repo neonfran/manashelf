@@ -2,8 +2,9 @@ import { cardProfile, analyzeDeckContext, buildContextState, profileDependencySa
 import { inferThemeModel, themeModelSummary, themeMembershipForProfile, LAB3_THEME_UNDERSTANDING_VERSION } from "./theme-understanding.mjs";
 import { COVERAGE } from "../semantic-v2/schema.mjs";
 import { availableComboPackages, comboPackageBaseScore, normalizeComboPolicy, COMBO_ENGINE_VERSION } from "../../lib/combo-engine.mjs";
+import { BRACKETS as CLASSIC_BRACKETS, BRACKET_RULES as CLASSIC_BRACKET_RULES } from "../../lib/collection-deck-builder.mjs";
 
-export const LAB3_BUILDER_VERSION=11;
+export const LAB3_BUILDER_VERSION=13;
 export const LAB3_MANA_MODEL_VERSION=4;
 
 const COLORS=["W","U","B","R","G"];
@@ -55,17 +56,32 @@ function manaCapabilities(card,commanderColors=[],deckCards=[]){
 function sourceTargets(demand,lands,colors){const total=Math.max(1,Object.values(demand).reduce((a,b)=>a+b,0)),out={};for(const c of colors){const share=Number(demand[c]||0)/total;out[c]=Math.min(lands,Math.max(8,Math.round(8+share*18)));}return out;}
 function addManaSources(counts,card,commanderColors,weight=1,deckCards=[]){const cap=manaCapabilities(card,commanderColors,deckCards);for(const c of cap.colors)counts[c]=(counts[c]||0)+Number(cap.colorReliability?.[c]??cap.reliability)*weight;return cap;}
 
+// Commander Brackets setting: reuses the exact same rule table and Game Changer definition as
+// the Classic (LAB 2) builder (collection-deck-builder.mjs) — a single source of truth instead
+// of a second, possibly-drifting copy of WotC's bracket definitions. `gameChanger` arrives on
+// each raw candidate (not on `semanticCard`) from the same Scryfall `game_changer` field LAB2
+// uses (see buildLab3 in index.mjs). Only the Game Changer axis and two-card infinite combos
+// (see chooseLab3ComboPackage below) are enforced — Mass Land Denial and Extra Turn are not;
+// see the longer note above bracketRule in buildLab3Deck for exactly why and what closing that
+// gap would require.
+export const LAB3_BRACKETS=CLASSIC_BRACKETS;
+const LAB3_BRACKET_TWO_CARD_COMBO={exhibition:false,core:false,upgraded:false,optimized:true,cedh:true};
+
 export function normalizeLab3Settings(input={}){
   return {
     themeFocus:Math.max(0,Math.min(100,Number(input.themeFocus??72))),
     ramp:["standard","more","heavy"].includes(input.ramp)?input.ramp:"standard",
-    interaction:["standard","more"].includes(input.interaction)?input.interaction:"standard",
+    interaction:["less","standard","more"].includes(input.interaction)?input.interaction:"standard",
     curve:["normal","lower","fastest"].includes(input.curve)?input.curve:"normal",
     synergyBias:["synergy","balanced","efficiency"].includes(input.synergyBias)?input.synergyBias:"balanced",
     protectExistingDecks:input.protectExistingDecks!==false,
     commanderDependence:["conservative","normal","all-in"].includes(input.commanderDependence)?input.commanderDependence:"normal",
     comboPolicy:normalizeComboPolicy(input.comboPolicy),
-    landStyle:["basics","safe","balanced","lean"].includes(input.landStyle)?input.landStyle:"balanced"
+    landStyle:["basics","safe","balanced","lean"].includes(input.landStyle)?input.landStyle:"balanced",
+    bracket:LAB3_BRACKETS.includes(input.bracket)?input.bracket:"none",
+    // Only meaningful when the chosen bracket allows a finite, nonzero number of Game Changers
+    // (currently just "upgraded", cap 3) — mirrors LAB2's same-named setting exactly.
+    forceGameChangers:Boolean(input.forceGameChangers)
   };
 }
 
@@ -74,7 +90,7 @@ function targetsFor(commander,settings,theme){
   if(commanderMv>=5)lands++;if(commanderMv>=7)lands++;if(settings.curve!=="normal")lands--;
   if(settings.landStyle==="safe")lands++;if(settings.landStyle==="lean")lands--;lands=Math.max(35,Math.min(41,lands));
   const ramp=settings.ramp==="heavy"?14:settings.ramp==="more"?12:10;
-  const interaction=settings.interaction==="more"?13:10;
+  const interaction=settings.interaction==="more"?13:settings.interaction==="less"?7:10;
   const themeTarget=/balanced|good stuff/i.test(String(theme||""))?0:Math.round(20+(settings.themeFocus/100)*20);
   return {lands,ramp,resources:10,interaction,wipes:2,protection:4,recursion:2,finishers:2,theme:themeTarget};
 }
@@ -160,8 +176,12 @@ function candidateModel(candidate,{theme,themeMode,themeModel,commander,settings
 
 function chooseLab3ComboPackage(comboCandidates,rawCandidates,models,settings,commander){
   const policy=normalizeComboPolicy(settings.comboPolicy);if(policy==="off"||!comboCandidates?.length)return null;
-  const available=availableComboPackages(comboCandidates,rawCandidates,{commander:commander.name,commanderColors:commander.colorIdentity||[],policy,protectExistingDecks:settings.protectExistingDecks,maxPieces:6}),modelByName=new Map(models.map(m=>[String(m.name).toLocaleLowerCase("en-US"),m]));let best=null;
+  const available=availableComboPackages(comboCandidates,rawCandidates,{commander:commander.name,commanderColors:commander.colorIdentity||[],policy,protectExistingDecks:settings.protectExistingDecks,maxPieces:6}),modelByName=new Map(models.map(m=>[String(m.name).toLocaleLowerCase("en-US"),m])),allowTwoCardCombo=LAB3_BRACKET_TWO_CARD_COMBO[settings.bracket]??true;let best=null;
   for(const pkg of available){
+    // Commander Brackets restrict "intentional two-card infinite combos" below Optimized/cEDH.
+    // pkg.pieces always includes the commander when required, so length===2 means exactly two
+    // cards (commander + one other, or two non-commander cards) assemble the combo.
+    if(!allowTwoCardCombo&&Array.isArray(pkg.pieces)&&pkg.pieces.length===2)continue;
     if(pkg.nonCommanderPieces.some(p=>Number(p.quantity||1)!==1))continue;
     const pieces=pkg.nonCommanderPieces.map(p=>modelByName.get(String(p.name).toLocaleLowerCase("en-US"))).filter(Boolean);if(pieces.length!==pkg.nonCommanderPieces.length||!pieces.length)continue;
     const themeMean=pieces.reduce((n,c)=>n+Number(c.profile?.themeScore||0),0)/pieces.length,commanderMean=pieces.reduce((n,c)=>n+Number(c.profile?.directCommanderSynergy||0),0)/pieces.length,qualityMean=pieces.reduce((n,c)=>n+Number(c.baseScore||0),0)/pieces.length,coherence=Math.max(themeMean,commanderMean*.8)+qualityMean*.12;
@@ -324,10 +344,37 @@ function outputCard(c,fallbackCategory){const category=lab3PrimaryCategory(c,fal
 
 export function buildLab3Deck({commander,theme,themeMode="semantic",themeModel:providedThemeModel=null,candidates=[],comboCandidates=[],settings={}}={}){
   if(!commander?.name)throw new Error("LAB3 requires a semantic Commander record");const cfg=normalizeLab3Settings(settings),targets=targetsFor(commander,cfg,theme),mapped=themeFacetForLabel(theme,commander),provided=trustedProvidedThemeModel(providedThemeModel,theme),themeModel=mapped?.kind==="neutral"?{version:LAB3_THEME_UNDERSTANDING_VERSION,theme,mode:"semantic_direct",source:"runtime_direct",directFacet:null,confidence:1,evidenceCards:0,features:{},featureRows:[],composite:false,secondaryFeatures:{},secondaryFeatureRows:[],secondaryFamilyPriors:{},trusted:true}:mapped?.facet?{...inferThemeModel(candidates,{theme,directFacet:mapped.facet}),source:"runtime_direct",trusted:true}:provided||{...inferThemeModel(candidates,{theme,directFacet:null}),source:"runtime_inference",trusted:false},effectiveThemeMode=themeModel.mode==="semantic_direct"?"semantic":themeModel.mode,commanderProfile=cardProfile(commander,{theme,themeMode:effectiveThemeMode,themeModel,commander:null,external:{commanderAffinity:1,themeAffinity:0}});
-  const models=candidates.filter(c=>c?.semanticCard&&c.semanticCard.status!==COVERAGE.GAP&&c.name!==commander.name&&Number(c.ownedQuantity??c.quantity??1)>0).map(c=>candidateModel(c,{theme,themeMode:effectiveThemeMode,themeModel,commander,settings:cfg})),lands=models.filter(c=>isLand(c.semanticCard)),nonlands=models.filter(c=>!isLand(c.semanticCard));
+  // Commander Brackets: filter candidates before scoring, exactly like Classic/LAB2 does on
+  // its own pool, so a restricted card never has a chance to be picked in the first place.
+  // Only the Game Changer axis is enforced here (Scryfall's own flag — not Oracle text, so it
+  // doesn't cross LAB3's architecture boundary: architecture-tests.mjs asserts builder.mjs must
+  // never inspect Oracle text at runtime, by design — LAB3 works only through pre-compiled
+  // Semantic v2 contracts, unlike Classic/LAB2's regex-on-text approach). Mass Land Denial and
+  // Extra Turn detection are genuinely NOT wired in yet: doing that properly means teaching the
+  // Semantic v2 compiler to emit a structured fact for them (it already extracts "destroy"/
+  // "extra_turn" capabilities from Oracle text at COMPILE time — see compiler.mjs — so the
+  // signal exists) and exposing it on the compiled Runtime record, which requires rebuilding
+  // the certified `data/lab3-runtime-index.jsonl.gz` and re-running Stress/unseen recertification
+  // against the new Runtime SHA. That's real, separate follow-up work, not done in this pass.
+  const bracketRule=CLASSIC_BRACKET_RULES[cfg.bracket]||null,bracketExclusions=[];
+  // Bracket 3 (Upgraded) allows up to 3 Game Changers instead of banning them outright: keep
+  // only the highest-EDHREC-power candidates up to that cap, mirroring Classic/LAB2 exactly.
+  const bracketCandidates=(!bracketRule||bracketRule.gameChangerCap===Infinity)?candidates:(()=>{
+    const changers=candidates.filter(c=>c?.semanticCard&&!isLand(c.semanticCard)&&c.gameChanger),others=candidates.filter(c=>!c?.semanticCard||isLand(c.semanticCard)||!c.gameChanger);
+    if(!bracketRule.gameChangerCap){bracketExclusions.push(...changers.map(c=>({name:c.name,reason:"game_changer"})));return others;}
+    const kept=[...changers].sort((a,b)=>Number(b.edhrecBaseScore||0)-Number(a.edhrecBaseScore||0)).slice(0,bracketRule.gameChangerCap),keptNames=new Set(kept.map(c=>c.name));
+    bracketExclusions.push(...changers.filter(c=>!keptNames.has(c.name)).map(c=>({name:c.name,reason:"game_changer"})));
+    return [...others,...kept];
+  })();
+  const forcedGameChangerNames=(cfg.forceGameChangers&&bracketRule&&bracketRule.gameChangerCap>0&&bracketRule.gameChangerCap!==Infinity)?new Set(bracketCandidates.filter(c=>c?.semanticCard&&!isLand(c.semanticCard)&&c.gameChanger).map(c=>c.name)):new Set();
+  const models=bracketCandidates.filter(c=>c?.semanticCard&&c.semanticCard.status!==COVERAGE.GAP&&c.name!==commander.name&&Number(c.ownedQuantity??c.quantity??1)>0).map(c=>candidateModel(c,{theme,themeMode:effectiveThemeMode,themeModel,commander,settings:cfg})),lands=models.filter(c=>isLand(c.semanticCard)),nonlands=models.filter(c=>!isLand(c.semanticCard));
   if(themeModel?.composite)themeModel.compositionTargets=compositeCompositionTargets(nonlands,themeModel);
   const comboPackage=chooseLab3ComboPackage(comboCandidates,candidates,models,cfg,commander),effectiveTargets={...targets,finishers:Math.max(0,Number(targets.finishers||0)-(comboPackage?.infinite?1:0))};
-  const nonlandSlots=99-targets.lands,selected=[];for(const c of comboPackage?.models||[]){if(isLand(c.semanticCard))continue;c.selected=true;c.selectionPhase=`combo:${comboPackage.id}`;c.selectionReason=`combo exacto · ${comboPackage.infinite?"infinito":"completo"}`;selected.push(c)}chooseStructural(nonlands,selected,effectiveTargets,nonlandSlots,cfg,theme,themeModel);chooseTheme(nonlands,selected,effectiveTargets,nonlandSlots,theme,effectiveThemeMode,themeModel);chooseFill(nonlands,selected,nonlandSlots,cfg,theme,commander,themeModel);
+  const nonlandSlots=99-targets.lands,selected=[];for(const c of comboPackage?.models||[]){if(isLand(c.semanticCard))continue;c.selected=true;c.selectionPhase=`combo:${comboPackage.id}`;c.selectionReason=`combo exacto · ${comboPackage.infinite?"infinito":"completo"}`;selected.push(c)}
+  // comboLocked also protects a slot from repairQuotaSelection's later swap pass — reused here
+  // so a forced Game Changer with poor synergy/quota fit cannot be traded back out afterward.
+  for(const c of nonlands){if(!c.selected&&forcedGameChangerNames.has(c.name)){c.selected=true;c.comboLocked=true;c.selectionPhase="bracket-forced";c.selectionReason=`Forzado por bracket (${bracketRule.gameChangerCap} Game Changer${bracketRule.gameChangerCap===1?"":"s"} permitidos) · Game Changer`;selected.push(c);}}
+  chooseStructural(nonlands,selected,effectiveTargets,nonlandSlots,cfg,theme,themeModel);chooseTheme(nonlands,selected,effectiveTargets,nonlandSlots,theme,effectiveThemeMode,themeModel);chooseFill(nonlands,selected,nonlandSlots,cfg,theme,commander,themeModel);
   if(selected.length<nonlandSlots)throw new Error(`LAB3 candidate pool cannot fill ${nonlandSlots} nonland slots (selected ${selected.length}).`);
   const quotaRepair=repairQuotaSelection(nonlands,selected,effectiveTargets,nonlandSlots);
   const landPlan=chooseLands(lands,selected,commander,targets,cfg,comboPackage),landModels=[...landPlan.chosenNonbasics,...landPlan.basics.map(b=>({...b,profile:cardProfile(b.semanticCard,{theme,themeMode:effectiveThemeMode,themeModel,commander}),baseScore:.4,selected:true,selectionPhase:"basic",selectionReason:"basic mana source"}))];
@@ -339,7 +386,7 @@ export function buildLab3Deck({commander,theme,themeMode="semantic",themeModel:p
   const shortages={};for(const k of ["ramp","resources","interaction","wipes","protection","recursion","finishers","theme"]){const have=k==="theme"?counts.theme:counts[k],target=Number(effectiveTargets[k]||0);if(have+.01<target){shortages[k]={target,have:round(have)};if(k==="theme"&&themeAvailability<effectiveTargets.theme){shortages[k].available=themeAvailability;shortages[k].reason="candidate_pool_limit";}}}const combo=comboResult(comboPackage,cfg.comboPolicy);if(combo.required&&!combo.selected)shortages.combo={target:1,have:0,reason:"no_complete_package"};
   const rejected=nonlands.filter(c=>!c.selected).map(c=>({model:c,penalty:round(themeRedundancyPenalty(c,selected,theme,themeModel))})).sort((a,b)=>(round(b.model.baseScore)-b.penalty)-(round(a.model.baseScore)-a.penalty)).slice(0,80).map(({model:c,penalty})=>({name:c.name,baseScore:round(c.baseScore),themeScore:round(c.profile.themeScore),semanticThemeScore:round(c.profile.semanticTheme),externalThemeScore:round(c.profile.externalTheme),themeEvidenceSource:c.profile.themeEvidenceSource,themeMembership:c.themeMembership,themeFacet:c.themeFacet,semanticStatus:c.semanticCard.status,roles:c.profile.roleScores,scoreBreakdown:c.scoreBreakdown,redundancyPenalty:penalty}));
   const facetCounts={},themeEvidenceCounts={};for(const c of selected){facetCounts[c.themeFacet]=(facetCounts[c.themeFacet]||0)+1;const src=c.profile.themeEvidenceSource||"none";themeEvidenceCounts[src]=(themeEvidenceCounts[src]||0)+1;}
-  return {schema:`manashelf-lab3-build-log-v${LAB3_BUILDER_VERSION}`,builderVersion:LAB3_BUILDER_VERSION,manaModelVersion:LAB3_MANA_MODEL_VERSION,contextEngineVersion:LAB3_CONTEXT_ENGINE_VERSION,comboEngineVersion:COMBO_ENGINE_VERSION,settings:cfg,theme,themeMode:effectiveThemeMode,themeUnderstanding:themeModelSummary(themeModel),themeModel,targets:{...targets,finishers:effectiveTargets.finishers},combo,size,complete:size===100,validation:{deckSize:size===100,commanderExactlyOne:true,candidatePool:candidates.length,semanticCoverage:{supported:finalProfiles.filter(p=>p.card.status===COVERAGE.SUPPORTED).length,partial:finalProfiles.filter(p=>p.card.status===COVERAGE.PARTIAL).length,gap:finalProfiles.filter(p=>p.card.status===COVERAGE.GAP).length}},summary:{lands:targets.lands,nonlands:selected.length,themeCards:counts.theme,themeAvailability,themeEvidenceCounts,roleCounts:Object.fromEntries(Object.entries(counts).filter(([k])=>k!=="theme")),themeFacets:facetCounts,basicLands:landPlan.basicCount,nonbasicLands:landPlan.nonbasicCount},shortages,mana:{pipDemand:landPlan.demand,sourceTargets:landPlan.sourceTargets,sourcesByColor:landPlan.sourcesByColor,sourceCoverage:landPlan.sourceCoverage,weightedCoverage:landPlan.weightedCoverage,shortfalls:landPlan.shortfalls,restrictedSources:landPlan.restrictedSources},context:{summary:context.summary,bottlenecks:context.bottlenecks.slice(0,20),roleCoverage:context.roleCoverage,packageLinks:context.packageLinks.slice(0,50)},diagnostics:{topRejected:rejected,themeFacetCounts:facetCounts,themeEvidenceCounts,compositionTargets:themeModel?.compositionTargets||null,quotaRepair},deck:collapsed};
+  return {schema:`manashelf-lab3-build-log-v${LAB3_BUILDER_VERSION}`,builderVersion:LAB3_BUILDER_VERSION,manaModelVersion:LAB3_MANA_MODEL_VERSION,contextEngineVersion:LAB3_CONTEXT_ENGINE_VERSION,comboEngineVersion:COMBO_ENGINE_VERSION,settings:cfg,theme,themeMode:effectiveThemeMode,themeUnderstanding:themeModelSummary(themeModel),themeModel,targets:{...targets,finishers:effectiveTargets.finishers},combo,size,complete:size===100,validation:{deckSize:size===100,commanderExactlyOne:true,candidatePool:candidates.length,semanticCoverage:{supported:finalProfiles.filter(p=>p.card.status===COVERAGE.SUPPORTED).length,partial:finalProfiles.filter(p=>p.card.status===COVERAGE.PARTIAL).length,gap:finalProfiles.filter(p=>p.card.status===COVERAGE.GAP).length}},summary:{lands:targets.lands,nonlands:selected.length,themeCards:counts.theme,themeAvailability,themeEvidenceCounts,roleCounts:Object.fromEntries(Object.entries(counts).filter(([k])=>k!=="theme")),themeFacets:facetCounts,basicLands:landPlan.basicCount,nonbasicLands:landPlan.nonbasicCount},shortages,mana:{pipDemand:landPlan.demand,sourceTargets:landPlan.sourceTargets,sourcesByColor:landPlan.sourcesByColor,sourceCoverage:landPlan.sourceCoverage,weightedCoverage:landPlan.weightedCoverage,shortfalls:landPlan.shortfalls,restrictedSources:landPlan.restrictedSources},context:{summary:context.summary,bottlenecks:context.bottlenecks.slice(0,20),roleCoverage:context.roleCoverage,packageLinks:context.packageLinks.slice(0,50)},diagnostics:{topRejected:rejected,themeFacetCounts:facetCounts,themeEvidenceCounts,compositionTargets:themeModel?.compositionTargets||null,quotaRepair},bracket:cfg.bracket==="none"?null:{name:cfg.bracket,excludedCount:bracketExclusions.length,excluded:bracketExclusions.slice(0,60),forcedGameChangers:[...forcedGameChangerNames]},deck:collapsed};
 }
 
 export const builderInternals={manaCapabilities,manaRestrictionUsability,themeRedundancyPenalty,compositeCompositionTargets,dominantThemeFacet,lab3PrimaryCategory,repairQuotaSelection,isThemeCandidate,chooseTheme};

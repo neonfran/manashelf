@@ -94,10 +94,11 @@ export function AppProvider({ children }) {
   const showSelection = useCallback((kind, value) => {
     if (!value) return;
     clearTimeout(noticeTimer.current);
-    const text = `seleccionado // ${String(kind || "item").trim()} · ${String(value).trim()}`;
+    const translatedKind = lang === "en" ? translate(String(kind || "item").trim()) : String(kind || "item").trim();
+    const text = lang === "en" ? `selected // ${translatedKind} · ${String(value).trim()}` : `seleccionado // ${translatedKind} · ${String(value).trim()}`;
     setTerminalNotice({ text });
     noticeTimer.current = setTimeout(() => setTerminalNotice(null), 2650);
-  }, []);
+  }, [lang]);
 
   const toggleShortlist = useCallback((card) => {
     setShortlist((prev) => {

@@ -2624,3 +2624,13 @@ html.theme-transitioning .theme-card{
 
 /* LAB3 current-engine recertification (Stress 200 + fixed unseen 60). */
 .lab3-recert-panel{border-style:solid}.lab3-recert-panel .primary{min-width:220px}.lab3-recert-panel progress{accent-color:var(--accent,#8f5cff)}
+
+/* Deck Metrics cards: collapsed-by-default mini-stats, plus the same under/ok color language
+   already used in the LAB2/LAB3 build-criteria audit (.lab2-target-list b.under/.ok). */
+.metric-expand-toggle{appearance:none;background:none;border:0;margin-top:6px;padding:3px 0 0;font-size:9px;letter-spacing:.05em;color:var(--cyan,#45e6ff);cursor:pointer;align-self:center}
+.metric-expand-toggle:hover{color:var(--text)}
+.metrics-lab-card.metric-under .metric-primary strong{color:#fbbf24}
+.metrics-lab-card.metric-ok .metric-primary strong{color:#55f0a5}
+:root[data-theme="light"] .metric-expand-toggle{color:#00798c}
+:root[data-theme="light"] .metrics-lab-card.metric-under .metric-primary strong{color:#b45309}
+:root[data-theme="light"] .metrics-lab-card.metric-ok .metric-primary strong{color:#15803d}

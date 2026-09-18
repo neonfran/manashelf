@@ -6,8 +6,8 @@ const MODES = [
   { id: "improve", num: "02", label: "Mejorar mi mazo", small: "Deck existente" },
   { id: "rank", num: "03", label: "¿Qué Commander puedo armar?", small: "Desde tu colección" },
   { id: "lab", num: "⚗1", label: "LAB 1", small: "Deck check++", cls: "lab-mode" },
-  { id: "lab2", num: "⚗2", label: "LAB 2", small: "Deck builder++", cls: "lab2-mode", locked: true },
-  { id: "lab3", num: "⚗3", label: "LAB 3", small: "Semantic builder", cls: "lab3-mode", locked: true },
+  { id: "lab3", num: "⚗2", label: "DeckBuilder Semantic", small: "Builder principal", cls: "lab3-mode", locked: true },
+  { id: "lab2", num: "⚗3", label: "DeckBuilder Classic", small: "Motor clásico · respaldo", cls: "lab2-mode", locked: true },
 ];
 
 export default function ModeTabs() {

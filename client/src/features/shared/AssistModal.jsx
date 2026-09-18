@@ -38,38 +38,38 @@ export default function AssistModal({ data, deckDetail, mode, commander }) {
 
   const exportTxt = () => download(`manashelf-${key(commander.name).replace(/\s+/g, "-")}.txt`, `1 ${commander.name}\n${built.chosen.map((c) => `1 ${c.name}`).join("\n")}`);
   const createDeck = async () => {
-    const name = prompt("Nombre para el nuevo deck:", `${commander.name} · ManaShelf`);
+    const name = prompt(t("Nombre para el nuevo deck:"), `${commander.name} · ManaShelf`);
     if (!name) return;
-    if (!confirm(`Crear "${name}" en Archidekt con este borrador?`)) return;
+    if (!confirm(t(`Crear "${name}" en Archidekt con este borrador?`))) return;
     try {
       const d = await archidektCreateDeck({ name, commander: commander.name, cards: built.chosen.map((x) => x.name), confirm: "CONFIRMAR" });
-      alert("Deck creado.");
+      alert(t("Deck creado."));
       window.open(d.url, "_blank");
     } catch (e) { showError(e); }
   };
 
   return (
     <div>
-      <div className="kicker">ASISTENTE A 100</div>
-      <h2>{mode === "improve" ? `Faltan ${built.target} slots para 100` : "Borrador de 99 + Commander"}</h2>
-      <p>Prioriza cartas propias con copia disponible, roles funcionales y sinergia EDHREC. Revisá tierras y curva antes de aplicarlo.</p>
+      <div className="kicker">{t("ASISTENTE A 100")}</div>
+      <h2>{mode === "improve" ? t(`Faltan ${built.target} slots para 100`) : t("Borrador de 99 + Commander")}</h2>
+      <p>{t("Prioriza cartas propias con copia disponible, roles funcionales y sinergia EDHREC. Revisá tierras y curva antes de aplicarlo.")}</p>
       <div className="assist-toggle">
-        <span>Mostrando:</span>
-        <button type="button" className={`tiny${availability === "available" ? " accent" : ""}`} onClick={() => setAvailability("available")}>Disponibles (no usadas en otro mazo)</button>
-        <button type="button" className={`tiny${availability === "owned" ? " accent" : ""}`} onClick={() => setAvailability("owned")}>En colección (aunque estén usadas)</button>
+        <span>{t("Mostrando:")}</span>
+        <button type="button" className={`tiny${availability === "available" ? " accent" : ""}`} onClick={() => setAvailability("available")}>{t("Disponibles (no usadas en otro mazo)")}</button>
+        <button type="button" className={`tiny${availability === "owned" ? " accent" : ""}`} onClick={() => setAvailability("owned")}>{t("En colección (aunque estén usadas)")}</button>
       </div>
       <div className="drawer-actions">
-        <button className="ghost" onClick={exportTxt}>Exportar decklist</button>
-        {accessMode === "private" && mode === "explore" && <button className="primary" onClick={createDeck}>Crear en Archidekt</button>}
+        <button className="ghost" onClick={exportTxt}>{t("Exportar decklist")}</button>
+        {accessMode === "private" && mode === "explore" && <button className="primary" onClick={createDeck}>{t("Crear en Archidekt")}</button>}
       </div>
       <div className="modal-list assist-list">
-        <div className="modal-row assist-row assist-head"><span>Carta</span><span>Tipo</span><span>Categoría</span><span>Qué suple</span></div>
+        <div className="modal-row assist-row assist-head"><span>{t("Carta")}</span><span>{t("Tipo")}</span><span>{t("Categoría")}</span><span>{t("Qué suple")}</span></div>
         {built.chosen.map((c) => (
           <div className="modal-row assist-row" key={c.name}>
             <span className="assist-name">{c.name}</span>
             <span className="assist-type">{typeBucket(c)}</span>
             <span className="assist-role">{c._fillRole}</span>
-            <span className="assist-why">{c._fillWhy}</span>
+            <span className="assist-why">{t(c._fillWhy)}</span>
           </div>
         ))}
       </div>

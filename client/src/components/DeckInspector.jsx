@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useApp } from "../context/AppContext.jsx";
 import { key } from "../utils.js";
 import { typeBucket } from "../features/shared/resultsLogic.js";
@@ -7,10 +8,19 @@ function deckPrimaryCategory(c) {
   return (c.categories || []).find((x) => !/^commander$/i.test(x)) || (c.categories || [])[0] || "Sin categoría";
 }
 
-export default function DeckInspector({ detail, filter, onClearFilter, showCategory = false, title = "Mazo" }) {
+export default function DeckInspector({ id, detail, filter, onClearFilter, showCategory = false, title = "Mazo" }) {
   const { t } = useApp();
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem("ms-inspector-collapsed") === "1");
   const [sort, setSort] = useState(showCategory ? "type:asc" : "");
+  const [preview, setPreview] = useState(null);
+  const asideRef = useRef(null);
+
+  const showPreview = (card) => {
+    if (!card.imageNormal) return;
+    const r = asideRef.current?.getBoundingClientRect();
+    setPreview({ src: card.imageNormal, alt: card.name, right: r ? Math.max(16, window.innerWidth - r.left + 16) : 16 });
+  };
+  const hidePreview = () => setPreview(null);
 
   const toggleCollapsed = () => {
     setCollapsed((c) => {
@@ -36,7 +46,7 @@ export default function DeckInspector({ detail, filter, onClearFilter, showCateg
   cards.sort((a, b) => (sortDir === "desc" ? -1 : 1) * compare(a, b));
 
   return (
-    <aside className={`deck-inspector${collapsed ? " collapsed" : ""}`}>
+    <aside id={id} ref={asideRef} className={`deck-inspector${collapsed ? " collapsed" : ""}`}>
       <button type="button" className="deck-inspector-toggle" title={collapsed ? t("Abrir deck list") : t("Ocultar deck list")} aria-label={collapsed ? t("Abrir deck list") : t("Ocultar deck list")} onClick={toggleCollapsed}>
         {collapsed ? <><span className="deck-toggle-triangle expand">◀</span><span className="deck-toggle-label">Deck List</span></> : <span className="deck-toggle-triangle collapse">▶</span>}
       </button>
@@ -64,7 +74,7 @@ export default function DeckInspector({ detail, filter, onClearFilter, showCateg
       </div>
       {filter?.names && (
         <div className="deck-inspector-filter">
-          <span>Filtro: {filter.label} · {cards.reduce((n, c) => n + Number(c.quantity || 1), 0)} cartas</span>
+          <span>{t(`Filtro: ${filter.label} · ${cards.reduce((n, c) => n + Number(c.quantity || 1), 0)} cartas`)}</span>
           <button type="button" onClick={onClearFilter}>{t("Limpiar filtro")}</button>
         </div>
       )}
@@ -72,13 +82,28 @@ export default function DeckInspector({ detail, filter, onClearFilter, showCateg
         {cards.length ? cards.map((c) => (
           <div className={`deck-list-row${showCategory ? " lab2-deck-list-row" : ""}`} key={c.name}>
             <span className="deck-qty">{c.quantity > 1 ? `${c.quantity}×` : ""}</span>
-            <span className="deck-list-name" title={c.name}>{c.name}</span>
+            <span
+              className="deck-list-name"
+              title={c.name}
+              data-deck-card-preview={c.imageNormal || undefined}
+              onMouseEnter={() => showPreview(c)}
+              onMouseLeave={hidePreview}
+              onFocus={() => showPreview(c)}
+              onBlur={hidePreview}
+              tabIndex={c.imageNormal ? 0 : undefined}
+            >{c.name}</span>
             <span className="deck-list-type">{typeBucket(c)}</span>
             {showCategory && <span className="deck-list-category">{deckPrimaryCategory(c)}</span>}
             <span className="deck-list-meta">CMC {Number(c.cmc || 0)}</span>
           </div>
-        )) : <p className="lab-muted">No hay cartas para este filtro.</p>}
+        )) : <p className="lab-muted">{t("No hay cartas para este filtro.")}</p>}
       </div>
+      {createPortal(
+        <div className={`deck-card-preview-portal${preview ? " visible" : ""}`} style={preview ? { right: `${preview.right}px`, left: "auto" } : undefined}>
+          <img src={preview?.src || ""} alt={preview?.alt || ""} />
+        </div>,
+        document.body
+      )}
     </aside>
   );
 }

@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useApp } from "../context/AppContext.jsx";
 import { translateLabInfo } from "../features/shared/labInfoTranslations.js";
 
@@ -39,8 +40,9 @@ export default function InfoDot({ text }) {
       onClick={(e) => { e.preventDefault(); e.stopPropagation(); visible ? hide() : show(); }}
     >
       <span>i</span>
-      {visible && (
-        <span className="info-popover visible" role="tooltip" style={{ left: pos.left, top: pos.top, position: "fixed" }}>{content}</span>
+      {visible && createPortal(
+        <span className="info-popover visible" role="tooltip" style={{ left: pos.left, top: pos.top, position: "fixed" }}>{content}</span>,
+        document.body
       )}
     </span>
   );

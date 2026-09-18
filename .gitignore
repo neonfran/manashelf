@@ -23,3 +23,10 @@ RUN-THEME-CORPUS.bat
 
 # Retired/superseded code kept only as a local safety net during the migration.
 Archive/
+
+# Local dev-server run artifacts and browser-automation tool state: produced
+# while manually testing in this environment, not build inputs or app code.
+server.pid
+server-out.log
+server-err.log
+.playwright-mcp/

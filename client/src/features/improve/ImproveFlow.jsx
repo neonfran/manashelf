@@ -9,7 +9,7 @@ import { deckDetail as fetchDeckDetail, searchCommanders, analyze, deckHealth } 
 import { download, key } from "../../utils.js";
 
 export default function ImproveFlow() {
-  const { t, decks, showError, clearError, addHistory, setActiveDeckDetail, setActivity, clearActivity, setSubject, showSelection } = useApp();
+  const { t, tAttr, decks, showError, clearError, addHistory, setActiveDeckDetail, setActivity, clearActivity, setSubject, showSelection } = useApp();
   const [selectedDeckId, setSelectedDeckId] = useState(null);
   const [detail, setDetail] = useState(null);
   const [commander, setCommander] = useState(null);
@@ -54,7 +54,7 @@ export default function ImproveFlow() {
   };
 
   const runAnalyze = async () => {
-    if (!detail || !selectedDeckId) return showError(new Error("Seleccioná un mazo primero."));
+    if (!detail || !selectedDeckId) return showError(new Error(t("Seleccioná un mazo primero.")));
     clearError();
     setAnalyzing(true);
     setAnalyzeData(null); setHealthData(null);
@@ -77,7 +77,7 @@ export default function ImproveFlow() {
   };
 
   const exportDetail = () => {
-    if (!detail) return showError(new Error("Seleccioná un mazo primero."));
+    if (!detail) return showError(new Error(t("Seleccioná un mazo primero.")));
     const commanders = (detail.commanders || [detail.commander]).filter(Boolean);
     const commanderKeys = new Set(commanders.map(key));
     const lines = (detail.mainboard || []).filter((c) => !commanderKeys.has(key(c.name))).map((c) => `${Number(c.quantity || 1)} ${c.name}`);
@@ -89,7 +89,7 @@ export default function ImproveFlow() {
 
   return (
     <>
-      <section className="flow-panel">
+      <section id="improveFlow" className="flow-panel">
         <div className="flow-head"><span>{t("MEJORAR MI MAZO")}</span></div>
         <DeckPicker onSelect={selectDeck} />
         {loadingDeck && <div className="inline-loading"><i></i><span>{t("Leyendo Commander, Size y cartas del deck…")}</span></div>}
@@ -100,7 +100,7 @@ export default function ImproveFlow() {
               <div className="panel-label">{t("DECK SELECCIONADO")}</div>
               <h2>{detail.name}</h2>
               <div className="deck-commander"><span>Commander</span><strong>{(detail.commanders || [detail.commander]).filter(Boolean).join(" + ")}</strong></div>
-              <div className="deck-counts"><span><b>{t("SIZE")}</b> · <strong>{detail.size}</strong> {t("cartas")}</span><small>Size real del deck · {detail.excludedCount || 0} carta{Number(detail.excludedCount || 0) === 1 ? "" : "s"} de Sideboard/Maybeboard excluida{Number(detail.excludedCount || 0) === 1 ? "" : "s"}</small></div>
+              <div className="deck-counts"><span><b>{t("SIZE")}</b> · <strong>{detail.size}</strong> {t("cartas")}</span><small>{t(`Size real del deck · ${detail.excludedCount || 0} carta${Number(detail.excludedCount || 0) === 1 ? "" : "s"} de Sideboard/Maybeboard excluida${Number(detail.excludedCount || 0) === 1 ? "" : "s"}`)}</small></div>
               <a className="ghost-link" href={detail.url} target="_blank" rel="noopener noreferrer">{t("Abrir en Archidekt ↗")}</a>
             </div>
             <div className="improve-actions">
@@ -114,7 +114,7 @@ export default function ImproveFlow() {
       </section>
 
       {healthData && !analyzing && (
-        <nav className="ribbon-tabs floating" aria-label="Secciones del análisis">
+        <nav className="ribbon-tabs floating" aria-label={tAttr("Secciones del análisis")}>
           <button type="button" className={tab === "deckcheck" ? "active" : ""} onClick={() => setTab("deckcheck")}>{t("Chequeo del mazo")}</button>
           <button type="button" className={tab === "changes" ? "active" : ""} onClick={() => setTab("changes")}>SWAPS</button>
           <button type="button" className={tab === "recommendations" ? "active" : ""} onClick={() => setTab("recommendations")}>{t("EDHREComendaciones")}</button>
@@ -126,7 +126,7 @@ export default function ImproveFlow() {
           <div className="lab-results improve-health-results">
             <DeckHealthPanel data={healthData} detail={detail} onAudit={onAudit} showMetrics={false} sections={tab === "changes" ? ["changes"] : ["summary", "health", "rules", "identity"]} />
           </div>
-          <DeckInspector detail={detail} filter={inspectorFilter} onClearFilter={() => setInspectorFilter(null)} title={detail?.name} />
+          <DeckInspector id="improveDeckInspector" detail={detail} filter={inspectorFilter} onClearFilter={() => setInspectorFilter(null)} title={detail?.name} />
         </div>
       )}
 

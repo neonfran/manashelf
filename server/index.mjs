@@ -6,7 +6,7 @@ import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { partitionArchidektDeck } from "./lib/archidekt-size.mjs";
 import { applySemanticClassification, buildDeckMetrics, classifyCard, deriveCardFacts, METRICS_ENGINE_VERSION, CLASSIFICATION_VERSION, SIMULATION_VERSION } from "./lib/deck-metrics.mjs";
-import { buildCollectionDeck, COLLECTION_BUILDER_VERSION, MANA_MODEL_VERSION } from "./lib/collection-deck-builder.mjs";
+import { buildCollectionDeck, COLLECTION_BUILDER_VERSION, MANA_MODEL_VERSION, estimateBracket, isMassLandDenialText, isExtraTurnText } from "./lib/collection-deck-builder.mjs";
 import { COMBO_ENGINE_VERSION, normalizeComboPolicy, normalizeSpellbookResponse, normalizeFindMyCombosResponse, spellbookCardQuery, comboAvailabilitySummary, SPELLBOOK_BASE_URL } from "./lib/combo-engine.mjs";
 import { countThemeSupport, countPredicateThemeSupport } from "./lib/theme-support.mjs";
 import { normalizeColorIdentity } from "./lib/color-identity.mjs";
@@ -860,7 +860,7 @@ function uniqueScryfallNames(names){
   return unique;
 }
 function scryfallCacheRecordFresh(c){
-  if(!c||Number(c.metaVersion||0)<4)return false;
+  if(!c||Number(c.metaVersion||0)<5)return false;
   if(c.small||c.normal||c.large)return true;
   return Boolean(c.notFound)&&Date.now()-Number(c.updatedAt||0)<24*60*60*1000;
 }
@@ -868,7 +868,7 @@ function scryfallRecordToMeta(name,c){
   return {
     canonicalName:c.canonicalName||name,small:c.small||null,normal:c.normal||null,large:c.large||c.normal||null,
     typeLine:c.typeLine||"",oracleText:c.oracleText||"",cmc:Number(c.cmc||0),manaCost:c.manaCost||"",producedMana:c.producedMana||[],colorIdentity:c.colorIdentity||[],
-    keywords:c.keywords||[],edhrecRank:c.edhrecRank??null,legalities:c.legalities||{}
+    keywords:c.keywords||[],edhrecRank:c.edhrecRank??null,legalities:c.legalities||{},gameChanger:Boolean(c.gameChanger)
   };
 }
 async function batchScryfallImagesUnlocked(names,{force=false,onProgress=null}={}){
@@ -894,7 +894,7 @@ async function batchScryfallImagesUnlocked(names,{force=false,onProgress=null}={
       const record={
         canonicalName:String(c.name||""),small:smallImage(c),normal:normalImage(c),large:c?.image_uris?.large||c?.card_faces?.[0]?.image_uris?.large||normalImage(c),
         typeLine:c.type_line||"",oracleText,cmc:Number(c.cmc||0),manaCost:c.mana_cost||c.card_faces?.[0]?.mana_cost||"",producedMana:c.produced_mana||[],colorIdentity:c.color_identity||[],
-        keywords:c.keywords||[],edhrecRank:c.edhrec_rank??null,legalities:c.legalities||{},notFound:false,metaVersion:4,updatedAt:Date.now()
+        keywords:c.keywords||[],edhrecRank:c.edhrec_rank??null,legalities:c.legalities||{},gameChanger:Boolean(c.game_changer),notFound:false,metaVersion:5,updatedAt:Date.now()
       };
       // Scryfall's canonical multi-face name and both faces point at the same immutable
       // metadata record. This is a join alias, not a display-name rewrite.
@@ -902,7 +902,7 @@ async function batchScryfallImagesUnlocked(names,{force=false,onProgress=null}={
     }
     for(const nf of (payload.not_found||[])){
       const n=nf?.name;
-      if(n)objectCardAliasSet(disk.cards,n,{canonicalName:String(n),small:null,normal:null,large:null,typeLine:"",oracleText:"",cmc:0,manaCost:"",producedMana:[],colorIdentity:[],keywords:[],legalities:{},notFound:true,metaVersion:4,updatedAt:Date.now()});
+      if(n)objectCardAliasSet(disk.cards,n,{canonicalName:String(n),small:null,normal:null,large:null,typeLine:"",oracleText:"",cmc:0,manaCost:"",producedMana:[],colorIdentity:[],keywords:[],legalities:{},gameChanger:false,notFound:true,metaVersion:5,updatedAt:Date.now()});
     }
     await saveScryfallDiskCache();
   }
@@ -1374,12 +1374,16 @@ function roleQty(cards,role){return cards.filter(c=>c.roles.includes(role)).redu
 function reliableRoleContribution(q){q=Number(q||0);return q>=.82?1:q>=.66?.82:q>=.50?.58:q>=.38?.30:0}
 function generatedReliableRoleQty(cards,role){return Number((cards||[]).reduce((n,c)=>n+reliableRoleContribution(c.builder?.roleQualities?.[role])*Number(c.quantity||1),0).toFixed(1))}
 function healthBand(value,low,high){return value<low?"Bajo":value>high?"Alto":"Adecuado"}
+// Bumps whenever buildDeckHealth's own structural computation changes shape (health/gaps/
+// structuralRules/bracketEstimate/etc.), independent of the metrics/classification/simulation
+// engines it also calls into — those already have their own versions in the signature below.
+const DECK_HEALTH_VERSION=2;
 async function buildDeckHealth(session,deckId,{includeDeckMetrics=false}={}){
   if(!session.deckDetails)session.deckDetails=new Map();
   let deck=session.deckDetails.get(Number(deckId));
   if(!deck){deck=await fetchRawDeckDetail(session,deckId);session.deckDetails.set(Number(deckId),deck)}
   if(!session.healthCache)session.healthCache=new Map();
-  const deckSignature=JSON.stringify({cards:(deck.mainboard||[]).map(c=>[c.name,c.quantity,c.primaryCategory]),metricsVersion:METRICS_ENGINE_VERSION,classificationVersion:CLASSIFICATION_VERSION,simulationVersion:SIMULATION_VERSION});
+  const deckSignature=JSON.stringify({cards:(deck.mainboard||[]).map(c=>[c.name,c.quantity,c.primaryCategory]),metricsVersion:METRICS_ENGINE_VERSION,classificationVersion:CLASSIFICATION_VERSION,simulationVersion:SIMULATION_VERSION,healthVersion:DECK_HEALTH_VERSION});
   const cachedHealth=session.healthCache.get(Number(deckId));
   if(cachedHealth?.deckSignature===deckSignature && (!includeDeckMetrics||cachedHealth.data?.deckMetrics))return cachedHealth.data;
   const names=[...new Set((deck.mainboard||[]).map(c=>c.name).concat(deck.commander?[deck.commander]:[]))];
@@ -1622,7 +1626,24 @@ async function buildDeckHealth(session,deckId,{includeDeckMetrics=false}={}){
     iterations:5000,
     deckSignature
   }):null;
-  const healthResult={experimental:true,readOnly:true,edhrecWarning,deck:{id:deck.id,name:deck.name,commander:deck.commander,size:deck.size,mainboardCount:deck.size,url:deck.url},context:{
+  // Bracket estimate: read-only, works for any deck regardless of who built it (LAB2, LAB3, or
+  // an ordinary Archidekt import) because it only depends on Scryfall metadata already fetched
+  // above. Reuses the exact same Mass Land Denial/Game Changer definitions as the LAB2 builder
+  // setting (estimateBracket/isMassLandDenialText/isExtraTurnText from collection-deck-builder.mjs)
+  // so the two never drift apart.
+  const gameChangerNames=new Set(expanded.filter(c=>c.meta?.gameChanger).map(c=>c.name));
+  if(commanderMeta.gameChanger)gameChangerNames.add(deck.commander);
+  const massLandDenialNames=expanded.filter(c=>isMassLandDenialText(c.meta?.oracleText)).map(c=>c.name);
+  const extraTurnNames=expanded.filter(c=>isExtraTurnText(c.meta?.oracleText)).map(c=>c.name);
+  const twoCardCombosFound=await spellbookFindMyCombos(deck.commander,deck.mainboard).then(r=>(r.included||[]).filter(v=>Array.isArray(v.pieces)&&v.pieces.length===2)).catch(()=>[]);
+  const bracketEstimate={
+    bracket:estimateBracket({gameChangerCount:gameChangerNames.size,hasMassLandDenial:massLandDenialNames.length>0,hasExtraTurn:extraTurnNames.length>0,hasTwoCardCombo:twoCardCombosFound.length>0}),
+    gameChangers:[...gameChangerNames],
+    massLandDenial:massLandDenialNames,
+    extraTurns:extraTurnNames,
+    twoCardCombos:twoCardCombosFound.map(v=>({id:v.id,pieces:(v.pieces||[]).map(p=>p.name)}))
+  };
+  const healthResult={experimental:true,readOnly:true,edhrecWarning,deck:{id:deck.id,name:deck.name,commander:deck.commander,size:deck.size,mainboardCount:deck.size,url:deck.url},bracketEstimate,context:{
     commanderCmc,
     avgCmc:Math.round(avgCmc*10)/10,
     lands,ramp,draw,removal,counters,wipes,interaction,
@@ -1956,6 +1977,10 @@ async function buildLab3(session,{commander,theme,settings}={}){
   const ownedOracleIds=[...new Set(collection.flatMap(c=>(Array.isArray(c.printings)&&c.printings.length?c.printings:[c]).map(p=>String(p?.oracleId||"").trim()).filter(Boolean)))],resolvedRuntime=await lab3Catalog.getManyCombined({names:collection.map(c=>c.name),oracleIds:ownedOracleIds}),runtime=resolvedRuntime.byName,runtimeByOracleId=resolvedRuntime.byOracleId,allowed=new Set(commanderSemantic.colorIdentity||[]),usage=session.deckUsage?.usage||new Map();
   const baseLists=await edhrec(String(commander).trim()).catch(()=>[]),baseRec=recMapFromLists(baseLists);
   const themeFetch=chosen.fallback||chosen.localSemantic?{lists:[],source:chosen.localSemantic?"semantic-commander":"fallback",warning:null}:await edhrecThemeLists(commander,chosen).catch(()=>({lists:[],source:"unavailable",warning:"EDHREC theme no disponible; LAB 3 continúa con semántica local."})),themeRec=recMapFromLists(themeFetch.lists||[]);
+  // Commander Brackets need Scryfall's own `game_changer` flag, which the compact Semantic
+  // Runtime doesn't carry — fetched here the same way LAB2/Classic already does for its own
+  // candidate pool, off the same disk-cached metadata.
+  const bracketMeta=(settings?.bracket&&settings.bracket!=="none")?await batchScryfallImages(collection.map(c=>c.name)).catch(()=>new Map()):new Map();
   const candidates=[],exclusions=[],printingExclusions=[];
   for(const owned of collection){
     if(!owned?.name||cardNameMatches(owned.name,commander))continue;
@@ -1971,7 +1996,7 @@ async function buildLab3(session,{commander,theme,settings}={}){
     const playableQuantity=eligible.reduce((n,x)=>n+x.quantity,0),semantic=eligible.sort((a,b)=>b.quantity-a.quantity)[0].semantic;
     const usedInDecks=usageFor(usage,owned.name),usedQuantity=usedInDecks.reduce((n,d)=>n+Number(d.quantity||0),0),availableQuantity=protect?Math.max(0,playableQuantity-usedQuantity):playableQuantity;if(availableQuantity<=0){exclusions.push({name:owned.name,reason:"no_available_copy",playableQuantity});continue}
     const br=getCardAlias(baseRec,owned.name),tr=getCardAlias(themeRec,owned.name),baseScore=Number(br?.score||0),themeScore=Number(tr?.score||0);
-    candidates.push({name:owned.name,semanticCard:semantic,quantity:1,ownedQuantity:playableQuantity,availableQuantity,usedQuantity,usedInDecks,commanderAffinity:clamp01(baseScore),edhrecBaseScore:clamp01(baseScore),themeAffinity:clamp01(themeScore),edhrecThemeScore:clamp01(themeScore),efficiencyScore:clamp01(Math.max(baseScore*.8,themeScore*.75,.08))});
+    candidates.push({name:owned.name,semanticCard:semantic,quantity:1,ownedQuantity:playableQuantity,availableQuantity,usedQuantity,usedInDecks,commanderAffinity:clamp01(baseScore),edhrecBaseScore:clamp01(baseScore),themeAffinity:clamp01(themeScore),edhrecThemeScore:clamp01(themeScore),efficiencyScore:clamp01(Math.max(baseScore*.8,themeScore*.75,.08)),gameChanger:Boolean(bracketMeta.get(owned.name)?.gameChanger)});
   }
   const comboPolicy=normalizeComboPolicy(settings?.comboPolicy);
   if(comboPolicy!=="off")setLab3Progress(session,"spellbook","Buscando paquetes exactos en Commander Spellbook…",{commander:String(commander||""),theme:chosen.name});
@@ -2183,7 +2208,7 @@ async function fetchLab2CommanderProfileMeta(name,{timeoutMs=LAB2_PROFILE_SCRYFA
   if(scryfallCacheRecordFresh(cached))return {meta:scryfallRecordToMeta(name,cached),source:"scryfall-disk-cache"};
   const r=await get(`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(name)}`,{headers:{Accept:"application/json"}},timeoutMs);
   if(!r.ok)throw new Error(`Scryfall ${r.status}`);
-  const c=await r.json(),row=commanderSearchRow(c),oracleText=row.oracleText||"",record={canonicalName:String(c.name||name),small:smallImage(c),normal:normalImage(c),large:c?.image_uris?.large||c?.card_faces?.[0]?.image_uris?.large||normalImage(c),typeLine:row.typeLine,oracleText,cmc:row.cmc,manaCost:row.manaCost,producedMana:c.produced_mana||[],colorIdentity:row.colorIdentity,keywords:row.keywords,edhrecRank:row.edhrecRank,legalities:row.legalities,notFound:false,metaVersion:4,updatedAt:Date.now()};
+  const c=await r.json(),row=commanderSearchRow(c),oracleText=row.oracleText||"",record={canonicalName:String(c.name||name),small:smallImage(c),normal:normalImage(c),large:c?.image_uris?.large||c?.card_faces?.[0]?.image_uris?.large||normalImage(c),typeLine:row.typeLine,oracleText,cmc:row.cmc,manaCost:row.manaCost,producedMana:c.produced_mana||[],colorIdentity:row.colorIdentity,keywords:row.keywords,edhrecRank:row.edhrecRank,legalities:row.legalities,gameChanger:Boolean(c.game_changer),notFound:false,metaVersion:5,updatedAt:Date.now()};
   objectCardAliasSet(disk.cards,c.name||name,record);rememberCommanderSearchProfile(row);await saveScryfallDiskCache().catch(()=>{});
   return {meta:scryfallRecordToMeta(name,record),source:"interactive-direct"};
 }

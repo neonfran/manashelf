@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 import CommanderAutocomplete from "../../components/CommanderAutocomplete.jsx";
 import DeckInspector from "../../components/DeckInspector.jsx";
+import InfoDot from "../../components/InfoDot.jsx";
 import DeckHealthPanel from "../shared/DeckHealthPanel.jsx";
 import Lab3HarnessPanel from "./Lab3HarnessPanel.jsx";
 import { Lab3Summary, Lab3Warnings, Lab3Context, Lab3DeckTable } from "./lab3AuditRender.jsx";
@@ -11,8 +12,11 @@ import {
   lab3StressStart, lab3StressStatus, lab3StressCancel,
 } from "../../api.js";
 import { download } from "../../utils.js";
+import { minimalThemeDescription } from "../shared/themeDescription.js";
+import { BRACKET_OPTIONS, BRACKET_INFO_TEXT } from "../shared/brackets.js";
 
-const DEFAULT_SETTINGS = { themeFocus: 72, ramp: "standard", interaction: "standard", curve: "normal", synergyBias: "balanced", commanderDependence: "normal", comboPolicy: "off", landStyle: "balanced", protectExistingDecks: true };
+const DEFAULT_SETTINGS = { themeFocus: 72, ramp: "standard", interaction: "standard", curve: "normal", synergyBias: "balanced", commanderDependence: "normal", comboPolicy: "off", landStyle: "balanced", protectExistingDecks: true, bracket: "none" };
+const LAB3_BRACKET_SETTING_DESCRIPTION = "Basado en el sistema oficial de Brackets de Wizards of the Coast. Aplica el límite de Game Changers (según el campo game_changer de Scryfall) y la restricción de combos infinitos de 2 cartas; la denegación masiva de tierras y turnos extra todavía no están conectados al pipeline semántico de DeckBuilder Semantic (sí lo están en DeckBuilder Classic).";
 
 export default function Lab3Flow() {
   const { t, showError, clearError, openModal, setActivity, clearActivity, setSubject, showSelection } = useApp();
@@ -32,8 +36,8 @@ export default function Lab3Flow() {
 
   useEffect(() => () => clearInterval(progressTimer.current), []);
   useEffect(() => {
-    if (profileLoading) setActivity(`LAB 3 · ${profileMessage}`);
-    else if (building) setActivity(`LAB 3 · ${buildMessage}`);
+    if (profileLoading) setActivity(`DeckBuilder Semantic · ${profileMessage}`);
+    else if (building) setActivity(`DeckBuilder Semantic · ${buildMessage}`);
     else clearActivity();
   }, [profileLoading, profileMessage, building, buildMessage, setActivity, clearActivity]);
 
@@ -67,17 +71,17 @@ export default function Lab3Flow() {
 
   const themeSourceLabel = (th) => {
     const mode = th.themeContractMode || th.mode || (th.semanticSupported === false ? "external_fallback" : "semantic");
-    if (th.localSemantic) return "Inferido por Semantic DB";
-    if (th.fallback) return "Fallback estructural";
-    if (mode === "external_fallback") return `${Number(th.count || 0).toLocaleString()} decks EDHREC · Fallback EDHREC`;
-    return `${Number(th.count || 0).toLocaleString()} decks EDHREC · Contrato semántico`;
+    if (th.localSemantic) return t("Inferido por Semantic DB");
+    if (th.fallback) return t("Fallback estructural");
+    if (mode === "external_fallback") return t(`${Number(th.count || 0).toLocaleString()} decks EDHREC · Fallback EDHREC`);
+    return t(`${Number(th.count || 0).toLocaleString()} decks EDHREC · Contrato semántico`);
   };
 
   const chooseTheme = (th) => { setTheme(th); setResult(null); };
 
   const runBuild = async () => {
-    if (!commander?.name) return showError(new Error("Elegí un Commander."));
-    if (!theme) return showError(new Error("Elegí un theme."));
+    if (!commander?.name) return showError(new Error(t("Elegí un Commander.")));
+    if (!theme) return showError(new Error(t("Elegí un theme.")));
     clearError();
     setResult(null);
     setBuilding(true);
@@ -102,14 +106,14 @@ export default function Lab3Flow() {
     return `${Number(c.quantity || 1)}x ${c.name} [${category}]`;
   }).join("\n");
   const safeName = (name) => String(name || "manashelf-deck").normalize("NFKD").replace(/[^\w.-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 90) || "manashelf-deck";
-  const exportDeck = () => { if (!result) return showError(new Error("Generá un mazo primero.")); download(`${safeName(commander?.name)}-lab3-archidekt.txt`, archidektText()); };
+  const exportDeck = () => { if (!result) return showError(new Error(t("Generá un mazo primero."))); download(`${safeName(commander?.name)}-lab3-archidekt.txt`, archidektText()); };
   const copyArchidekt = async () => {
-    if (!result) return showError(new Error("Generá un mazo primero."));
+    if (!result) return showError(new Error(t("Generá un mazo primero.")));
     try { await navigator.clipboard.writeText(archidektText()); setCopied(true); setTimeout(() => setCopied(false), 1300); }
-    catch { showError(new Error("No pude copiar el decklist al portapapeles.")); }
+    catch { showError(new Error(t("No pude copiar el decklist al portapapeles."))); }
   };
   const exportLog = async () => {
-    if (!result?.diagnosticLogId) return showError(new Error("No hay log LAB 3 disponible."));
+    if (!result?.diagnosticLogId) return showError(new Error(t("No hay log LAB 3 disponible.")));
     try {
       const log = await lab3BuildLog(result.diagnosticLogId);
       const version = String(log?.appVersion || "unknown").replace(/^v/i, "");
@@ -126,7 +130,7 @@ export default function Lab3Flow() {
 
   return (
     <section className="flow-panel lab2-panel lab3-panel">
-      <div className="lab2-banner lab3-banner"><b>⚗3 MANASHELF LAB 3</b><span>{t("SEMANTIC BUILDER · CONTRATOS + CONTEXTO DE DECK · LAB 2 PERMANECE INTACTO")}</span></div>
+      <div className="lab2-banner lab3-banner"><b>⚗ DECKBUILDER SEMANTIC</b><span>{t("BUILDER PRINCIPAL · CONTRATOS + CONTEXTO DE DECK · DECKBUILDER CLASSIC QUEDA DE RESPALDO")}</span></div>
       <div className="flow-head"><span>{t("SEMANTIC BUILD FROM COLLECTION")}</span><p>{t("Construye desde tu colección usando la Semantic DB, contratos de roles/arquetipos y dependencias del deck. EDHREC sólo ordena candidatos semánticamente compatibles.")}</p></div>
 
       <div className="lab2-step">
@@ -139,7 +143,7 @@ export default function Lab3Flow() {
               <div>
                 <h3>{commander.name}</h3>
                 <p>{commander.manaCost || ""} · {commander.typeLine || ""}</p>
-                <small>{profileLoading ? profileMessage : `${Number(commander.ownedQuantity || 0) > 0 ? `EN TU COLECCIÓN · ${commander.ownedQuantity} copia${commander.ownedQuantity === 1 ? "" : "s"}` : t("COMMANDER NO POSEÍDO · el 99 se arma desde tu colección")} · ${commander.semanticStatus || "semantic"}`}</small>
+                <small>{profileLoading ? t(profileMessage) : `${Number(commander.ownedQuantity || 0) > 0 ? t(`EN TU COLECCIÓN · ${commander.ownedQuantity} copia${commander.ownedQuantity === 1 ? "" : "s"}`) : t("COMMANDER NO POSEÍDO · el 99 se arma desde tu colección")} · ${commander.semanticStatus || "semantic"}`}</small>
               </div>
             </div>
           </div>
@@ -151,7 +155,7 @@ export default function Lab3Flow() {
           <div className="lab2-step-head"><b>02</b><div><strong>Theme</strong><small>{t("El contrato semántico decide compatibilidad; EDHREC puede ordenar, no fabricar afinidad.")}</small></div></div>
           <div className="lab2-theme-grid">
             {(profile.themes || []).length ? profile.themes.map((th, i) => (
-              <button type="button" key={i} className={`lab2-theme-choice${theme?.slug === th.slug ? " active" : ""}`} onClick={() => chooseTheme(th)}>
+              <button type="button" key={i} className={`lab2-theme-choice${theme?.slug === th.slug ? " active" : ""}`} title={minimalThemeDescription(th)} onClick={() => chooseTheme(th)}>
                 <strong>{th.name}</strong><small>{themeSourceLabel(th)}</small>
               </button>
             )) : <p className="lab-muted">{t("No encontré themes para este Commander.")}</p>}
@@ -165,53 +169,23 @@ export default function Lab3Flow() {
           <div className="lab2-settings-grid">
             <label className="lab2-setting lab2-range-setting"><span><strong>{t("Foco en el theme")}</strong><small>{t("Prioridad de densidad temática semántica.")}</small></span><div><input type="range" min={35} max={100} value={settings.themeFocus} onChange={(e) => setSettings((s) => ({ ...s, themeFocus: Number(e.target.value) }))} /><output>{settings.themeFocus}%</output></div></label>
             <label className="lab2-setting"><span><strong>{t("Ramp")}</strong><small>{t("Aceleración estructural, no simples mana abilities.")}</small></span><select value={settings.ramp} onChange={(e) => setSettings((s) => ({ ...s, ramp: e.target.value }))}><option value="standard">{t("Estándar")}</option><option value="more">{t("Más ramp")}</option><option value="heavy">{t("Mucho ramp")}</option></select></label>
-            <label className="lab2-setting"><span><strong>Interacción</strong><small>{t("Removal, counters y graveyard hate con dirección semántica.")}</small></span><select value={settings.interaction} onChange={(e) => setSettings((s) => ({ ...s, interaction: e.target.value }))}><option value="standard">{t("Estándar")}</option><option value="more">{t("Más respuestas")}</option></select></label>
+            <label className="lab2-setting"><span><strong>{t("Interacción")}</strong><small>{t("Removal, counters y graveyard hate con dirección semántica.")}</small></span><select value={settings.interaction} onChange={(e) => setSettings((s) => ({ ...s, interaction: e.target.value }))}><option value="less">{t("Menos respuestas")}</option><option value="standard">{t("Estándar")}</option><option value="more">{t("Más respuestas")}</option></select></label>
             <label className="lab2-setting"><span><strong>{t("Curva")}</strong><small>{t("Preferencia por costes bajos sin ignorar el contexto.")}</small></span><select value={settings.curve} onChange={(e) => setSettings((s) => ({ ...s, curve: e.target.value }))}><option value="normal">{t("Normal")}</option><option value="lower">{t("Más baja")}</option><option value="fastest">{t("Muy baja")}</option></select></label>
             <label className="lab2-setting"><span><strong>{t("Sinergia vs eficiencia")}</strong><small>{t("Balance entre contratos/contexto y señales externas.")}</small></span><select value={settings.synergyBias} onChange={(e) => setSettings((s) => ({ ...s, synergyBias: e.target.value }))}><option value="synergy">{t("Sinergia primero")}</option><option value="balanced">{t("Balanceado")}</option><option value="efficiency">{t("Eficiencia primero")}</option></select></label>
-            <label className="lab2-setting"><span><strong>{t("Dependencia del Commander")}</strong><small>{t("Penaliza cartas cuyo plan necesita al Commander disponible.")}</small></span><select value={settings.commanderDependence} onChange={(e) => setSettings((s) => ({ ...s, commanderDependence: e.target.value }))}><option value="conservative">{t("Baja dependencia")}</option><option value="normal">Balanceada</option><option value="all-in">{t("Alta dependencia")}</option></select></label>
+            <label className="lab2-setting"><span><strong>{t("Dependencia del Commander")}</strong><small>{t("Penaliza cartas cuyo plan necesita al Commander disponible.")}</small></span><select value={settings.commanderDependence} onChange={(e) => setSettings((s) => ({ ...s, commanderDependence: e.target.value }))}><option value="conservative">{t("Baja dependencia")}</option><option value="normal">{t("Balanceada")}</option><option value="all-in">{t("Alta dependencia")}</option></select></label>
             <label className="lab2-setting"><span><strong>{t("Plan de combo")}</strong><small>{t("Usa Commander Spellbook. Si elige un paquete, LAB 3 bloquea todas sus piezas exactas o ninguna.")}</small></span><select value={settings.comboPolicy} onChange={(e) => setSettings((s) => ({ ...s, comboPolicy: e.target.value }))}><option value="off">{t("No buscar combos")}</option><option value="synergistic">{t("Sólo si encaja")}</option><option value="infinite">{t("Priorizar combo infinito")}</option></select></label>
-            <label className="lab2-setting"><span><strong>{t("Base de maná")}</strong><small>{t("Básicas ilimitadas; no básicas desde tu colección.")}</small></span><select value={settings.landStyle} onChange={(e) => setSettings((s) => ({ ...s, landStyle: e.target.value }))}><option value="basics">{t("Básicas primero")}</option><option value="safe">{t("Segura · más tierras")}</option><option value="balanced">Balanceada</option><option value="lean">{t("Ajustada · menos tierras")}</option></select></label>
+            <label className="lab2-setting"><span><strong>{t("Bracket (nivel de poder)")}</strong> <InfoDot text={BRACKET_INFO_TEXT} /><small>{t(LAB3_BRACKET_SETTING_DESCRIPTION)}</small></span><select value={settings.bracket} onChange={(e) => setSettings((s) => ({ ...s, bracket: e.target.value }))}>{BRACKET_OPTIONS.map((b) => <option key={b.value} value={b.value}>{t(b.label)}</option>)}</select></label>
+            <label className="lab2-setting"><span><strong>{t("Base de maná")}</strong><small>{t("Básicas ilimitadas; no básicas desde tu colección.")}</small></span><select value={settings.landStyle} onChange={(e) => setSettings((s) => ({ ...s, landStyle: e.target.value }))}><option value="basics">{t("Básicas primero")}</option><option value="safe">{t("Segura · más tierras")}</option><option value="balanced">{t("Balanceada")}</option><option value="lean">{t("Ajustada · menos tierras")}</option></select></label>
             <label className="lab2-setting lab2-switch-setting"><span><strong>{t("Proteger mazos existentes")}</strong><small>{t("No toma copias comprometidas cuando el uso cruzado está sincronizado.")}</small></span><input type="checkbox" checked={settings.protectExistingDecks} onChange={(e) => setSettings((s) => ({ ...s, protectExistingDecks: e.target.checked }))} /><i aria-hidden="true"></i></label>
           </div>
           <div className="lab2-build-actions">
             <button className="primary big" disabled={!theme || building} onClick={runBuild}>{t("Generar con LAB 3 →")}</button>
-            <span>{theme ? `Theme seleccionado · ${theme.name}` : t("Elegí un theme para continuar.")}</span>
+            <span>{theme ? t(`Theme seleccionado · ${theme.name}`) : t("Elegí un theme para continuar.")}</span>
           </div>
         </div>
       )}
 
-      <Lab3HarnessPanel
-        kind="recert"
-        title="Field pre-check 3 + Stress 200 + unseen holdout 60"
-        description="Una sola corrida. Primero reconstruye Bruna/Voltron, Kotis/Voltron y Animar/+1/+1 Counters con la colección conectada y los settings de validación acordados. Si los tres pasan los gates genéricos, continúa automáticamente con Stress v4 200 y después con el holdout fijo unseen 60. Los tres bloques se exportan separados y ninguno se usa como entrenamiento."
-        startLabel="Recertificar LAB 3 · 3 + 200 + 60"
-        defaultTotal={263}
-        showError={showError}
-        api={{
-          start: () => lab3RecertStart({ stressRuns: 200, stressSeed: "manashelf-lab3-stress-4", unseenRuns: 60 }),
-          status: lab3RecertStatus,
-          cancel: lab3RecertCancel,
-          exportUrl: "/api/lab3/recert/export",
-          exportFallbackName: "ManaShelf-LAB3-RECERTIFICATION-3x200x60.zip",
-        }}
-      />
-      <Lab3HarnessPanel
-        kind="stress"
-        title="Corpus automático · 200 builds"
-        description="Selecciona Commanders y themes de forma estratificada sobre el pool global Commander-legal del runtime semántico, registra semántica directa, inferida o fallback efectivo, ejecuta LAB 3 y agrupa anomalías por familia. El stress es deliberadamente independiente de tu colección y no modifica LAB 2 ni tus mazos."
-        startLabel="Ejecutar 200 builds"
-        defaultTotal={200}
-        showError={showError}
-        api={{
-          start: () => lab3StressStart({ runs: 200, seed: "manashelf-lab3-stress-4" }),
-          status: lab3StressStatus,
-          cancel: lab3StressCancel,
-          exportUrl: "/api/lab3/stress/export",
-          exportFallbackName: "ManaShelf-LAB3-STRESS-CORPUS-v4.zip",
-        }}
-      />
-
-      {building && <div className="lab-loading lab2-loading"><span></span><p>{buildMessage}</p></div>}
+      {building && <div className="lab-loading lab2-loading"><span></span><p>{t(buildMessage)}</p></div>}
 
       {result && !building && (
         <div>
@@ -234,10 +208,44 @@ export default function Lab3Flow() {
           <section className="lab2-health-title"><span>{t("DECK HEALTH · COMPARACIÓN")}</span><h3>{t("Auditoría del mazo generado")}</h3><p>{t("Evalúa el resultado de LAB 3 con la misma interfaz de Deck Health y Deck Metrics de LAB 2 para poder compararlos. Esta auditoría ocurre después del build y no interviene en la selección semántica.")}</p></section>
           <div className="lab2-health-workspace">
             <div className="lab-results">{result.health && <DeckHealthPanel data={result.health} detail={deckDetail} onAudit={onAudit} showMetrics={true} />}</div>
-            <DeckInspector detail={deckDetail} filter={inspectorFilter} onClearFilter={() => setInspectorFilter(null)} title="Mazo generado" showCategory />
+            <DeckInspector id="lab3DeckInspector" detail={deckDetail} filter={inspectorFilter} onClearFilter={() => setInspectorFilter(null)} title={t("Mazo generado")} showCategory />
           </div>
         </div>
       )}
+
+      <details className="lab2-audit lab3-harness-section">
+        <summary>{t("Herramientas de validación LAB 3")} <span>{t("stress y recertificación · uso ocasional")}</span></summary>
+        <Lab3HarnessPanel
+          kind="recert"
+          title="Field pre-check 3 + Stress 200 + unseen holdout 60"
+          description={t("Una sola corrida. Primero reconstruye Bruna/Voltron, Kotis/Voltron y Animar/+1/+1 Counters con la colección conectada y los settings de validación acordados. Si los tres pasan los gates genéricos, continúa automáticamente con Stress v4 200 y después con el holdout fijo unseen 60. Los tres bloques se exportan separados y ninguno se usa como entrenamiento.")}
+          startLabel={t("Recertificar LAB 3 · 3 + 200 + 60")}
+          defaultTotal={263}
+          showError={showError}
+          api={{
+            start: () => lab3RecertStart({ stressRuns: 200, stressSeed: "manashelf-lab3-stress-4", unseenRuns: 60 }),
+            status: lab3RecertStatus,
+            cancel: lab3RecertCancel,
+            exportUrl: "/api/lab3/recert/export",
+            exportFallbackName: "ManaShelf-LAB3-RECERTIFICATION-3x200x60.zip",
+          }}
+        />
+        <Lab3HarnessPanel
+          kind="stress"
+          title={t("Corpus automático · 200 builds")}
+          description={t("Selecciona Commanders y themes de forma estratificada sobre el pool global Commander-legal del runtime semántico, registra semántica directa, inferida o fallback efectivo, ejecuta LAB 3 y agrupa anomalías por familia. El stress es deliberadamente independiente de tu colección y no modifica LAB 2 ni tus mazos.")}
+          startLabel={t("Ejecutar 200 builds")}
+          defaultTotal={200}
+          showError={showError}
+          api={{
+            start: () => lab3StressStart({ runs: 200, seed: "manashelf-lab3-stress-4" }),
+            status: lab3StressStatus,
+            cancel: lab3StressCancel,
+            exportUrl: "/api/lab3/stress/export",
+            exportFallbackName: "ManaShelf-LAB3-STRESS-CORPUS-v4.zip",
+          }}
+        />
+      </details>
     </section>
   );
 }
