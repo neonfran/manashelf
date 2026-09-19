@@ -7,7 +7,7 @@ const MODE_LABELS = {
   rank: "Descubrir Commanders",
   lab: "ManaShelf Lab",
   lab2: "ManaShelf DeckBuilder Classic",
-  lab3: "ManaShelf DeckBuilder Semantic",
+  lab3: "ManaShelf Deck Forge",
 };
 
 function useTerminalText() {

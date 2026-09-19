@@ -2523,28 +2523,27 @@ apiRouter.get("/api/lab3/quality/status",h(async(req,res)=>{
   if(session.lab2Unlocked!==true)return send(res,403,{error:"LAB 3 requiere acceso experimental."});
   return send(res,200,await fieldQualityRegistry.status({appVersion:APP_VERSION}));
 }));
+// LAB 3 (Deck Forge) is the main public product now: the password gate only remains on the
+// diagnostic/quality-status endpoint above and on the recert/stress harness routes below, since
+// those trigger heavy batch jobs (200+ builds against EDHREC/Scryfall) that must stay internal.
 apiRouter.post("/api/lab3/profile",h(async(req,res)=>{
   const session=getSession(req);if(!session)return send(res,401,{error:"Conectá una colección primero."});
-  if(session.lab2Unlocked!==true)return send(res,403,{error:"LAB 3 requiere acceso experimental."});
   const {commander=""}=await body(req);
   try{return send(res,200,await lab3CommanderProfile(session,commander))}
   catch(e){setLab3Progress(session,"error",`Perfil detenido · ${String(e.message||e)}`,{commander:String(commander||"")});return send(res,502,{error:"LAB 3 no pudo preparar ese Commander.",detail:String(e.message||e)})}
 }));
 apiRouter.get("/api/lab3/progress",h(async(req,res)=>{
   const session=getSession(req);if(!session)return send(res,401,{error:"Conectá una colección primero."});
-  if(session.lab2Unlocked!==true)return send(res,403,{error:"LAB 3 requiere acceso experimental."});
   return send(res,200,session.lab3Progress||{active:false,stage:"idle",message:"Sin procesamiento activo.",updatedAt:null});
 }));
 apiRouter.post("/api/lab3/build",h(async(req,res)=>{
   const session=getSession(req);if(!session)return send(res,401,{error:"Conectá una colección primero."});
-  if(session.lab2Unlocked!==true)return send(res,403,{error:"LAB 3 requiere acceso experimental."});
   const payload=await body(req);
   try{return send(res,200,await buildLab3(session,payload))}
   catch(e){setLab3Progress(session,"error",`Build detenido · ${String(e.message||e)}`,{commander:String(payload?.commander||""),theme:String(payload?.theme?.name||"")});return send(res,502,{error:"LAB 3 no pudo generar el mazo.",detail:String(e.message||e)})}
 }));
 apiRouter.get("/api/lab3/build-log",h(async(req,res)=>{
   const session=getSession(req);if(!session)return send(res,401,{error:"Conectá una colección primero."});
-  if(session.lab2Unlocked!==true)return send(res,403,{error:"LAB 3 requiere acceso experimental."});
   const u=new URL(req.url,`http://${req.headers.host}`);
   const id=Number(u.searchParams.get("id"));if(!id)return send(res,400,{error:"No hay un build seleccionado."});
   const log=session.lab3BuildLogs?.get(id);if(!log)return send(res,404,{error:"El log de LAB 3 ya no está disponible. Regenerá el mazo."});

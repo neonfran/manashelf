@@ -6,8 +6,10 @@ const MODES = [
   { id: "improve", num: "02", label: "Mejorar mi mazo", small: "Deck existente" },
   { id: "rank", num: "03", label: "¿Qué Commander puedo armar?", small: "Desde tu colección" },
   { id: "lab", num: "⚗1", label: "LAB 1", small: "Deck check++", cls: "lab-mode" },
-  { id: "lab3", num: "⚗2", label: "DeckBuilder Semantic", small: "Builder principal", cls: "lab3-mode", locked: true },
-  { id: "lab2", num: "⚗3", label: "DeckBuilder Classic", small: "Motor clásico · respaldo", cls: "lab2-mode", locked: true },
+  { id: "lab3", num: "⚗2", label: "Deck Forge", small: "Arma tu mazo desde tu colección", cls: "lab3-mode" },
+  // DeckBuilder Classic ("lab2") is retired from the UI but its code stays in the repo
+  // (Lab2Flow.jsx, collection-deck-builder.mjs) as a fallback if something breaks in the
+  // semantic engine above. Re-add an entry here to bring it back.
 ];
 
 export default function ModeTabs() {

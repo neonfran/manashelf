@@ -16,10 +16,10 @@ import { minimalThemeDescription } from "../shared/themeDescription.js";
 import { BRACKET_OPTIONS, BRACKET_INFO_TEXT } from "../shared/brackets.js";
 
 const DEFAULT_SETTINGS = { themeFocus: 72, ramp: "standard", interaction: "standard", curve: "normal", synergyBias: "balanced", commanderDependence: "normal", comboPolicy: "off", landStyle: "balanced", protectExistingDecks: true, bracket: "none" };
-const LAB3_BRACKET_SETTING_DESCRIPTION = "Basado en el sistema oficial de Brackets de Wizards of the Coast. Aplica el límite de Game Changers (según el campo game_changer de Scryfall) y la restricción de combos infinitos de 2 cartas; la denegación masiva de tierras y turnos extra todavía no están conectados al pipeline semántico de DeckBuilder Semantic (sí lo están en DeckBuilder Classic).";
+const LAB3_BRACKET_SETTING_DESCRIPTION = "Basado en el sistema oficial de Brackets de Wizards of the Coast. Aplica el límite de Game Changers (según el campo game_changer de Scryfall) y la restricción de combos infinitos de 2 cartas; la denegación masiva de tierras y turnos extra todavía no están conectados a este pipeline semántico (sí lo están en el motor clásico interno, que queda de respaldo).";
 
 export default function Lab3Flow() {
-  const { t, showError, clearError, openModal, setActivity, clearActivity, setSubject, showSelection } = useApp();
+  const { t, showError, clearError, openModal, setActivity, clearActivity, setSubject, showSelection, lab2Unlocked } = useApp();
   const [query, setQuery] = useState("");
   const [commander, setCommander] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -36,8 +36,8 @@ export default function Lab3Flow() {
 
   useEffect(() => () => clearInterval(progressTimer.current), []);
   useEffect(() => {
-    if (profileLoading) setActivity(`DeckBuilder Semantic · ${profileMessage}`);
-    else if (building) setActivity(`DeckBuilder Semantic · ${buildMessage}`);
+    if (profileLoading) setActivity(`Deck Forge · ${profileMessage}`);
+    else if (building) setActivity(`Deck Forge · ${buildMessage}`);
     else clearActivity();
   }, [profileLoading, profileMessage, building, buildMessage, setActivity, clearActivity]);
 
@@ -60,7 +60,7 @@ export default function Lab3Flow() {
       const pc = p.commander || c;
       setCommander({ ...c, ...pc, image: pc.image || c.image, largeImage: pc.imageLarge || c.largeImage });
       setSubject("lab3", "Commander", c.name);
-      showSelection("LAB 3 Commander", c.name);
+      showSelection("Commander", c.name);
     } catch (e) {
       showError(e);
     } finally {
@@ -113,7 +113,7 @@ export default function Lab3Flow() {
     catch { showError(new Error(t("No pude copiar el decklist al portapapeles."))); }
   };
   const exportLog = async () => {
-    if (!result?.diagnosticLogId) return showError(new Error(t("No hay log LAB 3 disponible.")));
+    if (!result?.diagnosticLogId) return showError(new Error(t("No hay log de Deck Forge disponible.")));
     try {
       const log = await lab3BuildLog(result.diagnosticLogId);
       const version = String(log?.appVersion || "unknown").replace(/^v/i, "");
@@ -130,7 +130,7 @@ export default function Lab3Flow() {
 
   return (
     <section className="flow-panel lab2-panel lab3-panel">
-      <div className="lab2-banner lab3-banner"><b>⚗ DECKBUILDER SEMANTIC</b><span>{t("BUILDER PRINCIPAL · CONTRATOS + CONTEXTO DE DECK · DECKBUILDER CLASSIC QUEDA DE RESPALDO")}</span></div>
+      <div className="lab2-banner lab3-banner"><b>⚗ DECK FORGE</b><span>{t("CONTRATOS + CONTEXTO DE DECK · ARMA TU MAZO DESDE TU COLECCIÓN")}</span></div>
       <div className="flow-head"><span>{t("SEMANTIC BUILD FROM COLLECTION")}</span><p>{t("Construye desde tu colección usando la Semantic DB, contratos de roles/arquetipos y dependencias del deck. EDHREC sólo ordena candidatos semánticamente compatibles.")}</p></div>
 
       <div className="lab2-step">
@@ -179,7 +179,7 @@ export default function Lab3Flow() {
             <label className="lab2-setting lab2-switch-setting"><span><strong>{t("Proteger mazos existentes")}</strong><small>{t("No toma copias comprometidas cuando el uso cruzado está sincronizado.")}</small></span><input type="checkbox" checked={settings.protectExistingDecks} onChange={(e) => setSettings((s) => ({ ...s, protectExistingDecks: e.target.checked }))} /><i aria-hidden="true"></i></label>
           </div>
           <div className="lab2-build-actions">
-            <button className="primary big" disabled={!theme || building} onClick={runBuild}>{t("Generar con LAB 3 →")}</button>
+            <button className="primary big" disabled={!theme || building} onClick={runBuild}>{t("Generar mazo →")}</button>
             <span>{theme ? t(`Theme seleccionado · ${theme.name}`) : t("Elegí un theme para continuar.")}</span>
           </div>
         </div>
@@ -190,7 +190,7 @@ export default function Lab3Flow() {
       {result && !building && (
         <div>
           <div className="lab2-result-head">
-            <div><span>{t("MAZO GENERADO · LAB 3")}</span><h2>{commander?.name || "Commander"} · {result.build?.theme || theme?.name || "Theme"}</h2></div>
+            <div><span>{t("MAZO GENERADO")}</span><h2>{commander?.name || "Commander"} · {result.build?.theme || theme?.name || "Theme"}</h2></div>
             <div className="lab2-result-actions">
               <button className="ghost" onClick={exportDeck}>{t("Exportar para Archidekt ⇩")}</button>
               <button className="ghost" onClick={copyArchidekt}>{copied ? t("Copiado ✓") : t("Copiar para Archidekt")}</button>
@@ -213,6 +213,7 @@ export default function Lab3Flow() {
         </div>
       )}
 
+      {lab2Unlocked ? (
       <details className="lab2-audit lab3-harness-section">
         <summary>{t("Herramientas de validación LAB 3")} <span>{t("stress y recertificación · uso ocasional")}</span></summary>
         <Lab3HarnessPanel
@@ -246,6 +247,11 @@ export default function Lab3Flow() {
           }}
         />
       </details>
+      ) : (
+        <button type="button" className="ghost lab3-harness-gate-link" onClick={() => openModal("lab2gate", { target: "lab3" })}>
+          {t("Herramientas de validación LAB 3")}
+        </button>
+      )}
     </section>
   );
 }

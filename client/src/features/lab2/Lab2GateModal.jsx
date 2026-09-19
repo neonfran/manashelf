@@ -2,14 +2,12 @@ import { useRef, useState } from "react";
 import { useApp } from "../../context/AppContext.jsx";
 import { lab2Unlock } from "../../api.js";
 
-export default function Lab2GateModal({ target = "lab2" }) {
+export default function Lab2GateModal({ target = "lab3" }) {
   const { t, tAttr, setLab2Unlocked, setMode, closeModal } = useApp();
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const inputRef = useRef(null);
-
-  const isLab3 = target === "lab3";
 
   const unlock = async () => {
     if (!password) { inputRef.current?.focus(); return; }
@@ -30,9 +28,9 @@ export default function Lab2GateModal({ target = "lab2" }) {
 
   return (
     <div className="lab2-gate">
-      <div className="kicker">{isLab3 ? "DeckBuilder Semantic" : "DeckBuilder Classic"} · {t("ACCESO RESTRINGIDO")}</div>
-      <h2>{isLab3 ? t("DeckBuilder Semantic") : t("DeckBuilder Classic")}</h2>
-      <p>{isLab3 ? t("DeckBuilder Semantic usa la misma clave experimental que DeckBuilder Classic.") : t("Ingresá la contraseña para continuar.")}</p>
+      <div className="kicker">{t("Herramientas de validación")} · {t("ACCESO RESTRINGIDO")}</div>
+      <h2>{t("Herramientas de validación")}</h2>
+      <p>{t("Stress y recertificación son procesos internos de validación; no hacen falta para armar mazos.")}</p>
       <div className="control">
         <span>⌁</span>
         <input
@@ -47,7 +45,7 @@ export default function Lab2GateModal({ target = "lab2" }) {
         />
       </div>
       <p className="lab2-gate-error">{error}</p>
-      <button className="primary" disabled={busy} onClick={unlock}>{isLab3 ? t("Entrar a DeckBuilder Semantic") : t("Entrar a DeckBuilder Classic")}</button>
+      <button className="primary" disabled={busy} onClick={unlock}>{t("Continuar")}</button>
     </div>
   );
 }
